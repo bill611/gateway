@@ -1,0 +1,10 @@
+*.[ado]
+*.swp
+tags
+cscope*
+.ycm_extra_conf.py*
+*.bak
+obj
+*.mk
+libs
+gw
