@@ -21,16 +21,19 @@ INC_DIR = \
 		  $(MAKEROOT)/src/platform\
 		  $(MAKEROOT)/src/product\
 		  $(MAKEROOT)/src/wireless\
+		  $(MAKEROOT)/src/drivers\
 
 
 include evn.mk
 
 CFLAGS += ${addprefix -I,${INC_DIR}}
+SRC = 
 
-SRC = $(wildcard ${SRC_DIR}/platform/*.c)
+SRC += $(wildcard ${SRC_DIR}/platform/*.c)
 SRC += $(wildcard ${SRC_DIR}/product/*.c)
 SRC += $(wildcard ${SRC_DIR}/app/*.c)
 SRC += $(wildcard ${SRC_DIR}/wireless/*.c)
+SRC += $(wildcard ${SRC_DIR}/drivers/*.c)
 
 # wildcard:扩展通配符，notdir;去除路径，patsubst;替换通配符
 
@@ -41,7 +44,7 @@ DEPS = $(patsubst %.c, ${OBJ_DIR}/%.d, $(notdir ${SRC}))
 # -Xlinker编译时可重复查找依赖库，和库的次序无关
 # LIB_DIR = 
 
-XLINKER = -Xlinker "-(" -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -Xlinker "-)"
+XLINKER = -Xlinker "-(" -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -Xlinker "-)"
 
 
 export CC LIB_DIR CFLAGS OBJ_DIR INC_DIR DEPS

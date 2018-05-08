@@ -51,6 +51,7 @@ int platform_flash_program_write_block(_IN_ char *buffer, _IN_ uint32_t length)
 
 int platform_flash_program_stop(void)
 {
+	fflush(fp);
     if (fp != NULL) {
         fclose(fp);
     }

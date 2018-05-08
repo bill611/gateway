@@ -5,6 +5,10 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -33,6 +37,12 @@ static int network_create_socket( pplatform_netaddr_t netaddr, int type, struct 
         if (inet_aton(netaddr->host, &in)) {
             ip = *(uint32_t *)&in;
         } else {
+			res_init();
+			// printf("=====================>route\n");
+			// system("route");
+			// printf("=====================>cat\n");
+			// system("cat /etc/resolv.conf");
+
             hp = gethostbyname(netaddr->host);
             if (!hp) {
                 printf("can't resolute the host address \n");
@@ -179,12 +189,13 @@ void *platform_udp_multicast_server_create(pplatform_netaddr_t netaddr, const ch
         goto err;
     }
 
+	// ifname = "wlan0";
     mreq.imr_multiaddr.s_addr = inet_addr(netaddr->host);
     if(NULL == ifname || strlen(ifname) == 0){
         mreq.imr_multiaddr.s_addr = inet_addr(netaddr->host);
         mreq.imr_interface.s_addr = htonl(INADDR_ANY);      //defaut router if ip
         if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &mreq, sizeof(mreq)) < 0) {
-            printf("setsockopt membership error, ip:default router, multicast addr:%s\n", netaddr->host);
+            printf("[ %d ]: setsockopt membership error (%s), ip:default router, multicast addr:%s\n", __LINE__, strerror(errno), netaddr->host);
             goto err;
         }
     }
@@ -198,7 +209,7 @@ void *platform_udp_multicast_server_create(pplatform_netaddr_t netaddr, const ch
         mreq.imr_multiaddr.s_addr = inet_addr(netaddr->host);
         mreq.imr_interface.s_addr = inet_addr(ip_str); //lan ip
         if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &mreq, sizeof(mreq)) < 0) {
-            printf("setsockopt membership error , ip:%s,  multicast addr:%s\n", ip_str, netaddr->host);
+            printf("[ %d ]: setsockopt membership error (%s), ip:%s,  multicast addr:%s\n", __LINE__, strerror(errno), ip_str, netaddr->host);
             goto err;
         }
     }

@@ -95,9 +95,9 @@ static char *encrypt_type[] = {
 static TcWifiConfig tc_wifi_config = {
 	.boot_proto = "DHCP",
 	.network_type = "Infra",
-	.ssid = "TC_OFFICE",
-	.auth_mode = "WPA2PSK",
-	.encrypt_type = "AES",
+	.ssid = "aha",
+	.auth_mode = "OPEN",
+	.encrypt_type = "NONE",
 	.auth_key = "TC.86kb.com",
 
 	.ap_addr = "192.168.100.1",
@@ -111,6 +111,7 @@ static TcWifiConfig tc_wifi_config = {
 static void tcSetNetwork(int type)
 {
 	FILE *fp;
+	printf("[%s]\n",__FUNCTION__);
 	fp = fopen("network_config","wb");	
 	if (fp == NULL) {
 		printf("Can't open network_config\n");
@@ -143,7 +144,7 @@ static void tcSetNetwork(int type)
 //一键配置超时时间, 建议超时时间1-3min, APP侧一键配置1min超时
 int platform_awss_get_timeout_interval_ms(void)
 {
-    return 3 * 60 * 1000;
+    return 1 * 60 * 1000;
 }
 
 //默认热点配网超时时间
@@ -163,11 +164,16 @@ void platform_awss_switch_channel(char primary_channel,
                                   char secondary_channel, uint8_t bssid[ETH_ALEN])
 {
 	tc_wifi_config.ap_channel = primary_channel;
-	tcSetNetwork(TC_SET_AP);
+	char buf[256];
+	snprintf(buf, sizeof(buf), "./iwconfig %s channel %d ",
+			IFNAME,primary_channel);
+	// excuteCmd(buf,NULL);
+	// tcSetNetwork(TC_SET_AP);
 }
 
 int open_socket(void)
 {
+	printf("app----------------->[%s]\n", __FUNCTION__);
     int fd;
 #if 0
     if (getuid() != 0) {
@@ -225,6 +231,7 @@ char monitor_running;
 
 void *monitor_thread_func(void *arg)
 {
+	printf("app----------------->[%s]\n", __FUNCTION__);
     platform_awss_recv_80211_frame_cb_t ieee80211_handler = arg;
     /* buffer to hold the 80211 frame */
     char *ether_frame = malloc(IP_MAXPACKET);
@@ -283,6 +290,8 @@ void platform_awss_open_monitor(platform_awss_recv_80211_frame_cb_t cb)
 {
     int ret;
 
+	printf("app----------------->[%s]\n", __FUNCTION__);
+    assert(cb);
 	tcSetNetwork(TC_SET_AP);
 
     monitor_running = 1;
@@ -294,22 +303,26 @@ void platform_awss_open_monitor(platform_awss_recv_80211_frame_cb_t cb)
 //退出monitor模式，回到station模式, 其他资源回收
 void platform_awss_close_monitor(void)
 {
+	printf("app----------------->[%s]\n", __FUNCTION__);
     monitor_running = 0;
 
     pthread_join(monitor_thread, NULL);
 
-	excuteCmd("ifconfig",AP_IFNAME,"down",NULL);
-	excuteCmd("killall","hostapd",NULL);
-	excuteCmd("killall","dnsmasq",NULL);
+	// excuteCmd("ifconfig",AP_IFNAME,"down",NULL);
+	// excuteCmd("killall","hostapd",NULL);
+	// excuteCmd("killall","dnsmasq",NULL);
 }
 
 static int sys_net_is_ready = 0;
 
 int platform_sys_net_is_ready(void)
 {
+	printf("app----------------->[%s],%d\n", __FUNCTION__,sys_net_is_ready);
     return sys_net_is_ready;
 }
 
+static TcWifiScan ap_info[100] ;
+static int ap_cnt = 0;
 int platform_awss_connect_ap(
             _IN_ uint32_t connection_timeout_ms,
             _IN_ char ssid[PLATFORM_MAX_SSID_LEN],
@@ -321,27 +334,35 @@ int platform_awss_connect_ap(
 {
 	char buf[256];
 	char *ret;
-    // int ret;
+	int cnt = 50;
+	int i;
 	sys_net_is_ready = 0;
+	for (i=0; i<ap_cnt; i++) {
+		if (strcmp(ssid,ap_info[i].ssid) == 0) {
+			if (ap_info[i].auth < AWSS_AUTH_TYPE_INVALID)
+				sprintf(tc_wifi_config.auth_mode,"%s",auth_mode[ap_info[i].auth]);
+			if (ap_info[i].encry < AWSS_ENC_TYPE_MAX)
+				sprintf(tc_wifi_config.encrypt_type,"%s",encrypt_type[ap_info[i].encry]);
+			printf("app----------------->[%s]auth:%d,encry:%d\n", 
+					__FUNCTION__,ap_info[i].auth,ap_info[i].encry);
+		}
+	}
 	sprintf(tc_wifi_config.ssid,"%s",ssid);
 	sprintf(tc_wifi_config.auth_key,"%s",passwd);
-	if (auth != AWSS_AUTH_TYPE_INVALID)
-		sprintf(tc_wifi_config.auth_mode,"%s",auth_mode[auth]);
-	if (encry != AWSS_ENC_TYPE_MAX)
-		sprintf(tc_wifi_config.encrypt_type,"%s",encrypt_type[auth]);
-	tc_wifi_config.ap_channel = channel;
+	// tc_wifi_config.ap_channel = channel;
 	tcSetNetwork(TC_SET_STATION);
 
-	snprintf(buf, sizeof(buf), "wpa_cli -p %s -i %s status | grep wpa_state",
+	snprintf(buf, sizeof(buf), "./wpa_cli -p %s -i %s status | grep wpa_state",
 			WPA_PATH, WLAN_IFNAME);
 	do {
 		ret = excuteCmd(buf,NULL);
 		usleep(100 * 1000);
-	} while (strcmp(ret,"wpa_state=COMPLETED") != 0);
+	} while ((strncmp(ret,"wpa_state=COMPLETED",strlen("wpa_state=COMPLETED")) != 0) && --cnt != 0);
 
 	sys_net_is_ready = 1;
-    // snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
-    // ret = system(buf);
+	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
+	ret = (char *)system(buf);
+	printf("system:%s\n",ret);
 
     //TODO: wait dhcp ready here
     return 0;
@@ -349,24 +370,22 @@ int platform_awss_connect_ap(
 
 int platform_wifi_scan(platform_wifi_scan_result_cb_t cb)
 {
-	int ap_cnt,i;
-	TcWifiScan *ap_info[100] ;
-	char *cmd[] = { "gw", "wlan0", "scan", };
+	int i;
+	printf("app----------------->[%s]\n", __FUNCTION__);
+	char *cmd[] = { "gw", "wlan0", "scan" };
+	memset(ap_info,0,sizeof(TcWifiScan)*100);
 	iwlist(3,cmd,&ap_info,&ap_cnt);
     for (i=0; i<ap_cnt; i++) {
         int is_last_ap = 0;
         if(i == ap_cnt - 1)
             is_last_ap = 1;
-        cb(ap_info[i]->ssid,
-                ap_info[i]->bssid,
-                ap_info[i]->auth,
-                ap_info[i]->encry,
-                ap_info[i]->channel,
-                ap_info[i]->rssi,
-                is_last_ap);
-		printf("[%d]ssid:%s\n",i, ap_info[i]->ssid); 
-        if (ap_info[i])
-            free(ap_info[i]);
+		cb(ap_info[i].ssid,
+				ap_info[i].bssid,
+				ap_info[i].auth,
+				ap_info[i].encry,
+				ap_info[i].channel,
+				ap_info[i].rssi,
+				is_last_ap);
     } 
     return 0;
 }
@@ -492,24 +511,30 @@ int platform_wifi_get_ap_info(
             char passwd[PLATFORM_MAX_PASSWD_LEN],
     uint8_t bssid[ETH_ALEN])
 {
-	memcpy(ssid,tc_wifi_config.ap_ssid,PLATFORM_MAX_SSID_LEN);
-	memcpy(passwd,tc_wifi_config.ap_auth_key,PLATFORM_MAX_PASSWD_LEN);
+	printf("app----------------->[%s]\n", __FUNCTION__);
+	printf("[%s]ssid:%s,password:%s,bssid:%s\n", 
+			__FUNCTION__,ssid,passwd,bssid);
+	if (ssid)
+		memcpy(ssid,tc_wifi_config.ap_ssid,PLATFORM_MAX_SSID_LEN);
+	if (passwd)
+		memcpy(passwd,tc_wifi_config.ap_auth_key,PLATFORM_MAX_PASSWD_LEN);
     struct ifreq ifreq;
     int sock = -1;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket");
-        return 0;
+        return -1;
     }
     strcpy(ifreq.ifr_name, IFNAME);
 
     if (ioctl(sock, SIOCGIFHWADDR, &ifreq) < 0) {
         close(sock);
         perror("ioctl");
-        return 0;
+        return -1;
     }
 
-	memcpy(bssid,ifreq.ifr_hwaddr.sa_data,ETH_ALEN);
+	if (bssid)
+		memcpy(bssid,ifreq.ifr_hwaddr.sa_data,ETH_ALEN);
 
     close(sock);
 	return 0;
@@ -518,6 +543,7 @@ int platform_wifi_get_ap_info(
 
 int platform_wifi_low_power(int timeout_ms)
 {
+	printf("app----------------->[%s]\n", __FUNCTION__);
     //wifi_enter_power_saving_mode();
     usleep(timeout_ms);
     //wifi_exit_power_saving_mode();
@@ -525,17 +551,95 @@ int platform_wifi_low_power(int timeout_ms)
     return 0;
 }
 
+/**
+ * @brief enable/disable filter specific management frame in wifi station mode
+ *
+ * @param[in] filter_mask @n see mask macro in enum platform_awss_frame_type,
+ *                      currently only FRAME_PROBE_REQ_MASK & FRAME_BEACON_MASK is used
+ * @param[in] vendor_oui @n oui can be used for precise frame match, optional
+ * @param[in] callback @n see platform_wifi_mgnt_frame_cb_t, passing 80211
+ *                      frame or ie to callback. when callback is NULL
+ *                      disable sniffer feature, otherwise enable it.
+ * @return
+   @verbatim
+   =  0, success
+   = -1, fail
+   = -2, unsupported.
+   @endverbatim
+ * @see None.
+ * @note awss use this API to filter specific mgnt frame in wifi station mode
+ */
 int platform_wifi_enable_mgnt_frame_filter(
             _IN_ uint32_t filter_mask,
             _IN_OPT_ uint8_t vendor_oui[3],
             _IN_ platform_wifi_mgnt_frame_cb_t callback)
 {
+	printf("app----------------->[%s]\n", __FUNCTION__);
     return -2;
 }
 
+/**
+ * @brief send 80211 raw frame in current channel with basic rate(1Mbps)
+ *
+ * @param[in] type @n see enum platform_awss_frame_type, currently only FRAME_BEACON
+ *                      FRAME_PROBE_REQ is used
+ * @param[in] buffer @n 80211 raw frame, include complete mac header & FCS field
+ * @param[in] len @n 80211 raw frame length
+ * @return
+   @verbatim
+   =  0, send success.
+   = -1, send failure.
+   = -2, unsupported.
+   @endverbatim
+ * @see None.
+ * @note awss use this API send raw frame in wifi monitor mode & station mode
+ */
 int platform_wifi_send_80211_raw_frame(_IN_ enum platform_awss_frame_type type,
                                        _IN_ uint8_t *buffer, _IN_ int len)
 {
-    return -2;
+    int bytes_sent;
+	struct sockaddr addr;
+	memset(&addr,0,sizeof(addr));
+	int fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    struct ifreq ifr;
+    int sockopt = 1;
+
+    memset(&ifr, 0, sizeof(ifr));
+
+    /* set interface to promiscuous mode */
+    strncpy(ifr.ifr_name, IFNAME, sizeof(ifr.ifr_name));
+    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+        perror("ioctl(SIOCGIFFLAGS)");
+        return -2;
+    }
+    ifr.ifr_flags |= IFF_PROMISC;
+    if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
+        perror("ioctl(SIOCSIFFLAGS)");
+        return -2;
+    }
+
+    /* allow the socket to be reused */
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                   &sockopt, sizeof(sockopt)) < 0) {
+        perror("setsockopt(SO_REUSEADDR)");
+        return -2;
+    }
+    /* bind to device */
+    struct sockaddr_ll ll;
+
+    memset(&ll, 0, sizeof(ll));
+    ll.sll_family = PF_PACKET;
+    ll.sll_protocol = htons(ETH_P_ALL);
+    ll.sll_ifindex = if_nametoindex(WLAN_IFNAME);
+
+
+    bytes_sent = sendto((long)fd, buffer, len, 0,(struct sockaddr*)&ll,sizeof(struct sockaddr_ll));
+
+    close(fd);
+	// printf("app----------------->[%s]fd:%d,type:%d,len:%d,ret:%d\n", 
+			// __FUNCTION__,fd,len,type,bytes_sent);
+	return 0;
+    // return bytes_sent > 0 ? 0 : -1;
+    // return 0;
 }
 

@@ -3,9 +3,9 @@
 #include "product.h"
 
 //TODO: update these product info
-#define product_model           "ALINKTEST_LIVING_LIGHT_SMARTLED_LUA"
-#define product_key             "iv24VQiby0PJonv3YYtt"
-#define product_secret          "rW7pnj2x8t7vfuVzj41SkRI8k2e1WoYeXNUyD5ey"
+#define product_model           "TAICHUAN_SECURITY_GATEWAY_TC_U9WG_C"
+#define product_key             "m4FBdYl8nTb5E30IxoFz"
+#define product_secret          "O1hhTYpctScypr8MFoSpTqHwazDhT1AxxdPTPvRF"
 #define product_debug_key       "GG81ieHbhgl7Igm1KxUm"
 #define product_debug_secret    "p7C7sBS0uGA2cs95E32Kf1xlgiJ4KjXTX06ZD78k"
 

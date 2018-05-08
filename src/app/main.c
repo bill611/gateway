@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "alink_export_gateway.h"
 #include "alink_export_subdev.h"
 #include "platform.h"		/* Header */
@@ -40,7 +41,7 @@
 #define DEVMGR_ATTRIBUTE_JOINED_DEVICE_LIST     "JoinedDeviceList"
 #define DEVMGR_SERVICE_PERMITJOIN_DEVICE        "PermitJoin"
 
-#define GW_ATTRIBUTE_SOUND_ALARM                "SoundAlarm"
+#define GW_ATTR_ARM_ENTRY_DELAY                "ArmEntryDelay"
 #define GW_SERVICE_FACTORY_RESET                "FactoryReset"
 
 
@@ -67,6 +68,11 @@ void cloud_connected(void)
 void cloud_disconnected(void)
 {
     printf("alink cloud disconnected!\n");
+}
+
+void cloud_get_device_status(void)
+{
+    printf("cloud_get_device_status!\n");
 }
 
 static int __sound_alarm_attr_get_cb(char *output_buf, unsigned int buf_sz)
@@ -184,9 +190,9 @@ int register_gateway_service(void)
 
 int register_gateway_attribute(void)
 {
-    int ret = alink_register_attribute(GW_ATTRIBUTE_SOUND_ALARM, __sound_alarm_attr_get_cb, __sound_alarm_attr_set_cb);
+    int ret = alink_register_attribute(GW_ATTR_ARM_ENTRY_DELAY, __sound_alarm_attr_get_cb, __sound_alarm_attr_set_cb);
     if (0 != ret) {
-        printf("register attribute fail, attribute:%s\n", GW_ATTRIBUTE_SOUND_ALARM);
+        printf("register attribute fail, attribute:%s\n", GW_ATTR_ARM_ENTRY_DELAY);
         return -1;
     }
 
@@ -203,9 +209,9 @@ int register_sub_device(void)
     const char *dev_id = "12341241212";
 
     //device shortmodel
-    unsigned short_model = 0x00091940;  //device shortmodel
+    unsigned short_model = 0x00092316;  //device shortmodel
     //device product secret
-    const char *secret = "RlTVYmxb4gUxCMHXAkl2ZItNx7kUQ7TRV2TDBbAO";
+    const char *secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm";
 
     char rand[SUBDEV_RAND_BYTES] = {0};
     char sign[17] = {0};
@@ -282,12 +288,23 @@ int get_property_from_cloud(const char *key, char *value_buf, int buf_sz)
 int device_private_property_test(void)
 {
     int ret = -1;
-    char key[16] = "key_01";
-    char value[16] = "value_01";
+    char req_params[256] = {0};
+    char uuid[33] = {0};
+    char key[16] = "ArmMode";
+    char value[16] = "1";
 
-    ret = set_property_to_cloud(key, value);
-    value[0] = '0';
-    ret = get_property_from_cloud(key, value, sizeof(key));
+    ret = alink_get_main_uuid(uuid, sizeof(uuid));//or alink_subdev_get_uuid
+    if (ret != 0)
+        return ret;
+
+    snprintf(req_params, sizeof(req_params) - 1, SET_PROPERTY_REQ_FMT, uuid, key, value);
+    ret = alink_report("postDeviceData", "{\"ArmMode\": { \"value\": \"1\"  }}");
+    if (ret != 0)
+        printf("report msg fail, params: %s\n", req_params);
+
+    // ret = set_property_to_cloud(key, value);
+    // value[0] = '0';
+    // ret = get_property_from_cloud(key, value, sizeof(key));
 
     return ret;
 }
@@ -307,7 +324,7 @@ int main_loop(void)
     device_private_property_test();
 
     //注册子设备
-    //register_sub_device();
+	register_sub_device();
 
     while (loop++ < 2) {
         sleep(5);
@@ -381,32 +398,18 @@ void parse_opt(int argc, char *argv[])
            env_str[env], dead_loop ? "true" : "false", loglevel);
 }
 
+static void * uartSendThead(void *arg)
+{
+	int ret;
+	while (1) {
+		ret = aws_notify_app_nonblock();
+		printf("ret :%d\n", ret);
+		sleep(1);
+	}	
+}
 
 int main(int argc, char *argv[])
 {
-#if 0
-	int ap_cnt = 0;
-	TcWifiScan *ap_info[100] ;
-	char *cmd[] = { "gw", "wlan0", "scan", };
-	iwlist(3,cmd,&ap_info,&ap_cnt);
-	int i;
-	for (i=0; i<ap_cnt; i++) {
-		printf("[%d]ssid:%s\n",i, ap_info[i]->ssid); 
-		printf("mac:%02X:%02X:%02X:%02X:%02X:%02X",
-				ap_info[i]->bssid[0],
-				ap_info[i]->bssid[1],
-				ap_info[i]->bssid[2],
-				ap_info[i]->bssid[3],
-				ap_info[i]->bssid[4],
-				ap_info[i]->bssid[5]); 
-		printf(";channel:%d", ap_info[i]->channel); 
-		printf(";rssid:%d", ap_info[i]->rssi); 
-		printf(";auth:%d", ap_info[i]->auth); 
-		printf(";encry:%d\n", ap_info[i]->encry); 
-		if (ap_info[i]) free(ap_info[i]);
-	}
-	return 0;
-#endif
     parse_opt(argc, argv);
 
     alink_set_loglevel(loglevel);
@@ -422,16 +425,30 @@ int main(int argc, char *argv[])
     alink_register_callback(ALINK_CLOUD_CONNECTED, &cloud_connected);
     alink_register_callback(ALINK_CLOUD_DISCONNECTED, &cloud_disconnected);
 
+    alink_register_callback(3, &cloud_get_device_status);
+
     register_gateway_service();
     register_gateway_attribute();
 
     //设置设备认证模式:DEFAULT(阿里智能),SDS+DEVICEID,SDS_WHITELIST
     alink_set_auth_mode(ALINK_AUTH_MODE_DEFAULT);
-
+	// awss_start();
     alink_start();
+	// awss_end();
     register_modbus_protocol();
     alink_wait_connect(ALINK_WAIT_FOREVER);
-
+	zigbeeInit();
+	// int ret;
+	// pthread_t id;
+	// pthread_attr_t  attr;
+	// pthread_attr_init(&attr);
+	// pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
+	// pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+	// ret = pthread_create(&id,&attr,(void *)uartSendThead,NULL);
+	// if(ret) {
+		// printf("pthread failt,Error code:%d\n",ret);
+	// }
+	// pthread_attr_destroy(&attr);
 loop:
     main_loop();
 

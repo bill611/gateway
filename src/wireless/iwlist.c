@@ -166,7 +166,7 @@ static const char *	iw_ie_key_mgmt_name[] = {
 
 #endif	/* WE_ESSENTIAL */
 
-static TcWifiScan **g_ap_info; 
+static TcWifiScan *g_ap_info; 
 static int *g_ap_cnt = NULL;
 /************************* WPA SUBROUTINES *************************/
 
@@ -308,13 +308,13 @@ iw_print_ie_wpa(unsigned char *	iebuf,
 	offset += 2;
 
 	if(iebuf[0] == 0xdd) {
-        g_ap_info[(*g_ap_cnt) - 1]->auth |= TC_AUTH_TYPE_WPAPSK;
+        (g_ap_info + (*g_ap_cnt) - 1)->auth |= TC_AUTH_TYPE_WPAPSK;
 #ifdef TC_DEBUG
         printf("WPA Version %d\n", ver);
 #endif
 	}
 	if(iebuf[0] == 0x30) {
-        g_ap_info[(*g_ap_cnt) - 1]->auth |= TC_AUTH_TYPE_WPA2PSK;
+        (g_ap_info + (*g_ap_cnt) - 1)->auth |= TC_AUTH_TYPE_WPA2PSK;
 #ifdef TC_DEBUG
 		printf("IEEE 802.11i/WPA2 Version %d\n", ver);
 #endif
@@ -326,7 +326,7 @@ iw_print_ie_wpa(unsigned char *	iebuf,
 	if(ielen < (offset + 4))
 	{
 		/* We have a short IE.  So we should assume TKIP/TKIP. */
-        g_ap_info[(*g_ap_cnt) - 1]->encry = AWSS_ENC_TYPE_TKIP;
+        (g_ap_info + (*g_ap_cnt) - 1)->encry |= AWSS_ENC_TYPE_TKIP;
 #ifdef TC_DEBUG
 		printf("                        Group Cipher : TKIP\n");
 		printf("                        Pairwise Cipher : TKIP\n");
@@ -343,7 +343,7 @@ iw_print_ie_wpa(unsigned char *	iebuf,
 	}
 	else
 	{
-		g_ap_info[(*g_ap_cnt - 1)]->encry = AWSS_ENC_TYPE_AES;
+		(g_ap_info + (*g_ap_cnt) - 1)->encry = AWSS_ENC_TYPE_AES;
 #ifdef TC_DEBUG
 		printf("                        Group Cipher :");
 		iw_print_value_name(iebuf[offset+3],
@@ -507,13 +507,12 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
 				printf("          Cell %02d - Address: %s\n", state->ap_num,
 						iw_saether_ntop(&event->u.ap_addr, buffer));
 #endif
-				g_ap_info[(*g_ap_cnt)] = (TcWifiScan *)calloc(1,sizeof(TcWifiScan) );
-				g_ap_info[(*g_ap_cnt)]->bssid[0] = eth->ether_addr_octet[0];
-				g_ap_info[(*g_ap_cnt)]->bssid[1] = eth->ether_addr_octet[1];
-				g_ap_info[(*g_ap_cnt)]->bssid[2] = eth->ether_addr_octet[2];
-				g_ap_info[(*g_ap_cnt)]->bssid[3] = eth->ether_addr_octet[3];
-				g_ap_info[(*g_ap_cnt)]->bssid[4] = eth->ether_addr_octet[4];
-				g_ap_info[(*g_ap_cnt)]->bssid[5] = eth->ether_addr_octet[5];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[0] |= eth->ether_addr_octet[0];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[1] |= eth->ether_addr_octet[1];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[2] |= eth->ether_addr_octet[2];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[3] |= eth->ether_addr_octet[3];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[4] |= eth->ether_addr_octet[4];
+				(g_ap_info + (*g_ap_cnt) - 1)->bssid[5] |= eth->ether_addr_octet[5];
 				(*g_ap_cnt)++;
 				state->ap_num++;
 			}
@@ -539,7 +538,7 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
                         freq, channel, event->u.freq.flags);
                 printf("                    %s\n", buffer);
 #endif
-                g_ap_info[(*g_ap_cnt)-1]->channel = channel;
+				(g_ap_info + (*g_ap_cnt) - 1)->channel = channel;
 			}
 			break;
 		case SIOCGIWMODE:
@@ -558,9 +557,9 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
 			break;
 		case SIOCGIWESSID:
 			{
-                memset(g_ap_info[(*g_ap_cnt - 1)]->ssid, '\0', sizeof(g_ap_info[0]->ssid));
+                memset((g_ap_info + (*g_ap_cnt) - 1)->ssid, '\0', sizeof((g_ap_info + (*g_ap_cnt) - 1)->ssid));
                 if((event->u.essid.pointer) && (event->u.essid.length))
-                    memcpy(g_ap_info[(*g_ap_cnt - 1)]->ssid, event->u.essid.pointer, event->u.essid.length);
+                    memcpy((g_ap_info + (*g_ap_cnt) - 1)->ssid, event->u.essid.pointer, event->u.essid.length);
 
 #ifdef TC_DEBUG
                 char essid[IW_ESSID_MAX_SIZE+1] = {0};
@@ -663,16 +662,16 @@ print_scanning_token(struct stream_descr *	stream,	/* Stream of events */
                             || (qual->updated & (IW_QUAL_DBM | IW_QUAL_RCPI))))
                 {
                     if(!(qual->updated & IW_QUAL_QUAL_INVALID)) {
-                        g_ap_info[(*g_ap_cnt - 1)]->rssi = qual->qual - range->max_qual.qual;
+                        (g_ap_info + (*g_ap_cnt) - 1)->rssi = qual->qual - range->max_qual.qual;
                     }
                 }
-                if ((g_ap_info[(*g_ap_cnt - 1)]->auth & TC_AUTH_TYPE_WPA2PSK )
-                        && (g_ap_info[(*g_ap_cnt - 1)]->auth & TC_AUTH_TYPE_WPAPSK) ) {
-                    g_ap_info[(*g_ap_cnt - 1)]->auth = AWSS_AUTH_TYPE_WPAPSKWPA2PSK;
-                } else if (g_ap_info[(*g_ap_cnt - 1)]->auth & TC_AUTH_TYPE_WPA2PSK) {
-                    g_ap_info[(*g_ap_cnt - 1)]->auth = AWSS_AUTH_TYPE_WPA2PSK;
-                } else if (g_ap_info[(*g_ap_cnt - 1)]->auth & TC_AUTH_TYPE_WPAPSK) {
-                    g_ap_info[(*g_ap_cnt - 1)]->auth = AWSS_AUTH_TYPE_WPAPSK;
+                if (((g_ap_info + (*g_ap_cnt) - 1)->auth & TC_AUTH_TYPE_WPA2PSK )
+                        && ((g_ap_info + (*g_ap_cnt) - 1)->auth & TC_AUTH_TYPE_WPAPSK) ) {
+                    (g_ap_info + (*g_ap_cnt) - 1)->auth = AWSS_AUTH_TYPE_WPAPSKWPA2PSK;
+                } else if ((g_ap_info + (*g_ap_cnt) - 1)->auth & TC_AUTH_TYPE_WPA2PSK) {
+                    (g_ap_info + (*g_ap_cnt) - 1)->auth = AWSS_AUTH_TYPE_WPA2PSK;
+                } else if ((g_ap_info + (*g_ap_cnt) - 1)->auth & TC_AUTH_TYPE_WPAPSK) {
+                    (g_ap_info + (*g_ap_cnt) - 1)->auth = AWSS_AUTH_TYPE_WPAPSK;
                 }
 #ifdef TC_DEBUG
 				iw_print_stats(buffer, sizeof(buffer),
@@ -2251,7 +2250,7 @@ static void iw_usage(int status)
  */
 int
 iwlist(int	argc,
-     char **	argv,TcWifiScan **ap_info,int *ap_cnt)
+     char **	argv,TcWifiScan *ap_info,int *ap_cnt)
 {
   int skfd;			/* generic raw socket desc.	*/
   char *dev;			/* device name			*/

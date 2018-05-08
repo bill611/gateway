@@ -3,6 +3,7 @@ SIBDIR=\
 	   product \
 	   wireless \
 	   app\
+	   drivers\
 
 define make_loop
 	@for mkdir in $(SIBDIR); do \

@@ -174,7 +174,8 @@ uint32_t platform_wifi_get_ip(char ip_str[PLATFORM_IP_LEN], const char *ifname)
 char *platform_get_chipid(char chipid[PLATFORM_CID_LEN])
 {
     //strncpy(chipid, "unknown chipid", PLATFORM_CID_LEN);
-    strncpy(chipid, "rtl8189se", PLATFORM_CID_LEN);
+    // strncpy(chipid, "rtl8189se", PLATFORM_CID_LEN);
+    strncpy(chipid, "rtl8188eu 12345678", PLATFORM_CID_LEN);
     chipid[PLATFORM_CID_LEN - 1] = '\0';
 
     return chipid;

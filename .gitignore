@@ -8,3 +8,5 @@ obj
 *.mk
 libs
 gw
+libplatform.so
+libproduct.so

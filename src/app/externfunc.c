@@ -379,7 +379,7 @@ void backData(char *file)
  * @returns
  */
 /* ---------------------------------------------------------------------------*/
-static char   cmd_buf[30*1024] = {0};
+static char   cmd_buf[1024] = {0};
 char * excuteCmd(char *Cmd,...)
 {
 	int i;
@@ -401,9 +401,11 @@ char * excuteCmd(char *Cmd,...)
 	printf("cmd :%s\n",commond);
 	if ((fp = popen(commond, "r") ) == 0) {
 		perror("popen");
-		return -1;
+		return NULL;
 	}
-	fread( cmd_buf, sizeof(char), sizeof(cmd_buf), fp ); //将刚刚FILE* stream的数据流读取到cmd_buf
+	memset(cmd_buf,0,sizeof(cmd_buf));
+	ret = fread( cmd_buf, sizeof(cmd_buf), sizeof(char), fp ); //将刚刚FILE* stream的数据流读取到cmd_buf
+	printf("r:%d\n",ret );
 	if ( (ret = pclose(fp)) == -1 ) {
 		printf("close popen file pointer fp error!\n");
 	}
