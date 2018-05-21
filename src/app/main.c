@@ -25,6 +25,9 @@
  * PURPOSE, TITLE, AND NONINFRINGEMENT.
  */
 
+/* ---------------------------------------------------------------------------*
+ *                      include head files
+ *----------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -33,17 +36,26 @@
 #include <pthread.h>
 #include "alink_export_gateway.h"
 #include "alink_export_subdev.h"
+#include "device_protocol.h"
 #include "platform.h"		/* Header */
 #include "iwlib.h"		/* Header */
 
-#define DEVMGR_SERVICE_AUTHORISE_DEVICE_LIST    "AuthoriseDeviceList"
-#define DEVMGR_SERVICE_REMOVE_DEVICE            "RemoveDevice"
-#define DEVMGR_ATTRIBUTE_JOINED_DEVICE_LIST     "JoinedDeviceList"
-#define DEVMGR_SERVICE_PERMITJOIN_DEVICE        "PermitJoin"
 
-#define GW_ATTR_ARM_ENTRY_DELAY                "ArmEntryDelay"
-#define GW_SERVICE_FACTORY_RESET                "FactoryReset"
+/* ---------------------------------------------------------------------------*
+ *                  extern variables declare
+ *----------------------------------------------------------------------------*/
+extern char *config_get_main_uuid(void);
+extern char *optarg;
 
+/* ---------------------------------------------------------------------------*
+ *                  internal functions declare
+ *----------------------------------------------------------------------------*/
+
+/* ---------------------------------------------------------------------------*
+ *                        macro define
+ *----------------------------------------------------------------------------*/
+#define SET_DEVICE_PROPERTY_METHOD      "setDeviceProperty"
+#define GET_DEVICE_PROPERTY_METHOD      "getDeviceProperty"
 
 enum SERVER_ENV {
     DAILY = 0,
@@ -52,10 +64,13 @@ enum SERVER_ENV {
     PREPUB
 };
 
-
-static char sound_alarm[2] = {'0', '\0'};
-extern char *config_get_main_uuid(void);
+/* ---------------------------------------------------------------------------*
+ *                      variables define
+ *----------------------------------------------------------------------------*/
 const char *env_str[] = {"daily", "sandbox", "online"};
+static unsigned char env = ONLINE;
+static char dead_loop = 0;
+static char loglevel = ALINK_LL_INFO;
 
 
 void cloud_connected(void)
@@ -75,165 +90,6 @@ void cloud_get_device_status(void)
     printf("cloud_get_device_status!\n");
 }
 
-static int __sound_alarm_attr_get_cb(char *output_buf, unsigned int buf_sz)
-{
-    printf("get gateway sound_alarm attr, value:%s\n", sound_alarm);
-    snprintf(output_buf, buf_sz - 1, sound_alarm);
-
-    return 0;
-}
-
-static int __sound_alarm_attr_set_cb(char *value)
-{
-    printf("set gateway sound_alarm attr, value:%s\n", value);
-    if (*value != '0' && *value != '1') {
-        printf("invalid sound_alarm attr value:%s\n", value);
-        return -1;
-    }
-    sound_alarm[0] = *value;
-
-    return 0;
-}
-
-static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
-{
-    printf("exec gateway factory_reset service, args:%s\n", args);
-    int ret = 0;
-    //1.firmware reset
-    //reset config, ....
-
-    //2.alink reset
-    ret = alink_factory_reset(ALINK_REBOOT);
-    if (ret != 0) {
-        printf("call function alink_factory_reset fail!\n");
-    }
-
-    return 0;
-}
-
-
-static int __modbus_get_attr_cb(const char *devid, const char *attr_set[])
-{
-    printf("get attr, devid:%s, attribute name:\n", devid);
-    int i = 0;
-    while (attr_set[i++]) {
-        printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
-    }
-
-    return 0;
-}
-
-
-static int __modbus_set_attr_cb(const char *devid, const char *attr_name, const char *attr_value)
-{
-    printf("set attr, devid:%s, attrname:%s, attrvalue:%s\n",
-           devid, attr_name, attr_value);
-    return 0;
-}
-
-static int __modbus_exec_cmd_cb(const char *devid, const char *cmd_name, const char *cmd_args)
-{
-    printf("exec cmd, devid:%s, cmd_name:%s, cmd_args:%s\n",
-           devid, cmd_name, cmd_args);
-    return 0;
-}
-
-static int __modbus_remove_device_cb(const char *devid)
-{
-    printf("remove device, devid:%s\n",devid);
-    return 0;
-}
-
-
-int register_modbus_protocol()
-{
-    int ret = -1;
-    proto_info_t modbus_proto;
-
-    memset(&modbus_proto, 0, sizeof(modbus_proto));
-    modbus_proto.proto_type = PROTO_TYPE_MODBUS;
-    strncpy(modbus_proto.protocol_name, "modbus", sizeof(modbus_proto.protocol_name) - 1);
-
-    int i = 0;
-    modbus_proto.callback[i].cb_type = GET_SUB_DEVICE_ATTR;
-    modbus_proto.callback[i].cb_func = __modbus_get_attr_cb;
-
-    i++;
-    modbus_proto.callback[i].cb_type = SET_SUB_DEVICE_ATTR;
-    modbus_proto.callback[i].cb_func = __modbus_set_attr_cb;
-
-    i++;
-    modbus_proto.callback[i].cb_type = EXECUTE_SUB_DEVICE_CMD;
-    modbus_proto.callback[i].cb_func = __modbus_exec_cmd_cb;
-
-    i++;
-    modbus_proto.callback[i].cb_type = REMOVE_SUB_DEVICE;
-    modbus_proto.callback[i].cb_func = __modbus_remove_device_cb;
-
-    ret = alink_subdev_register_device_type(&modbus_proto);
-
-    return ret;
-}
-
-
-int register_gateway_service(void)
-{
-    //register service
-    int ret = alink_register_service(GW_SERVICE_FACTORY_RESET, __factory_reset_service_cb);
-    if (0 != ret) {
-        printf("register service fail, service:%s\n", GW_SERVICE_FACTORY_RESET);
-        return -1;
-    }
-
-    return 0;
-}
-
-int register_gateway_attribute(void)
-{
-    int ret = alink_register_attribute(GW_ATTR_ARM_ENTRY_DELAY, __sound_alarm_attr_get_cb, __sound_alarm_attr_set_cb);
-    if (0 != ret) {
-        printf("register attribute fail, attribute:%s\n", GW_ATTR_ARM_ENTRY_DELAY);
-        return -1;
-    }
-
-    return 0;
-
-}
-
-char *calc_subdev_signature(const char *secret, const uint8_t rand[SUBDEV_RAND_BYTES],
-        char *sign_buff, uint32_t buff_size);
-int register_sub_device(void)
-{
-    int ret = -1;
-    unsigned char proto_type = PROTO_TYPE_MODBUS;
-    const char *dev_id = "12341241212";
-
-    //device shortmodel
-    unsigned short_model = 0x00092316;  //device shortmodel
-    //device product secret
-    const char *secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm";
-
-    char rand[SUBDEV_RAND_BYTES] = {0};
-    char sign[17] = {0};
-
-    if (calc_subdev_signature(secret, rand, sign, sizeof(sign)) == NULL) {
-        printf("__get_device_signature fail\n");
-        return ret;
-    }
-
-    ret = alink_subdev_register_device(proto_type, dev_id, short_model, rand, sign);
-    if (ret != 0)
-        printf("register sub device fail");
-
-    return ret;
-}
-
-
-#define SET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"properties\":{\"%s\":{\"value\":\"%s\"}}}]}"
-#define GET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"group\":\"\",\"attrSet\":[\"%s\"]}]}"
-#define GET_PROPERTY_RESP_FMT           "{\"items\":[{\"uuid\":\"%s\",\"properties\":{\"%\":{\"value\":\"%s\"}}}]}"
-#define SET_DEVICE_PROPERTY_METHOD      "setDeviceProperty"
-#define GET_DEVICE_PROPERTY_METHOD      "getDeviceProperty"
 /*设备私有属性设置*/
 int set_property_to_cloud(const char *key, const char *value)
 {
@@ -285,36 +141,6 @@ int get_property_from_cloud(const char *key, char *value_buf, int buf_sz)
 }
 
 
-int device_private_property_test(void)
-{
-    int ret = -1;
-    char req_params[256] = {0};
-    char uuid[33] = {0};
-    char key[16] = "ArmMode";
-    char value[16] = "1";
-
-    ret = alink_get_main_uuid(uuid, sizeof(uuid));//or alink_subdev_get_uuid
-    if (ret != 0)
-        return ret;
-
-    snprintf(req_params, sizeof(req_params) - 1, SET_PROPERTY_REQ_FMT, uuid, key, value);
-    ret = alink_report("postDeviceData", "{\"ArmMode\": { \"value\": \"1\"  }}");
-    if (ret != 0)
-        printf("report msg fail, params: %s\n", req_params);
-
-    // ret = set_property_to_cloud(key, value);
-    // value[0] = '0';
-    // ret = get_property_from_cloud(key, value, sizeof(key));
-
-    return ret;
-}
-
-
-
-static unsigned char env = ONLINE;
-static char dead_loop = 0;
-char loglevel = ALINK_LL_INFO;
-extern char *optarg;
 
 int main_loop(void)
 {
@@ -324,7 +150,7 @@ int main_loop(void)
     device_private_property_test();
 
     //注册子设备
-	register_sub_device();
+	// register_sub_device();
 
     while (loop++ < 2) {
         sleep(5);
@@ -398,7 +224,7 @@ void parse_opt(int argc, char *argv[])
            env_str[env], dead_loop ? "true" : "false", loglevel);
 }
 
-static void * uartSendThead(void *arg)
+static void * testUartSendThead(void *arg)
 {
 	int ret;
 	while (1) {
@@ -406,6 +232,16 @@ static void * uartSendThead(void *arg)
 		printf("ret :%d\n", ret);
 		sleep(1);
 	}	
+}
+
+static void testUartSend(void)
+{
+	pthread_t id;
+	pthread_attr_t  attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+	pthread_create(&id,&attr,(void *)testUartSendThead,NULL);
+	pthread_attr_destroy(&attr);
 }
 
 int main(int argc, char *argv[])
@@ -435,20 +271,12 @@ int main(int argc, char *argv[])
 	// awss_start();
     alink_start();
 	// awss_end();
-    register_modbus_protocol();
     alink_wait_connect(ALINK_WAIT_FOREVER);
+	deviceInit();
 	zigbeeInit();
-	// int ret;
-	// pthread_t id;
-	// pthread_attr_t  attr;
-	// pthread_attr_init(&attr);
-	// pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
-	// pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
-	// ret = pthread_create(&id,&attr,(void *)uartSendThead,NULL);
-	// if(ret) {
-		// printf("pthread failt,Error code:%d\n",ret);
-	// }
-	// pthread_attr_destroy(&attr);
+	smarthomeInit();
+	register_sub_device();
+	// testUartSend();
 loop:
     main_loop();
 

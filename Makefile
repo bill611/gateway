@@ -44,7 +44,7 @@ DEPS = $(patsubst %.c, ${OBJ_DIR}/%.d, $(notdir ${SRC}))
 # -Xlinker编译时可重复查找依赖库，和库的次序无关
 # LIB_DIR = 
 
-XLINKER = -Xlinker "-(" -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -Xlinker "-)"
+XLINKER = -Xlinker "-(" -lsqlite3 -liniparser -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -lcjson -Xlinker "-)"
 
 
 export CC LIB_DIR CFLAGS OBJ_DIR INC_DIR DEPS

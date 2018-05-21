@@ -1,0 +1,60 @@
+/*
+ * =============================================================================
+ *
+ *       Filename:  ali_protoco.h
+ *
+ *    Description:  阿里相关json接口
+ *
+ *        Version:  virsion
+ *        Created:  2018-05-08 16:39:45 
+ *       Revision:  none
+ *
+ *         Author:  xubin
+ *        Company:  Taichuan
+ *
+ * =============================================================================
+ */
+#ifndef _ALI_PROTOOCL_H
+#define _ALI_PROTOOCL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif  /* __cplusplus */
+
+#include <stdint.h>
+#include "alink_export_subdev.h"
+
+#define NELEMENTS(array)  \
+	        (sizeof (array) / sizeof ((array) [0]))                       
+
+#define SET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"properties\":{\"%s\":{\"value\":\"%s\"}}}]}"
+#define GET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"group\":\"\",\"attrSet\":[\"%s\"]}]}"
+#define GET_PROPERTY_RESP_FMT           "{\"items\":[{\"uuid\":\"%s\",\"properties\":{\"%\":{\"value\":\"%s\"}}}]}"
+
+#define MAX_DEVICE_PARA 30   // 每个设备最参数个数
+
+	struct _DeviceStr;
+	typedef struct {
+		char *name; // 设备类型名称 如灯控为light,调试使用
+		uint32_t short_model;  // 设备标识码，由阿里注册产品后生成
+		const char *secret;  // 设备密钥，由阿里注册产品后生成
+		uint8_t proto_type; // 设备协议类型
+		char *attr[MAX_DEVICE_PARA];  // 不同设备自身的参数
+
+		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]);
+		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value);
+		int (*execCmd)(struct _DeviceStr *dev, const char *cmd_name, const char *cmd_args);
+		int (*remove)(struct _DeviceStr *dev);
+	}DeviceTypePara;
+
+	typedef struct _DeviceStr {
+		char id[32];
+		char *value[MAX_DEVICE_PARA];
+		DeviceTypePara *type_para;
+	}DeviceStr;
+
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
+
+#endif

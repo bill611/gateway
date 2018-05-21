@@ -29,8 +29,8 @@ extern "C" {
 	   	Router 
 	};
 
-#define ZIGBEE_DEVICE_TYPE  Router
-// #define ZIGBEE_DEVICE_TYPE  Coordinator
+// #define ZIGBEE_DEVICE_TYPE  Router
+#define ZIGBEE_DEVICE_TYPE  Coordinator
 
 	typedef enum
 	{

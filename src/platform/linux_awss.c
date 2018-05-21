@@ -511,8 +511,7 @@ int platform_wifi_get_ap_info(
             char passwd[PLATFORM_MAX_PASSWD_LEN],
     uint8_t bssid[ETH_ALEN])
 {
-	printf("app----------------->[%s]\n", __FUNCTION__);
-	printf("[%s]ssid:%s,password:%s,bssid:%s\n", 
+	printf("app----------------->[%s]ssid:%s,password:%s,bssid:%s\n", 
 			__FUNCTION__,ssid,passwd,bssid);
 	if (ssid)
 		memcpy(ssid,tc_wifi_config.ap_ssid,PLATFORM_MAX_SSID_LEN);
@@ -574,7 +573,7 @@ int platform_wifi_enable_mgnt_frame_filter(
             _IN_OPT_ uint8_t vendor_oui[3],
             _IN_ platform_wifi_mgnt_frame_cb_t callback)
 {
-	printf("app----------------->[%s]\n", __FUNCTION__);
+	// printf("app----------------->[%s]\n", __FUNCTION__);
     return -2;
 }
 
