@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <pthread.h>
 
+#include "sqlHandle.h"
 #include "smart_home_pro.h"
 
 /* ---------------------------------------------------------------------------*
@@ -424,7 +425,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 	SMART_HOME_PRO *packet;
 	packet = (SMART_HOME_PRO *)buf;
 	uint8_t id[8],idCnt = 0;
-	znBoxDevInfo_TypeDef dev;
+	// znBoxDevInfo_TypeDef dev;
 	uint8_t i,j;
 	static uint8_t id_bak = 0;
 	static uint8_t cmd_bak = Cmd_Null;
@@ -466,7 +467,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				smarthomeAddNewDev(packet);
 				memset(&sendBuf,0,sizeof(sendBuf));
 				memset(&dev,0,sizeof(dev));
-				sendBuf.dstAddr = packet->zAddr;
+				sendBuf.dstAddr = packet->addr;
 				sendBuf.cnt = 1;
 				dev.devUnit = 0x3ff;
 				smarthomSinglePacket( &sendBuf, &dev,NetIn_Report_Res, 0);
@@ -511,7 +512,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			dev.status = packet->param[0];
 			EEPROM_WriteDeviceInfo(id[0],&dev);	//更新EEPROM中的状态
 			
-			smarthomeReceiveNeeded(packet->zAddr,packet->current_channel,Device_On_Res,id[0]);	//
+			smarthomeReceiveNeeded(packet->addr,packet->current_channel,Device_On_Res,id[0]);	//
 			
 			Linkage(id[0],1);	//1 《MINI网关通信协议》5 设备联动
 			break;
@@ -520,7 +521,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			dev.status = 0;
 			EEPROM_WriteDeviceInfo(id[0],&dev);	//更新EEPROM中的状态
 			
-			smarthomeReceiveNeeded(packet->zAddr,packet->current_channel,Device_Off_Res,id[0]);	//
+			smarthomeReceiveNeeded(packet->addr,packet->current_channel,Device_Off_Res,id[0]);	//
 			
 			Linkage(id[0],0);	//1 《MINI网关通信协议》5 设备联动
 			break;
