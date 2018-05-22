@@ -71,9 +71,10 @@ typedef enum
 }TC_CMD;
 
 
+#pragma pack(1)
 typedef struct 
 {
-	uint16_t zAddr;
+	uint16_t addr;
 	uint8_t channel;
 	uint8_t id;
 }zbDev_TypeDef;	//zigbee周边设备基本信息
@@ -90,11 +91,13 @@ typedef struct
 
 typedef struct 
 {
-	uint16_t zAddr;		//周边设备地址
+	uint16_t addr;		//周边设备地址
 	uint8_t channel;	//当前通道
 	uint8_t cmd;		//功能指令
 	uint16_t param;		//参数
 }MULTI_CTRL_TypeDef;	//群发控制协议单个设备结构
+#pragma pack()
+
 #define MULTI_PACKET_DEV_MAX	((ZIGBEE_UART_MAX-8)/(sizeof(MULTI_CTRL_TypeDef)))	//群控每包最大的设备个数
 
 typedef struct 

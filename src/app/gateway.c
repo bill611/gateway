@@ -18,6 +18,7 @@
  *                      include head files
  *----------------------------------------------------------------------------*/
 #include <stdio.h>
+#include "debug.h"
 #include "device_protocol.h"
 #include "alink_export_gateway.h"
 #include "alink_export_subdev.h"
@@ -55,10 +56,19 @@ typedef struct {
 	unsigned int cnt;
 	DeviceStr *dev[MAX_SUB_DEVICE_NUM];
 }SubDevice;
+
+typedef struct {
+	int device_type;	
+	DeviceStr* (*regist) (char *);
+}SubDeviceRegist;
+
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
 static SubDevice sub_device;
+static SubDeviceRegist device_regist[] = {
+	{DEVICE_TYPE_DK,registDeviceLight},
+};
 
 
 static char sound_alarm[2] = {'0', '\0'};
@@ -124,34 +134,48 @@ int register_gateway_attribute(void)
 
 }
 
-
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief register_sub_device 注册子设备
+ * @brief registerSubDevice 注册子设备
  *
- * @returns 
+ * @param id 子设备ID，即短地址字符串
+ * @param type 设备类型
+ * 
+ * @returns -1失败
  */
 /* ---------------------------------------------------------------------------*/
-int register_sub_device(void)
+int registerSubDevice(char *id,int type)
 {
     int ret = -1;
 	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		char rand[SUBDEV_RAND_BYTES] = {0};
-		char sign[17] = {0};
-		if (calc_subdev_signature(sub_device.dev[i]->type_para->secret, rand, sign, sizeof(sign)) == NULL) {
-			printf("[%s:%s]__get_device_signature fail\n",sub_device.dev[i]->id,sub_device.dev[i]->type_para->name);
-			continue;
-		}
-		ret = alink_subdev_register_device(sub_device.dev[i]->type_para->proto_type,
-				sub_device.dev[i]->id,
-				sub_device.dev[i]->type_para->short_model,
-				rand, sign);
-		if (ret != 0) 
-			printf("[%s]register sub device fail,id:%s",
-					sub_device.dev[i]->type_para->name,sub_device.dev[i]->id);
+	for (i=0; i<NELEMENTS(device_regist); i++) {
+		if (device_regist[i].device_type == type)	
+			break;
 	}
-
+	if (i == NELEMENTS(device_regist)) {
+		printf("unknow type:%d\n",type );
+		return -1;
+	}
+	sub_device.dev[sub_device.cnt] = device_regist[i].regist(id);
+	char rand[SUBDEV_RAND_BYTES] = {0};
+	char sign[17] = {0};
+	if (calc_subdev_signature(sub_device.dev[sub_device.cnt]->type_para->secret,
+			   	rand, sign, sizeof(sign)) == NULL) {
+		printf("[%s:%s]__get_device_signature fail\n",
+				sub_device.dev[sub_device.cnt]->id,
+				sub_device.dev[sub_device.cnt]->type_para->name);
+	}
+	ret = alink_subdev_register_device(
+			sub_device.dev[sub_device.cnt]->type_para->proto_type,
+			sub_device.dev[sub_device.cnt]->id,
+			sub_device.dev[sub_device.cnt]->type_para->short_model,
+			rand, sign);
+	if (ret != 0) 
+		printf("[%s]register sub device fail,id:%s\n",
+				sub_device.dev[sub_device.cnt]->type_para->name,
+				sub_device.dev[sub_device.cnt]->id);
+	else
+		sub_device.cnt++;
     return ret;
 }
 
@@ -233,6 +257,7 @@ static int removeDeviceCb(const char *devid)
 static int permitSubDeviceJoinCb(uint8_t duration)
 {
     printf("permitSubDeviceJoinCb, devid:%d\n",duration);
+	zigbeeNetIn();
 	return 0;
 }
 void deviceInit(void)
@@ -268,6 +293,4 @@ void deviceInit(void)
 	if (ret != 0) 
 		printf("register sub device type fail");
 
-	sub_device.dev[sub_device.cnt] = registDeviceLight("123456");
-	sub_device.cnt++;
 }

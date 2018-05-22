@@ -1,8 +1,49 @@
+/*
+ * =============================================================================
+ *
+ *       Filename:  sqlite.c
+ *
+ *    Description:  Êï∞ÊçÆÂ∫ìÊé•Âè£
+ *
+ *        Version:  virsion
+ *        Created:  2018-05-22 10:39:45
+ *       Revision:  none
+ *
+ *         Author:  xubin
+ *        Company:  Taichuan
+ *
+ * =============================================================================
+ */
+/* ---------------------------------------------------------------------------*
+ *                      include head files
+ *----------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "sqlite3.h"
 #include "sqlite.h"
+
+/* ---------------------------------------------------------------------------*
+ *                  extern variables declare
+ *----------------------------------------------------------------------------*/
+#define SQL_LOCK()   pthread_mutex_lock(&Query->sql_lock->mutex)
+#define SQL_UNLOCK() pthread_mutex_unlock(&Query->sql_lock->mutex)
+struct Sqlite_mutex {
+	pthread_mutex_t mutex;
+};
+
+/* ---------------------------------------------------------------------------*
+ *                  internal functions declare
+ *----------------------------------------------------------------------------*/
+
+/* ---------------------------------------------------------------------------*
+ *                        macro define
+ *----------------------------------------------------------------------------*/
+
+/* ---------------------------------------------------------------------------*
+ *                      variables define
+ *----------------------------------------------------------------------------*/
+
 //----------------------------------------------------------------------------
 char *strupper(char *pdst,const char *pstr,int Size);
 
@@ -28,7 +69,7 @@ static char * strncpytrim(char *pDest,const char *pSrc,int Size)
 	while(*pSrc && --i) {
 		*pDest++ = *pSrc++;
 	}
-	//»•≥˝Œ≤µºø’∏Ò
+	//ÂéªÈô§Â∞æÂØºÁ©∫Ê†º
 	while(pTmp!=pDest) {
 		if(*(--pDest)!=32) {
 			pDest++;
@@ -108,7 +149,7 @@ static void SQLite_Destroy(struct _TSqlite *This)
 	free(This);
 }
 //----------------------------------------------------------------------------
-//¥Úø™
+//ÊâìÂºÄ
 static BOOL SQLite_Open(struct _TSqlite *This)
 {
 	int i;
@@ -148,7 +189,7 @@ static BOOL SQLite_Open(struct _TSqlite *This)
 	return FALSE;
 }
 //----------------------------------------------------------------------------
-//÷¥––
+//ÊâßË°å
 static BOOL SQLite_ExecSQL(struct _TSqlite *This)
 {
 	if(This->Private->Active)
@@ -164,7 +205,7 @@ static BOOL SQLite_ExecSQL(struct _TSqlite *This)
 	return FALSE;
 }
 //----------------------------------------------------------------------------
-//πÿ±’
+//ÂÖ≥Èó≠
 static void SQLite_Close(struct _TSqlite *This)
 {
 	if(This->Private->Active) {
@@ -175,38 +216,38 @@ static void SQLite_Close(struct _TSqlite *This)
 	}
 }
 //----------------------------------------------------------------------------
-// ∑µªÿº«¬º ˝¡ø
+// ËøîÂõûËÆ∞ÂΩïÊï∞Èáè
 static int SQLite_RecordCount(struct _TSqlite *This)
 {
 	return This->Private->RecordCount;
 }
 //----------------------------------------------------------------------------
-// ∑µªÿ±Ì «∑Ò¥Úø™
+// ËøîÂõûË°®ÊòØÂê¶ÊâìÂºÄ
 static BOOL SQLite_Active(struct _TSqlite *This)
 {
 	return This->Private->Active;
 }
 //----------------------------------------------------------------------------
-// ∑µªÿ◊÷∂Œ ˝¡ø
+// ËøîÂõûÂ≠óÊÆµÊï∞Èáè
 static int SQLite_FieldCount(struct _TSqlite *This)
 {
 	return This->Private->FieldCount;
 }
 //----------------------------------------------------------------------------
-/* »°µ√◊Ó∫Û≤Â»Î”∞œÏµƒID. */
+/* ÂèñÂæóÊúÄÂêéÊèíÂÖ•ÂΩ±ÂìçÁöÑID. */
 static int SQLite_LastRowId(struct _TSqlite *This)
 {
 	return (int)sqlite3_last_insert_rowid(This->Private->db);
 }
 //----------------------------------------------------------------------------
-//Ã¯µΩº«¬º∫≈
+//Ë∑≥Âà∞ËÆ∞ÂΩïÂè∑
 static void SQLite_SetRecNo(struct _TSqlite *This,int RecNo)
 {
 	if(RecNo>0 && RecNo<=This->Private->RecordCount)
 		This->Private->RecNo = RecNo;
 }
 //----------------------------------------------------------------------------
-// ◊º«¬º
+//È¶ñËÆ∞ÂΩï
 static void SQLite_First(struct _TSqlite *This)
 {
 	if(This->Private->pData)
@@ -215,7 +256,7 @@ static void SQLite_First(struct _TSqlite *This)
 		This->Private->RecNo = 0;
 }
 //----------------------------------------------------------------------------
-//ƒ©º«¬º
+//Êú´ËÆ∞ÂΩï
 static void SQLite_Last(struct _TSqlite *This)
 {
 	if(This->Private->pData)
@@ -224,7 +265,7 @@ static void SQLite_Last(struct _TSqlite *This)
 		This->Private->RecNo = 0;
 }
 //----------------------------------------------------------------------------
-//…œ“ªº«¬º
+//‰∏ä‰∏ÄËÆ∞ÂΩï
 static void SQLite_Prior(struct _TSqlite *This)
 {
 	if(This->Private->pData) {
@@ -233,7 +274,7 @@ static void SQLite_Prior(struct _TSqlite *This)
 	}
 }
 //----------------------------------------------------------------------------
-//œ¬“ªº«¬º
+//‰∏ã‰∏ÄËÆ∞ÂΩï
 static void SQLite_Next(struct _TSqlite *This)
 {
 	if(This->Private->pData) {
@@ -242,13 +283,13 @@ static void SQLite_Next(struct _TSqlite *This)
 	}
 }
 //----------------------------------------------------------------------------
-//∑µªÿº«¬º∫≈
+//ËøîÂõûËÆ∞ÂΩïÂè∑
 static int SQLite_RecNo(struct _TSqlite *This)
 {
 	return This->Private->RecNo;
 }
 //----------------------------------------------------------------------------
-//∑µªÿ◊÷∂Œ
+//ËøîÂõûÂ≠óÊÆµ
 static PSQLiteField SQLite_FieldByName(struct _TSqlite *This,char *Name)
 {
 	int i;
@@ -264,7 +305,7 @@ static PSQLiteField SQLite_FieldByName(struct _TSqlite *This,char *Name)
 	return NULL;
 }
 //----------------------------------------------------------------------------
-//»°SQL√¸¡Ó––
+//ÂèñSQLÂëΩ‰ª§Ë°å
 static int SQLite_GetSQLText(struct _TSqlite *This,char *pBuf,int Size)
 {
 	if(!This->Private->SqlText)
@@ -273,7 +314,7 @@ static int SQLite_GetSQLText(struct _TSqlite *This,char *pBuf,int Size)
 	return TRUE;
 }
 //----------------------------------------------------------------------------
-//…Ë÷√SQL√¸¡Ó––
+//ËÆæÁΩÆSQLÂëΩ‰ª§Ë°å
 static void SQLite_SetSQLText(struct _TSqlite *This,char *SqlCmd)
 {
 	int TextLen = strlen(SqlCmd)+1;
@@ -319,7 +360,9 @@ TSqlite * CreateLocalQuery(const char *FileName)
     TSqlite * This = (TSqlite *)malloc(sizeof(TSqlite));
     memset(This,0,sizeof(TSqlite));
     This->Private = (struct SqlitePrivate*)malloc(sizeof(struct SqlitePrivate));
+	This->sql_lock = (struct Sqlite_mutex *)malloc(sizeof(struct Sqlite_mutex));
     memset(This->Private,0,sizeof(struct SqlitePrivate));
+    pthread_mutex_init(&This->sql_lock->mutex, NULL);
 
 	ret = sqlite3_open(FileName, &This->Private->db);
 	if(ret!=SQLITE_OK) {
@@ -328,6 +371,7 @@ TSqlite * CreateLocalQuery(const char *FileName)
 		return NULL;
 	}
 
+	This->file_name = FileName;
 	This->Destroy = SQLite_Destroy;
     This->Open = SQLite_Open;
     This->ExecSQL  = SQLite_ExecSQL;
@@ -357,16 +401,22 @@ TSqlite * CreateLocalQuery(const char *FileName)
 //----------------------------------------------------------------------------
 BOOL LocalQueryOpen(TSqlite *Query,char *SqlStr)
 {
+	SQL_LOCK();
     Query->Close(Query);
     Query->SetSQLText(Query,SqlStr);
-    return Query->Open(Query);
+	BOOL ret = 	Query->Open(Query);
+	SQL_UNLOCK();
+    return ret;
 }
 //----------------------------------------------------------------------------
 BOOL LocalQueryExec(TSqlite *Query,char *SqlStr)
 {
+	SQL_LOCK();
     Query->Close(Query);
     Query->SetSQLText(Query,SqlStr);
-    return Query->ExecSQL(Query);
+	BOOL ret = Query->ExecSQL(Query);
+	SQL_UNLOCK();
+    return ret;
 }
 //----------------------------------------------------------------------------
 char* LocalQueryOfChar(TSqlite *Query,char *FieldName,char *cBuf,int Size)
@@ -403,4 +453,29 @@ double LocalQueryOfFloat(TSqlite *Query,char *FieldName)
 
     return Field->AsFloat(Field);
 }
-//----------------------------------------------------------------------------
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief sqlLoad Âä†ËΩΩÊï∞ÊçÆÂ∫ìÊñá‰ª∂Âπ∂Âà§Êñ≠ÊòØÂê¶ÊàêÂäüÔºåËã•‰∏çÊàêÂäüÂàôÊÅ¢Â§çÂ§á‰ªΩÊñá‰ª∂ÔºåÈáçÊñ∞Âä†ËΩΩ
+ *
+ * @param sql Êï∞ÊçÆÂ∫ìÊñá‰ª∂
+ * @param file Êï∞ÊçÆÂ∫ìÊñá‰ª∂Âêç
+ */
+/* ---------------------------------------------------------------------------*/
+void LocalQueryLoad(TSqliteData *sql)
+{
+	sql->sql = CreateLocalQuery(sql->file_name);
+	if (sql->sql) {
+		printf("Open %s successfully\n",sql->file_name);
+	} else {
+		printf("Err:%s open failed\n",sql->file_name);
+		// char file_bak[32];
+		// sprintf(file_bak,"%s_bak",sql->file_name);
+		// if (fileexists(file_bak) == 1) {
+			// recoverData(sql->file_name,0);
+			// sql->sql = CreateLocalQuery(sql->file_name);
+		// }
+	}
+}
+
+

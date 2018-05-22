@@ -7,43 +7,46 @@
     #define BOOL int
 #endif
 //----------------------------------------------------------------------------
-struct SqlitePrivate;        //Ë½ÓĞÊı¾İ
+struct SqlitePrivate;        //ç§æœ‰æ•°æ®
 
 typedef struct _TSQLiteField
 {
 	struct SqlitePrivate *Private;
-	char Name[16];														//×Ö¶ÎÃû
-	int offset;															//µÚ¼¸¸ö×Ö¶Î
-    char * (*AsChar)(struct _TSQLiteField *This,char *Buf,int Size);    //×÷Îª×Ö¶ÎĞÍ¶ÁÈ¡
-    int (*AsInt)(struct _TSQLiteField *This);                           //×÷ÎªÕûĞÍ¶ÁÈ¡
-    double (*AsFloat)(struct _TSQLiteField *This);                      //×÷Îª¸¡µãĞÍ¶ÁÈ¡
+	char Name[16];														//å­—æ®µå
+	int offset;															//ç¬¬å‡ ä¸ªå­—æ®µ
+    char * (*AsChar)(struct _TSQLiteField *This,char *Buf,int Size);    //ä½œä¸ºå­—æ®µå‹è¯»å–
+    int (*AsInt)(struct _TSQLiteField *This);                           //ä½œä¸ºæ•´å‹è¯»å–
+    double (*AsFloat)(struct _TSQLiteField *This);                      //ä½œä¸ºæµ®ç‚¹å‹è¯»å–
 } TSQLiteField,*PSQLiteField;
 //----------------------------------------------------------------------------
 
+struct Sqlite_mutex; 
 typedef struct _TSqlite
 {
     struct SqlitePrivate * Private;
 	PSQLiteField Fields;
     char ServerIP[16];
     int ServerPort;
+	const char *file_name;
+	struct Sqlite_mutex *sql_lock;
 
-    void (*Destroy)(struct _TSqlite *This);        //Ïú»Ù
-    BOOL (*Open)(struct _TSqlite *This);            //´ò¿ª
-    BOOL (*ExecSQL)(struct _TSqlite *This);         //Ö´ĞĞ
-    void (*Close)(struct _TSqlite *This);           //¹Ø±Õ
-    void (*First)(struct _TSqlite *This);          //Ê×¼ÇÂ¼
-    void (*Last)(struct _TSqlite *This);           //Ä©¼ÇÂ¼
-    void (*Prior)(struct _TSqlite *This);          //ÉÏÒ»¼ÇÂ¼
-    void (*Next)(struct _TSqlite *This);           //ÏÂÒ»¼ÇÂ¼
-    void (*SetRecNo)(struct _TSqlite *This,int RecNo);       //Ìøµ½¼ÇÂ¼ºÅ
-    int (*RecNo)(struct _TSqlite *This);          //·µ»Ø¼ÇÂ¼ºÅ
-    PSQLiteField (*FieldByName)(struct _TSqlite *This,char *Name);       //·µ»Ø×Ö¶Î
-    int (*GetSQLText)(struct _TSqlite *This,char *pBuf,int Size);  //È¡SQLÃüÁîĞĞ
-    void (*SetSQLText)(struct _TSqlite *This,char *SqlCmd);        //ÉèÖÃSQLÃüÁîĞĞ
-	BOOL (*Active)(struct _TSqlite *This);							//ÊÇ·ñ´ò¿ª±í
-    int (*RecordCount)(struct _TSqlite *This);						//¶ÁĞĞÊı
-    int (*FieldCount)(struct _TSqlite *This);						//×Ö¶ÎÊı
-	int (*LastRowId)(struct _TSqlite *This);						//È¡µÃ×îºó²åÈëÓ°ÏìµÄID
+    void (*Destroy)(struct _TSqlite *This);        //é”€æ¯
+    BOOL (*Open)(struct _TSqlite *This);            //æ‰“å¼€
+    BOOL (*ExecSQL)(struct _TSqlite *This);         //æ‰§è¡Œ
+    void (*Close)(struct _TSqlite *This);           //å…³é—­
+    void (*First)(struct _TSqlite *This);          //é¦–è®°å½•
+    void (*Last)(struct _TSqlite *This);           //æœ«è®°å½•
+    void (*Prior)(struct _TSqlite *This);          //ä¸Šä¸€è®°å½•
+    void (*Next)(struct _TSqlite *This);           //ä¸‹ä¸€è®°å½•
+    void (*SetRecNo)(struct _TSqlite *This,int RecNo);       //è·³åˆ°è®°å½•å·
+    int (*RecNo)(struct _TSqlite *This);          //è¿”å›è®°å½•å·
+    PSQLiteField (*FieldByName)(struct _TSqlite *This,char *Name);       //è¿”å›å­—æ®µ
+    int (*GetSQLText)(struct _TSqlite *This,char *pBuf,int Size);  //å–SQLå‘½ä»¤è¡Œ
+    void (*SetSQLText)(struct _TSqlite *This,char *SqlCmd);        //è®¾ç½®SQLå‘½ä»¤è¡Œ
+	BOOL (*Active)(struct _TSqlite *This);							//æ˜¯å¦æ‰“å¼€è¡¨
+    int (*RecordCount)(struct _TSqlite *This);						//è¯»è¡Œæ•°
+    int (*FieldCount)(struct _TSqlite *This);						//å­—æ®µæ•°
+	int (*LastRowId)(struct _TSqlite *This);						//å–å¾—æœ€åæ’å…¥å½±å“çš„ID
 
     void (*prepare)(struct _TSqlite *This,char *SqlCmd);
     void (*reset)(struct _TSqlite *This);
@@ -53,7 +56,14 @@ typedef struct _TSqlite
     void (*bind_text)(struct _TSqlite *This,char *text);
 } TSqlite;
 
+typedef struct _TSqliteData {      
+    const char *file_name;         
+    TSqlite *sql;                  
+    int (*checkFunc)(TSqlite *sql);
+}TSqliteData;                      
+
 TSqlite * CreateLocalQuery(const char *FileName);
+void LocalQueryLoad(TSqliteData *sql);
 
 BOOL LocalQueryOpen(TSqlite *Query,char *SqlStr);
 BOOL LocalQueryExec(TSqlite *Query,char *SqlStr);

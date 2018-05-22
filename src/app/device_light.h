@@ -22,8 +22,8 @@ extern "C" {
 #endif  /* __cplusplus */
 
 #include "device_protocol.h"
+#include "smart_home_pro.h"
 
-	// extern DeviceStr light;
 	extern DeviceStr * registDeviceLight(char *id);
 
 #ifdef __cplusplus

@@ -308,10 +308,12 @@ unsigned char zigbeeSendData(uint16_t dst_addr, uint8_t* data, uint16_t len)
 	unsigned char tx_buf[80];
 
 	tx_buf[0] = 0xfa;	//起始符
-	*(unsigned int *)&tx_buf[1] = dst_addr;	//本数据包的目标地址
+	tx_buf[1] = dst_addr & 0xff;	//本数据包的目标地址
+	tx_buf[2] = dst_addr >> 8;	//本数据包的目标地址
 	tx_buf[3] = len;
 	memcpy(&tx_buf[4], data, len);
 	tx_buf[len + 4] = 0xf5;
+
 	if (uart)
 		uart->send(uart,tx_buf, 5 + len);
 	return 1;
@@ -401,6 +403,31 @@ void getNetChannel(void)
 
 /* ---------------------------------------------------------------------------*/
 /**
+ * @brief zigbeeNetIn 允许设备入网(协调器)
+ */
+/* ---------------------------------------------------------------------------*/
+void zigbeeNetIn(void)
+{
+	setSendCmd(SET_NETIN_ENABLE, 0xfe);
+}
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief zigbeeOutNet 设备退网(路由器)
+ */
+/* ---------------------------------------------------------------------------*/
+void zigbeeOutNet(void)
+{
+	setSendCmd(RESUME_FACTORY_SETTINGS, 0);
+	zigbeeClearNetAddr();//收数据不在处理，直到再次入网
+}
+
+void zigbeeSetDataRecvFunc(int (*func)(char*,int))
+{
+	zigbeeDataRcv = func;
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
  * @brief zigbeeModuleTask zigbee定时查询
  *
  * @param arg
@@ -425,30 +452,6 @@ static void *zigbeeModuleTask(void *arg)
 	pthread_exit(NULL);
 }
 
-/* ---------------------------------------------------------------------------*/
-/**
- * @brief zigbeeNetIn 允许设备入网(协调器)
- */
-/* ---------------------------------------------------------------------------*/
-void zigbeeNetIn(void)
-{
-	setSendCmd(GET_CHANNEL, 0xfe);
-}
-/* ---------------------------------------------------------------------------*/
-/**
- * @brief zigbeeOutNet 设备退网(路由器)
- */
-/* ---------------------------------------------------------------------------*/
-void zigbeeOutNet(void)
-{
-	setSendCmd(RESUME_FACTORY_SETTINGS, 0);
-	zigbeeClearNetAddr();//收数据不在处理，直到再次入网
-}
-
-void zigbeeSetDataRecvFunc(int (*func)(char*,int))
-{
-	zigbeeDataRcv = func;
-}
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief zigbeeInit 串口与zigbee通信模块初始化
