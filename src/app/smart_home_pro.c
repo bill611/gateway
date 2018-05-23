@@ -37,6 +37,13 @@
 /* ---------------------------------------------------------------------------*
  *                        macro define
  *----------------------------------------------------------------------------*/
+#define VAILDTIME 	(200)				//200ms
+typedef struct _PacketsID {
+	uint16_t addr;  //短地址
+	uint16_t current_channel; // 当前控制通道
+	uint8_t cmd; // 当前控制通道
+	uint64_t dwTick;		//时间
+}PacketsID;
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -48,6 +55,8 @@
 // sendBuf_TypeDef zbSend;
 // extern ipAddr_TypeDef phoneIP;
 
+static PacketsID packets_id[10];
+static int packet_pos;
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief smarthomeSendDataPacket 单控命令封包
@@ -205,7 +214,15 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf)
 {
 	static char id[32];
-	sprintf(id,"%08x",cmdBuf->addr);
+	sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
+			cmdBuf->param[0],
+			cmdBuf->param[1],
+			cmdBuf->param[2],
+			cmdBuf->param[3],
+			cmdBuf->param[4],
+			cmdBuf->param[5],
+			cmdBuf->param[6],
+			cmdBuf->param[7]);
 	sqlInsertDevice(id,
 			cmdBuf->device_type,
 			cmdBuf->addr,
@@ -213,6 +230,41 @@ static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf)
 	return id;
 }
 
+static int smarthomeCmdFilter(SMART_HOME_PRO *data)
+{
+	int i;
+	uint64_t dwTick;
+	if (data == NULL) {
+		return 0;
+	}
+    //判断包是否重发
+    dwTick = GetMs();
+    for(i=0;i<10;i++) {
+        if (data->addr == packets_id[i].addr
+                 && data->current_channel == packets_id[i].current_channel
+				 && data->cmd == packets_id[i].cmd
+				 && (getDiffSysTick(dwTick,packets_id[i].dwTick) < VAILDTIME)){
+            // saveLog("Packet ID %d is already receive,diff:%d!\n",
+                    // packets_id[i].id,getDiffSysTick(dwTick,packets_id[i].dwTick));
+            return 0;
+        }
+    }
+
+	//保存ID
+    packets_id[packet_pos].addr = data->addr;
+	packets_id[packet_pos].cmd = data->cmd;
+	packets_id[packet_pos].current_channel = data->current_channel;
+	packets_id[packet_pos++].dwTick = dwTick;
+	packet_pos %= 10;
+    return 1;
+}
+
+static char * smarthomeGetId(SMART_HOME_PRO *cmdBuf)
+{
+	static char id[32];
+	sqlGetDeviceId(cmdBuf->addr,id);
+	return id;
+}
 /*********************************************************************************************************
 ** Descriptions:       协议解析
 ** input parameters:   id 为设备的序列号， param 命令参数，dAddr  tAddr TAG 为网络控制时用，
@@ -221,49 +273,12 @@ static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf)
 *********************************************************************************************************/
 static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 {
-	zbDev_TypeDef addrBuf[MAX_REGIST_DEVICE];
-	SMART_HOME_PRO *packet;
-	packet = (SMART_HOME_PRO *)buf;
-	uint8_t id[8],idCnt = 0;
-	// znBoxDevInfo_TypeDef dev;
-	uint8_t i,j;
-	static uint8_t id_bak = 0;
-	static uint8_t cmd_bak = Cmd_Null;
-	
-	// EEPROM_GetZbAddr((uint8_t *)addrBuf);	//读出所有设备的地址及通道信息
-	//先根据短地址和通道找出对应的ID
-	memset(id,0,sizeof(id));
-
-#if 1
-	if( ((packet->current_channel == 0xff) || (packet->current_channel == 0)) 
-			&& (packet->cmd != NetIn_Report) )	//此指令为所有通道操作
+	SMART_HOME_PRO *packet = (SMART_HOME_PRO *)buf;
+    if (smarthomeCmdFilter(packet) == 0)
+        return;
+	switch (packet->cmd)
 	{
-		for (j=0; j<packet->channel_num; j++)
-		{
-			for (i=2; i<MAX_REGIST_DEVICE; i++)	//id 1被本身插座占用
-			{
-				if( (addrBuf[i].addr == packet->addr) && (addrBuf[i].channel == packet->param[j*2+1]) )
-				{
-					id[idCnt] = addrBuf[i].id;
-					idCnt++;
-					break;
-				}
-			}
-		}
-	}
-	else
-	{
-		for (i=2; i<MAX_REGIST_DEVICE; i++)	//id 1被本身插座占用
-		{
-			if( (addrBuf[i].addr == packet->addr) && (addrBuf[i].channel == packet->current_channel) )
-			{
-				id[0] = addrBuf[i].id;
-				break;
-			}
-		}		
-		if (i >= MAX_REGIST_DEVICE)	//设备列表中没有找到此设备
-		{
-			if(packet->cmd == NetIn_Report)	//此设备要入网？
+		case NetIn_Report:
 			{
 				char *id = smarthomeAddNewDev(packet);
 				smarthomeSendDataPacket(
@@ -278,26 +293,15 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						packet->channel_num,
 						packet->current_channel,
 						NULL,0);
-				registerSubDevice(id,packet->device_type);
+				gwRegisterSubDevice(id,packet->device_type);
 			}
-			return;	//找不到对应的设备
-		}
-	}
-#endif	
-	if((cmd_bak == packet->cmd)&&(id_bak == id[0])&&(packet->cmd != Demand_Sw_Status_Res))
-		return;
-	else
-	{
-		cmd_bak = packet->cmd;
-		id_bak = id[0];
-	}
-	// EEPROM_GetDeviceInfo(id[0], &dev);
-	switch (packet->cmd)
-	{
+			break;
 		case NetOut_Report_Res:	//有设备要退网
+			printf("out\n");
 			break;	
 			
 		case Demand_Sw_Status_Res:	//开关状态返回
+			printf("status\n");
 			// for (i=0; i<idCnt; i++)
 			// {
 				// if(packet->param[i*2] > 100)
@@ -309,23 +313,13 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			break;
 		
 		case Device_On_Res:		//设备开
-			// if(packet->param[0] > 100)
-				// packet->param[0] = 100;
-			// dev.status = packet->param[0];
-			// EEPROM_WriteDeviceInfo(id[0],&dev);	//更新EEPROM中的状态
-			
-			// smarthomeReceiveNeeded(packet->addr,packet->current_channel,Device_On_Res,id[0]);	//
-			
-			// Linkage(id[0],1);	//1 《MINI网关通信协议》5 设备联动
+			printf("on\n");
+			gwReportPowerOn(smarthomeGetId(packet),packet->param);
 			break;
 			
 		case Device_Off_Res:	//设备关
-			// dev.status = 0;
-			// EEPROM_WriteDeviceInfo(id[0],&dev);	//更新EEPROM中的状态
-			
-			// smarthomeReceiveNeeded(packet->addr,packet->current_channel,Device_Off_Res,id[0]);	//
-			
-			// Linkage(id[0],0);	//1 《MINI网关通信协议》5 设备联动
+			printf("off\n");
+			gwReportPowerOff(smarthomeGetId(packet));
 			break;
 		
 		case Device_Scene:		//情景控制
@@ -362,5 +356,26 @@ void smarthomeInit(void)
     pthread_create(&task, &attr, smarthomeThread, NULL);        
 }                                                               
 
+void smarthomeLightCmdCtrOpen(uint16_t addr,uint16_t channel_num,uint16_t channel)
+{
+	uint8_t param[2] = {0xff,0};
+	smarthomeSendDataPacket(addr,Device_On,channel_num,channel,param,sizeof(param));
+}
 
+void smarthomeLightCmdCtrClose(uint16_t addr,uint16_t channel_num,uint16_t channel)
+{
+	smarthomeSendDataPacket(addr,Device_Off,channel_num,channel,NULL,0);
+}
 
+void smarthomeFreshAirCmdCtrOpen(uint16_t addr,uint8_t value)
+{
+	uint8_t param[2] = {0};
+	param[0] = value;
+	printf("value :%d,test:%d\n", param[0],value);
+	smarthomeSendDataPacket(addr,Device_On,1,0,param,sizeof(param));
+}
+
+void smarthomeFreshAirCmdCtrClose(uint16_t addr)
+{
+	smarthomeSendDataPacket(addr,Device_Off,1,0,NULL,0);
+}

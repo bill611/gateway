@@ -26,6 +26,7 @@
 #include "iwlib.h"		/* Header */
 
 #include "device_light.h"
+#include "device_fresh_air.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -59,7 +60,7 @@ typedef struct {
 
 typedef struct {
 	int device_type;	
-	DeviceStr* (*regist) (char *);
+	DeviceStr* (*regist) (char *,uint16_t,uint16_t);
 }SubDeviceRegist;
 
 /* ---------------------------------------------------------------------------*
@@ -68,6 +69,7 @@ typedef struct {
 static SubDevice sub_device;
 static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,registDeviceLight},
+	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
 };
 
 
@@ -88,7 +90,7 @@ static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int
 
     return 0;
 }
-int register_gateway_service(void)
+int gwRegisterGatewayService(void)
 {
     //register service
     int ret = alink_register_service(GW_SERVICE_FACTORY_RESET, __factory_reset_service_cb);
@@ -121,7 +123,7 @@ static int __sound_alarm_attr_set_cb(char *value)
 }
 
 
-int register_gateway_attribute(void)
+int gwRegisterGatewayAttribute(void)
 {
     int ret = alink_register_attribute(GW_ATTR_ARM_ENTRY_DELAY,
 		   	__sound_alarm_attr_get_cb, __sound_alarm_attr_set_cb);
@@ -144,7 +146,7 @@ int register_gateway_attribute(void)
  * @returns -1失败
  */
 /* ---------------------------------------------------------------------------*/
-int registerSubDevice(char *id,int type)
+int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 {
     int ret = -1;
 	unsigned int i;
@@ -153,10 +155,10 @@ int registerSubDevice(char *id,int type)
 			break;
 	}
 	if (i == NELEMENTS(device_regist)) {
-		printf("unknow type:%d\n",type );
+		printf("unknow device type:%d\n",type );
 		return -1;
 	}
-	sub_device.dev[sub_device.cnt] = device_regist[i].regist(id);
+	sub_device.dev[sub_device.cnt] = device_regist[i].regist(id,addr,channel);
 	char rand[SUBDEV_RAND_BYTES] = {0};
 	char sign[17] = {0};
 	if (calc_subdev_signature(sub_device.dev[sub_device.cnt]->type_para->secret,
@@ -179,7 +181,7 @@ int registerSubDevice(char *id,int type)
     return ret;
 }
 
-int device_private_property_test(void)
+int gwDevicePrivatePropertyTest(void)
 {
     int ret = -1;
     char req_params[256] = {0};
@@ -256,11 +258,11 @@ static int removeDeviceCb(const char *devid)
 
 static int permitSubDeviceJoinCb(uint8_t duration)
 {
-    printf("permitSubDeviceJoinCb, devid:%d\n",duration);
+    printf("permitSubDeviceJoinCb, duration:%d\n",duration);
 	zigbeeNetIn();
 	return 0;
 }
-void deviceInit(void)
+void gwDeviceInit(void)
 {
     int ret = -1;
 	proto_info_t proto_info;
@@ -294,3 +296,43 @@ void deviceInit(void)
 		printf("register sub device type fail");
 
 }
+
+void gwLoadDeviceData(void)
+{
+	int i;
+	int device_num = sqlGetDeviceStart();
+	char id[32];
+	int type;
+	uint16_t addr,channel;
+	for (i=0; i<device_num; i++) {
+		sqlGetDevice(id,&type,&addr,&channel);	
+		gwRegisterSubDevice(id,type,addr,channel);
+	}
+	sqlGetDeviceEnd();
+}
+
+static DeviceStr *getSubDevice(char *id)
+{
+	unsigned int i;
+	for (i=0; i<sub_device.cnt; i++) {
+		if (strcmp(sub_device.dev[i]->id,id) == 0) {
+			break;	
+		}
+	}	
+	return sub_device.dev[i];
+}
+
+void gwReportPowerOn(char *id,char *param)
+{
+	DeviceStr * dev = getSubDevice(id);
+	if (dev->type_para->reportPowerOn)
+		dev->type_para->reportPowerOn(dev,param);
+}
+
+void gwReportPowerOff(char *id)
+{
+	DeviceStr * dev = getSubDevice(id);
+	if (dev->type_para->reportPowerOff)
+		dev->type_para->reportPowerOff(dev);
+}
+

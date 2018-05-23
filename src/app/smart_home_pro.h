@@ -112,14 +112,8 @@ typedef struct
 
 void SHP_Timer(void);
 
-// void SHP_CtrlDevice(uint32_t id,uint32_t param,uint32_t TAG,ipAddr_TypeDef *dAddr,ipAddr_TypeDef *tAddr);
-
-// void SHP_CtrlMulti(multi_log_TypeDef *multi, uint8_t devNum);
-// void SHP_Parser(uint8_t *buf, uint8_t len);
-
-// void SHP_ZbSending(void);
-// void SHP_SendCmdFromQueue(void);
-
-// uint32_t SHP_DelDev(uint32_t devUnit);
-
+void smarthomeLightCmdCtrOpen(uint16_t addr,uint16_t channel_num,uint16_t channel);
+void smarthomeLightCmdCtrClose(uint16_t addr,uint16_t channel_num,uint16_t channel);
+void smarthomeFreshAirCmdCtrOpen(uint16_t addr,uint8_t value);
+void smarthomeFreshAirCmdCtrClose(uint16_t addr);
 #endif

@@ -1,7 +1,7 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_light.c
+ *       Filename:  device_fresh_air.c
  *
  *    Description:  灯控设备 
  *
@@ -21,8 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cJSON.h"
-#include "device_light.h"
+#include "device_fresh_air.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -36,6 +35,11 @@
  *                        macro define
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
+enum {
+	ATTR_ERROR,
+	ATTR_SWICH,
+	ATTR_SPEED,
+};
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -47,10 +51,6 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
     while (attr_set[i++]) {
         printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
     }
-	// const char *attr_name["a","b",NULL];
-	// const char *attr_value["1","2",NULL];
-			// alink_subdev_report_attrs(dev->type_para->proto_type,
-					// dev->id, attr_name,attr_value);
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
 			const char *attr_name[2] = {NULL};
@@ -63,28 +63,6 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 		}
 	}
 
-
-	// cJSON *root,*par,*par1;
-	// char uuid[33] = {0};
-	// int ret = -1;
-	// char req_params[256] = {0};
-	// ret = alink_subdev_get_uuid(light.proto_type,light.dev[0].id,uuid, sizeof(uuid));//or alink_subdev_get_uuid
-	// if (ret != 0)
-		// return ret;
-	// root = cJSON_CreateObject();
-	// // cJSON_AddItemToObject(root, "items", par=cJSON_CreateArray());
-	// cJSON_AddStringToObject(root, "uuid", uuid);
-	// cJSON_AddItemToObject(root, "Luminance", par1=cJSON_CreateObject());
-	// cJSON_AddStringToObject(par1, "value", "50");
-	// // cJSON_AddStringToObject(par1, "Luminance", "50");
-	// char *out = cJSON_PrintUnformatted(root);
-	// cJSON_Delete(root);
-	// // snprintf(req_params, sizeof(req_params) - 1, SET_PROPERTY_REQ_FMT, uuid, "Luminance", "50");
-	// ret = alink_report("postDeviceData", out);
-	// printf("req_params:%s\n", out);
-	// if (ret != 0)
-		// printf("report msg fail, params: %s\n", out);
-	// free(out);
 
     return 0;
 }
@@ -129,37 +107,90 @@ static int removeDeviceCb(DeviceStr *dev)
 static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
-	if (value_int)
-		smarthomeLightCmdCtrOpen(dev->addr,dev->channel,0);
-	else
-		smarthomeLightCmdCtrClose(dev->addr,dev->channel,0);
+	sprintf(dev->value[ATTR_SWICH],"%s",value);
+	if (value_int) {
+		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
+		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
+			speed -= 1;
+		smarthomeFreshAirCmdCtrOpen(dev->addr,speed);
+	} else
+		smarthomeFreshAirCmdCtrClose(dev->addr);
 }
 
-static DeviceTypePara light = {
-	.name = "light",
-	.short_model = 0x00092316,
-	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
+static void cmdWindSpeed(DeviceStr *dev,char *value)
+{
+	int value_int = atoi(value);
+	sprintf(dev->value[ATTR_SPEED],"%s",value);
+	if (value_int) {
+		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
+		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
+			speed -=1;
+		smarthomeFreshAirCmdCtrOpen(dev->addr,speed);
+	}
+}
+
+static void reportPowerOnCb(DeviceStr *dev,char *param)
+{
+	// 固定为开
+	sprintf(dev->value[ATTR_SWICH],"1");
+	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
+	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1); 
+	char *attr_name[3] = {
+		dev->type_para->attr[ATTR_SWICH].name,
+		dev->type_para->attr[ATTR_SPEED].name,
+		NULL};
+	char *attr_value[3] = {
+		dev->value[ATTR_SWICH],
+		dev->value[ATTR_SPEED],
+		NULL};
+	alink_subdev_report_attrs(dev->type_para->proto_type,
+			dev->id, attr_name,attr_value);
+}
+
+static void reportPowerOffCb(DeviceStr *dev)
+{
+	sprintf(dev->value[ATTR_SWICH],"0");
+	char *attr_name[2] = {
+		dev->type_para->attr[ATTR_SWICH].name,
+		NULL};
+	char *attr_value[2] = {
+		dev->value[ATTR_SWICH],
+		NULL};
+	alink_subdev_report_attrs(dev->type_para->proto_type,
+			dev->id, attr_name,attr_value);
+}
+
+static DeviceTypePara fresh_air = {
+	.name = "fresh_air",
+	.short_model = 0x002824cd,
+	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
 	.proto_type = PROTO_TYPE_ZIGBEE,
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
-		{"Luminance",NULL},
+		{"WindSpeed",cmdWindSpeed},
+		{"CurrentTemperature",NULL},
+		{"CurrentHumidity",NULL},
+		{"TVOC",NULL},
+		{"PM25",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.execCmd = execCmdCb,
 	.remove = removeDeviceCb,
+	.reportPowerOn = reportPowerOnCb,
+	.reportPowerOff = reportPowerOffCb,
 };
 
 
-DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &light;
+	This->type_para = &fresh_air;
 	This->addr = addr;
 	This->channel = channel;
 	// 初始化属性

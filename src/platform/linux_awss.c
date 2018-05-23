@@ -315,10 +315,12 @@ void platform_awss_close_monitor(void)
 
 static int sys_net_is_ready = 0;
 
+// xb20180523 todo  增加网络在线监测
 int platform_sys_net_is_ready(void)
 {
-	printf("app----------------->[%s],%d\n", __FUNCTION__,sys_net_is_ready);
-    return sys_net_is_ready;
+	// printf("app----------------->[%s],%d\n", __FUNCTION__,sys_net_is_ready);
+	return 1;
+    // return sys_net_is_ready;
 }
 
 static TcWifiScan ap_info[100] ;

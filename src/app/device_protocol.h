@@ -39,16 +39,23 @@ extern "C" {
 		uint32_t short_model;  // 设备标识码，由阿里注册产品后生成
 		const char *secret;  // 设备密钥，由阿里注册产品后生成
 		uint8_t proto_type; // 设备协议类型
-		char *attr[MAX_DEVICE_PARA];  // 不同设备自身的参数
+		struct {
+			char *name;  // 不同设备自身的参数
+			void (*attrcb)(struct _DeviceStr *dev,char *value);
+		}attr[MAX_DEVICE_PARA];
 
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]);
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value);
 		int (*execCmd)(struct _DeviceStr *dev, const char *cmd_name, const char *cmd_args);
 		int (*remove)(struct _DeviceStr *dev);
+		void (*reportPowerOn)(struct _DeviceStr *dev, char *param);
+		void (*reportPowerOff)(struct _DeviceStr *dev);
 	}DeviceTypePara;
 
 	typedef struct _DeviceStr {
 		char id[32];
+		uint16_t addr;
+		uint16_t channel;
 		char *value[MAX_DEVICE_PARA];
 		DeviceTypePara *type_para;
 	}DeviceStr;

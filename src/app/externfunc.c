@@ -220,7 +220,7 @@ char * GetDate(char *cBuf,int Size)
  * @returns
  */
 /* ---------------------------------------------------------------------------*/
-unsigned long long int GetMs(void)
+uint64_t GetMs(void)
 {
 	struct  timeval    tv;
     gettimeofday(&tv,NULL);
@@ -766,3 +766,22 @@ void hexToChar( unsigned long long int num, char* d_str, unsigned int radix)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief getDiffSysTick ¼ÆËã32Î»²îÖµ
+ *
+ * @param new
+ * @param old
+ *
+ * @returns
+ */
+/* ---------------------------------------------------------------------------*/
+uint32_t getDiffSysTick(uint64_t new,uint64_t old)
+{
+    uint32_t diff;
+    if (new >= old)
+        diff = new - old;
+    else
+        diff = 0XFFFFFFFF - old + new;
+    return diff;
+}

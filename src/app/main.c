@@ -147,7 +147,7 @@ int main_loop(void)
     int loop = 0;
 
     //设备私有属性设置和读取
-    device_private_property_test();
+    gwDevicePrivatePropertyTest();
 
     //注册子设备
 	// register_sub_device();
@@ -263,8 +263,8 @@ int main(int argc, char *argv[])
 
     alink_register_callback(3, &cloud_get_device_status);
 
-    register_gateway_service();
-    register_gateway_attribute();
+    gwRegisterGatewayService();
+    gwRegisterGatewayAttribute();
 
     //设置设备认证模式:DEFAULT(阿里智能),SDS+DEVICEID,SDS_WHITELIST
     alink_set_auth_mode(ALINK_AUTH_MODE_DEFAULT);
@@ -272,9 +272,10 @@ int main(int argc, char *argv[])
     alink_start();
 	// awss_end();
     alink_wait_connect(ALINK_WAIT_FOREVER);
-	deviceInit();
+	gwDeviceInit();
 	zigbeeInit();
 	smarthomeInit();
+	gwLoadDeviceData();
 	// register_sub_device();
 	// testUartSend();
 loop:

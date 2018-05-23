@@ -61,17 +61,65 @@ sqlCheck_fail:
 	return FALSE;
 }
 
+int sqlGetDeviceStart(void)
+{
+	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
+	return sql_local.sql->RecordCount(sql_local.sql);
+}
+
+void sqlGetDevice(char *id,
+		int *dev_type,
+		uint16_t *addr,
+		uint16_t *channel)
+{
+	if (id)
+		LocalQueryOfChar(sql_local.sql,"ID",id,32);
+	if (dev_type)
+		*dev_type = LocalQueryOfInt(sql_local.sql,"DevType");
+	if (addr)
+		*addr = LocalQueryOfInt(sql_local.sql,"Addr");
+	if (channel)
+		*channel = LocalQueryOfInt(sql_local.sql,"Channel");
+	sql_local.sql->Next(sql_local.sql);
+}
+void sqlGetDeviceEnd(void)
+{
+	sql_local.sql->Close(sql_local.sql);
+}
+
 void sqlInsertDevice(char *id,
 		int dev_type,
 		uint16_t addr,
-		uint16_t Channel)
+		uint16_t channel)
 {
 	char buf[128];
-	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr) VALUES('%s','%d','%d','%d')",
-			id, dev_type,addr,Channel);
+	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr,Channel) VALUES('%s','%d','%d','%d')",
+			id, dev_type,addr,channel);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
+}
+
+void sqlDeleteDevice(char *id)
+{
+	char buf[128];
+	sprintf(buf, "Delete From DeviceList Where ID=\"%s\"", id);
+	printf("buf:%s\n",buf);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+}
+
+int sqlGetDeviceId(uint16_t addr,char *id)
+{
+	char buf[128];
+	sprintf(buf, "select ID From DeviceList Where Addr=\"%d\"", addr);
+	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
+	int ret = sql_local.sql->RecordCount(sql_local.sql);
+	if (ret)
+		LocalQueryOfChar(sql_local.sql,"ID",id,32);
+	sql_local.sql->Close(sql_local.sql);
+	return ret;
 }
 
 void sqlInit(void)

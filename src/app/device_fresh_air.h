@@ -1,7 +1,7 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_light.h
+ *       Filename:  device_fresh_air.h
  *
  *    Description:  灯控设备
  *
@@ -14,8 +14,8 @@
  *
  * =============================================================================
  */
-#ifndef _DEVICE_LIGHT_H
-#define _DEVICE_LIGHT_H
+#ifndef _DEVICE_FRESHAIR_H
+#define _DEVICE_FRESHAIR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel);
+	extern DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel);
 
 #ifdef __cplusplus
 }
