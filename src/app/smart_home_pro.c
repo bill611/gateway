@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <pthread.h>
 
+#include "zigbee.h"
+#include "gateway.h"
 #include "sql_handle.h"
 #include "smart_home_pro.h"
 
@@ -63,24 +65,27 @@ static int packet_pos;
  *
  * @param d_addr 目的地址
  * @param cmd 命令
+ * @param device_type 设备类型
  * @param ch_num 通道号
  * @param ch 通道
  * @param param 参数
  * @param param_len 参数长度
  */
 /* ---------------------------------------------------------------------------*/
-static void smarthomeSendDataPacket(uint16_t d_addr,
+static void smarthomeSendDataPacket(
+		uint16_t d_addr,
 		uint8_t cmd,
+		uint8_t device_type,
 	   	uint8_t ch_num,
 		uint8_t ch,
 	   	uint8_t* param,
 	   	uint8_t param_len)
 {
-	char buf[128] = {0};
+	uint8_t buf[128] = {0};
 	SMART_HOME_PRO *packet;
 	packet = (SMART_HOME_PRO *)buf;
 	packet->addr = 0;  //协调器地址为0
-	packet->device_type = DEVICE_TYPE_ZK;	//协调器的设备类型为0
+	packet->device_type = device_type;	//协调器的设备类型为0
 	packet->channel_num = ch_num;	//通道数据
 	packet->current_channel = ch;	//当前通道
 	packet->cmd = cmd;
@@ -211,18 +216,9 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 ** output parameters:   无
 ** Returned value:      1成功
 *********************************************************************************************************/
-static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf)
+static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf,char *id)
 {
-	static char id[32];
-	sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
-			cmdBuf->param[0],
-			cmdBuf->param[1],
-			cmdBuf->param[2],
-			cmdBuf->param[3],
-			cmdBuf->param[4],
-			cmdBuf->param[5],
-			cmdBuf->param[6],
-			cmdBuf->param[7]);
+	printf("id:%s,type:%d,addr:%x\n", id,cmdBuf->device_type,cmdBuf->addr);
 	sqlInsertDevice(id,
 			cmdBuf->device_type,
 			cmdBuf->addr,
@@ -259,11 +255,11 @@ static int smarthomeCmdFilter(SMART_HOME_PRO *data)
     return 1;
 }
 
-static char * smarthomeGetId(SMART_HOME_PRO *cmdBuf)
+static void smarthomeGetId(SMART_HOME_PRO *cmdBuf,char *id)
 {
-	static char id[32];
+	if (!id)
+		return;
 	sqlGetDeviceId(cmdBuf->addr,id);
-	return id;
 }
 /*********************************************************************************************************
 ** Descriptions:       协议解析
@@ -280,20 +276,35 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 	{
 		case NetIn_Report:
 			{
-				char *id = smarthomeAddNewDev(packet);
+				char id[32] = {0};
+				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
+						packet->param[0],
+						packet->param[1],
+						packet->param[2],
+						packet->param[3],
+						packet->param[4],
+						packet->param[5],
+						packet->param[6],
+						packet->param[7]);
 				smarthomeSendDataPacket(
 						packet->addr,
 						NetIn_Report_Res,
+						packet->device_type,
 						packet->channel_num,
 						packet->current_channel,
 						NULL,0);
 				smarthomeSendDataPacket(
 						packet->addr,
 						Demand_Sw_Status,
+						packet->device_type,
 						packet->channel_num,
 						packet->current_channel,
 						NULL,0);
-				gwRegisterSubDevice(id,packet->device_type);
+				int ret = gwRegisterSubDevice(id,packet->device_type,packet->addr,packet->channel_num);
+				if (ret == 0) 
+					smarthomeAddNewDev(packet,id);
+				// 根据阿里APP设定，完成入网后禁止入网
+				zigbeeNetIn(0);
 			}
 			break;
 		case NetOut_Report_Res:	//有设备要退网
@@ -313,14 +324,20 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			break;
 		
 		case Device_On_Res:		//设备开
-			printf("on\n");
-			gwReportPowerOn(smarthomeGetId(packet),packet->param);
-			break;
+			{
+				printf("on:%x\n",packet->addr);
+				char id[32];
+				smarthomeGetId(packet,id);
+				gwReportPowerOn(id,packet->param);
+			} break;
 			
 		case Device_Off_Res:	//设备关
-			printf("off\n");
-			gwReportPowerOff(smarthomeGetId(packet));
-			break;
+			printf("off:%x\n",packet->addr);
+			{
+				char id[32];
+				smarthomeGetId(packet,id);
+				gwReportPowerOff(id);
+			} break;
 		
 		case Device_Scene:		//情景控制
 			// SceneStart(packet->param[0],1);
@@ -356,26 +373,62 @@ void smarthomeInit(void)
     pthread_create(&task, &attr, smarthomeThread, NULL);        
 }                                                               
 
-void smarthomeLightCmdCtrOpen(uint16_t addr,uint16_t channel_num,uint16_t channel)
+void smarthomeAllDeviceCmdGetSwichStatus(DeviceStr *dev,uint16_t channel)
+{
+	smarthomeSendDataPacket(
+			dev->addr,
+			Demand_Sw_Status,
+			dev->type_para->device_type,
+			dev->channel,
+			channel, NULL, 0);
+}
+
+void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel)
 {
 	uint8_t param[2] = {0xff,0};
-	smarthomeSendDataPacket(addr,Device_On,channel_num,channel,param,sizeof(param));
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			channel,param,sizeof(param));
 }
 
-void smarthomeLightCmdCtrClose(uint16_t addr,uint16_t channel_num,uint16_t channel)
+void smarthomeLightCmdCtrClose(DeviceStr *dev,uint16_t channel)
 {
-	smarthomeSendDataPacket(addr,Device_Off,channel_num,channel,NULL,0);
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Off,
+			dev->type_para->device_type,
+			dev->channel,
+			channel, NULL, 0);
 }
 
-void smarthomeFreshAirCmdCtrOpen(uint16_t addr,uint8_t value)
+void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value)
 {
 	uint8_t param[2] = {0};
 	param[0] = value;
-	printf("value :%d,test:%d\n", param[0],value);
-	smarthomeSendDataPacket(addr,Device_On,1,0,param,sizeof(param));
+	printf("[%s]type:%d,value:%d\n",
+			__FUNCTION__, 
+			dev->type_para->device_type,
+			param[0]);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			0,param,sizeof(param));
 }
 
-void smarthomeFreshAirCmdCtrClose(uint16_t addr)
+void smarthomeFreshAirCmdCtrClose(DeviceStr *dev)
 {
-	smarthomeSendDataPacket(addr,Device_Off,1,0,NULL,0);
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Off,
+			dev->type_para->device_type,
+			dev->channel,
+			0,NULL,0);
 }

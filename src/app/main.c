@@ -276,6 +276,7 @@ int main(int argc, char *argv[])
 	zigbeeInit();
 	smarthomeInit();
 	gwLoadDeviceData();
+	udpDebugInit();
 	// register_sub_device();
 	// testUartSend();
 loop:

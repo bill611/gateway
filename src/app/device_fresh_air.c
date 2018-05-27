@@ -20,8 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "device_fresh_air.h"
+#include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -57,7 +59,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			const char *attr_value[2] = {NULL};
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
-			printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
+			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
 			alink_subdev_report_attrs(dev->type_para->proto_type,
 					dev->id, attr_name,attr_value);
 		}
@@ -74,6 +76,7 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_name,dev->type_para->attr[i].name) == 0) {
 			sprintf(dev->value[i],"%s",attr_value);
+			printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
 			break;
@@ -90,17 +93,20 @@ static int execCmdCb(DeviceStr *dev, const char *cmd_name, const char *cmd_args)
     return 0;
 }
 
-static int removeDeviceCb(DeviceStr *dev)
+static int removeDeviceCb(DeviceStr **device)
 {
+	DeviceStr *dev = *device;
     printf("remove device, devid:%s\n",dev->id);
 	int i;
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
-		if (dev->value[i])
-			free(dev->value);
+		if (dev->value[i]) {
+			free(dev->value[i]);
+		}
 		dev->value[i] = NULL;
 	}
 	sqlDeleteDevice(dev->id);
 	free(dev);
+	*device = NULL;
     return 0;
 }
 
@@ -108,13 +114,20 @@ static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	sprintf(dev->value[ATTR_SWICH],"%s",value);
+	printf("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
+			__FUNCTION__,
+			value,
+			value_int,
+			dev->value[ATTR_SWICH],
+			dev->value[ATTR_SPEED] );
 	if (value_int) {
 		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
 		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
 			speed -= 1;
-		smarthomeFreshAirCmdCtrOpen(dev->addr,speed);
+		printf("%s:%d\n", __FUNCTION__,speed);
+		smarthomeFreshAirCmdCtrOpen(dev,speed);
 	} else
-		smarthomeFreshAirCmdCtrClose(dev->addr);
+		smarthomeFreshAirCmdCtrClose(dev);
 }
 
 static void cmdWindSpeed(DeviceStr *dev,char *value)
@@ -125,8 +138,13 @@ static void cmdWindSpeed(DeviceStr *dev,char *value)
 		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
 		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
 			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev->addr,speed);
+		smarthomeFreshAirCmdCtrOpen(dev,speed);
 	}
+}
+
+static void cmdGetSwichStatus(DeviceStr *dev)
+{
+	// smarthomeAllDeviceCmdGetSwichStatus(dev->addr,1,0);
 }
 
 static void reportPowerOnCb(DeviceStr *dev,char *param)
@@ -135,11 +153,11 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 	sprintf(dev->value[ATTR_SWICH],"1");
 	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1); 
-	char *attr_name[3] = {
+	const char *attr_name[3] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		dev->type_para->attr[ATTR_SPEED].name,
 		NULL};
-	char *attr_value[3] = {
+	const char *attr_value[3] = {
 		dev->value[ATTR_SWICH],
 		dev->value[ATTR_SPEED],
 		NULL};
@@ -150,10 +168,10 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 static void reportPowerOffCb(DeviceStr *dev)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
-	char *attr_name[2] = {
+	const char *attr_name[2] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	char *attr_value[2] = {
+	const char *attr_value[2] = {
 		dev->value[ATTR_SWICH],
 		NULL};
 	alink_subdev_report_attrs(dev->type_para->proto_type,
@@ -165,6 +183,7 @@ static DeviceTypePara fresh_air = {
 	.short_model = 0x002824cd,
 	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
 	.proto_type = PROTO_TYPE_ZIGBEE,
+	.device_type = DEVICE_TYPE_XFXT,
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
@@ -179,6 +198,7 @@ static DeviceTypePara fresh_air = {
 	.setAttr = setAttrCb,
 	.execCmd = execCmdCb,
 	.remove = removeDeviceCb,
+	.getSwichStatus = cmdGetSwichStatus,
 	.reportPowerOn = reportPowerOnCb,
 	.reportPowerOff = reportPowerOffCb,
 };
@@ -193,6 +213,7 @@ DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
 	This->type_para = &fresh_air;
 	This->addr = addr;
 	This->channel = channel;
+	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);

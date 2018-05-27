@@ -22,6 +22,10 @@ extern "C" {
 #endif  /* __cplusplus */
 
 
+	extern int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel);
+	extern void gwReportPowerOn(char *id,char *param);
+	extern void gwReportPowerOff(char *id);
+	extern void gwGetSwichStatus(void);
 
 #ifdef __cplusplus
 }

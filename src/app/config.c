@@ -13,8 +13,9 @@
 #define INI_PUBLIC_FILENAME "config_public.ini"
 #define INI_PRIVATE_FILENAME "config_private.ini"
 #define SIZE_CONFIG(x)  x,sizeof(x) - 1
-#define NELEMENTS(array)  \                        
-            (sizeof (array) / sizeof ((array) [0]))
+
+#define NELEMENTS(array)  (sizeof (array) / sizeof ((array) [0]))
+
 typedef enum
 {
     CONFIG_CRC,

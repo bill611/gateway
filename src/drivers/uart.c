@@ -385,7 +385,7 @@ UartServer *uartServerCreate(void (*func)(void))
 	call_back_func = func;
 
 	This->priv->queue =
-		queueCreate("uart_socket",QUEUE_BLOCK,sizeof(UartSendBuf));
+		queueCreate("/uart_socket",QUEUE_BLOCK,sizeof(UartSendBuf));
 
 	This->priv->comparam.baudrate = 38400;
 	This->priv->comparam.data_bit = 8;

@@ -9,3 +9,4 @@ void CreateWorkerThread(void *(*start_routine)(void *), void *arg)
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_create(&task, &attr, start_routine, arg);
 }
+

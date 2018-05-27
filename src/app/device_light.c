@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "cJSON.h"
+#include "sql_handle.h"
 #include "device_light.h"
 
 /* ---------------------------------------------------------------------------*
@@ -36,6 +37,10 @@
  *                        macro define
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
+enum {
+	ATTR_ERROR,
+	ATTR_SWICH,
+};
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -112,17 +117,19 @@ static int execCmdCb(DeviceStr *dev, const char *cmd_name, const char *cmd_args)
     return 0;
 }
 
-static int removeDeviceCb(DeviceStr *dev)
+static int removeDeviceCb(DeviceStr **device)
 {
+	DeviceStr *dev = *device;
     printf("remove device, devid:%s\n",dev->id);
 	int i;
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (dev->value[i])
-			free(dev->value);
+			free(dev->value[i]);
 		dev->value[i] = NULL;
 	}
 	sqlDeleteDevice(dev->id);
 	free(dev);
+	*device = NULL;
     return 0;
 }
 
@@ -130,9 +137,45 @@ static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	if (value_int)
-		smarthomeLightCmdCtrOpen(dev->addr,dev->channel,0);
+		smarthomeLightCmdCtrOpen(dev,1);
 	else
-		smarthomeLightCmdCtrClose(dev->addr,dev->channel,0);
+		smarthomeLightCmdCtrClose(dev,1);
+}
+
+static void cmdGetSwichStatus(DeviceStr *dev)
+{
+	int i;
+	for (i=0; i<3; i++) {
+		smarthomeAllDeviceCmdGetSwichStatus(dev,i);
+	}
+}
+
+static void reportPowerOnCb(DeviceStr *dev,char *param)
+{
+	// 固定为开
+	sprintf(dev->value[ATTR_SWICH],"1");
+	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
+	const char *attr_name[2] = {
+		dev->type_para->attr[ATTR_SWICH].name,
+		NULL};
+	const char *attr_value[2] = {
+		dev->value[ATTR_SWICH],
+		NULL};
+	alink_subdev_report_attrs(dev->type_para->proto_type,
+			dev->id, attr_name,attr_value);
+}
+
+static void reportPowerOffCb(DeviceStr *dev)
+{
+	sprintf(dev->value[ATTR_SWICH],"0");
+	const char *attr_name[2] = {
+		dev->type_para->attr[ATTR_SWICH].name,
+		NULL};
+	const char *attr_value[2] = {
+		dev->value[ATTR_SWICH],
+		NULL};
+	alink_subdev_report_attrs(dev->type_para->proto_type,
+			dev->id, attr_name,attr_value);
 }
 
 static DeviceTypePara light = {
@@ -140,6 +183,7 @@ static DeviceTypePara light = {
 	.short_model = 0x00092316,
 	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
 	.proto_type = PROTO_TYPE_ZIGBEE,
+	.device_type = DEVICE_TYPE_DK,
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
@@ -150,6 +194,9 @@ static DeviceTypePara light = {
 	.setAttr = setAttrCb,
 	.execCmd = execCmdCb,
 	.remove = removeDeviceCb,
+	.getSwichStatus = cmdGetSwichStatus,
+	.reportPowerOn = reportPowerOnCb,
+	.reportPowerOff = reportPowerOffCb,
 };
 
 

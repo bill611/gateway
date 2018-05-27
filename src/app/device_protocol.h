@@ -39,6 +39,7 @@ extern "C" {
 		uint32_t short_model;  // 设备标识码，由阿里注册产品后生成
 		const char *secret;  // 设备密钥，由阿里注册产品后生成
 		uint8_t proto_type; // 设备协议类型
+		uint8_t device_type; // 设备类型(智能家居协议)
 		struct {
 			char *name;  // 不同设备自身的参数
 			void (*attrcb)(struct _DeviceStr *dev,char *value);
@@ -47,7 +48,9 @@ extern "C" {
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]);
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value);
 		int (*execCmd)(struct _DeviceStr *dev, const char *cmd_name, const char *cmd_args);
-		int (*remove)(struct _DeviceStr *dev);
+		int (*remove)(struct _DeviceStr **dev);
+
+		void (*getSwichStatus)(struct _DeviceStr *dev);
 		void (*reportPowerOn)(struct _DeviceStr *dev, char *param);
 		void (*reportPowerOff)(struct _DeviceStr *dev);
 	}DeviceTypePara;

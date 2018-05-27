@@ -1,6 +1,7 @@
 #ifndef __SMART_HOME_PRO_H__
 #define __SMART_HOME_PRO_H__
 #include "zigbee.h"
+#include "device_protocol.h"
 
 #define MAX_REGIST_DEVICE 70  // 最多支持的设备
 
@@ -112,8 +113,9 @@ typedef struct
 
 void SHP_Timer(void);
 
-void smarthomeLightCmdCtrOpen(uint16_t addr,uint16_t channel_num,uint16_t channel);
-void smarthomeLightCmdCtrClose(uint16_t addr,uint16_t channel_num,uint16_t channel);
-void smarthomeFreshAirCmdCtrOpen(uint16_t addr,uint8_t value);
-void smarthomeFreshAirCmdCtrClose(uint16_t addr);
+extern void smarthomeAllDeviceCmdGetSwichStatus(DeviceStr *dev,uint16_t channel);
+extern void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel);
+extern void smarthomeLightCmdCtrClose(DeviceStr *dev,uint16_t channel);
+extern void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value);
+extern void smarthomeFreshAirCmdCtrClose(DeviceStr *dev);
 #endif

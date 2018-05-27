@@ -21,6 +21,20 @@
 extern "C" {
 #endif  /* __cplusplus */
 
+#include <stdint.h>
+	extern int sqlGetDeviceStart(void);
+	extern void sqlGetDevice(char *id,
+			int *dev_type,
+			uint16_t *addr,
+			uint16_t *channel);
+	extern void sqlGetDeviceEnd(void);
+	extern void sqlInsertDevice(char *id,
+			int dev_type,
+			uint16_t addr,
+			uint16_t channel);
+	extern void sqlDeleteDevice(char *id);
+	extern int sqlGetDeviceId(uint16_t addr,char *id);
+	extern void sqlInit(void);
 
 
 #ifdef __cplusplus

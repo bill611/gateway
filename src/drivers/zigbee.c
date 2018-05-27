@@ -58,7 +58,7 @@ static uint16_t zigbee_net_addr = 0xffff;	//短地址
 static uint8_t zigbee_net_channel = 0xff;		//信道
 static uint8_t zigbee_ieee_addr[8] = { 0 };	//IEEE地址
 
-static int (*zigbeeDataRcv)(char* buf, int len) = NULL;
+static void (*zigbeeDataRcv)(uint8_t* buf, uint8_t len) = NULL;
 /*********************************************************************************************************
 ** Descriptions:      清除命令队列中指定的命令（停止发送）
 ** input parameters:   cmd 要清除的命今（对应在的BIT位）
@@ -404,11 +404,14 @@ void getNetChannel(void)
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief zigbeeNetIn 允许设备入网(协调器)
+ *
+ * @param time 入网时长 0为禁止
  */
 /* ---------------------------------------------------------------------------*/
-void zigbeeNetIn(void)
+void zigbeeNetIn(uint8_t time)
 {
-	setSendCmd(SET_NETIN_ENABLE, 0xfe);
+	if (time > 0 && time < 0xff)
+	setSendCmd(SET_NETIN_ENABLE, time);
 }
 /* ---------------------------------------------------------------------------*/
 /**
@@ -421,7 +424,7 @@ void zigbeeOutNet(void)
 	zigbeeClearNetAddr();//收数据不在处理，直到再次入网
 }
 
-void zigbeeSetDataRecvFunc(int (*func)(char*,int))
+void zigbeeSetDataRecvFunc(void (*func)(uint8_t*,uint8_t))
 {
 	zigbeeDataRcv = func;
 }

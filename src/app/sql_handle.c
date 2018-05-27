@@ -104,7 +104,7 @@ void sqlDeleteDevice(char *id)
 {
 	char buf[128];
 	sprintf(buf, "Delete From DeviceList Where ID=\"%s\"", id);
-	printf("buf:%s\n",buf);
+	printf("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -114,10 +114,11 @@ int sqlGetDeviceId(uint16_t addr,char *id)
 {
 	char buf[128];
 	sprintf(buf, "select ID From DeviceList Where Addr=\"%d\"", addr);
-	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
+	LocalQueryOpen(sql_local.sql,buf);
 	int ret = sql_local.sql->RecordCount(sql_local.sql);
 	if (ret)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
+	printf("ret:%d,id:%s\n", ret,id);
 	sql_local.sql->Close(sql_local.sql);
 	return ret;
 }

@@ -19,7 +19,10 @@
  *----------------------------------------------------------------------------*/
 #include <stdio.h>
 #include "debug.h"
+#include "linklist.h"		/* Header */
 #include "device_protocol.h"
+#include "sql_handle.h"
+#include "zigbee.h"
 #include "alink_export_gateway.h"
 #include "alink_export_subdev.h"
 #include "platform.h"		/* Header */
@@ -39,6 +42,7 @@ extern char *calc_subdev_signature(const char *secret,
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
+void gwGetSwichStatus(void);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -55,7 +59,8 @@ extern char *calc_subdev_signature(const char *secret,
 
 typedef struct {
 	unsigned int cnt;
-	DeviceStr *dev[MAX_SUB_DEVICE_NUM];
+	List *list;
+	DeviceStr *dev;
 }SubDevice;
 
 typedef struct {
@@ -66,7 +71,8 @@ typedef struct {
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
-static SubDevice sub_device;
+static List *sub_dev_list = NULL; // 链表保存子设备
+// static SubDevice sub_device;
 static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,registDeviceLight},
 	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
@@ -106,7 +112,7 @@ static int __sound_alarm_attr_get_cb(char *output_buf, unsigned int buf_sz)
 {
     printf("get gateway sound_alarm attr, value:%s\n", sound_alarm);
     snprintf(output_buf, buf_sz - 1, sound_alarm);
-
+	gwGetSwichStatus();
     return 0;
 }
 
@@ -138,12 +144,14 @@ int gwRegisterGatewayAttribute(void)
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief registerSubDevice 注册子设备
+ * @brief gwRegisterSubDevice  注册子设备
  *
- * @param id 子设备ID，即短地址字符串
- * @param type 设备类型
- * 
- * @returns -1失败
+ * @param id 子设备IEEE长地址转为字符串作为唯一ID
+ * @param type 子设备类型
+ * @param addr 子设备短地址
+ * @param channel 子设备通道数量
+ *
+ * @returns 0成功 -1失败
  */
 /* ---------------------------------------------------------------------------*/
 int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
@@ -158,26 +166,24 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 		printf("unknow device type:%d\n",type );
 		return -1;
 	}
-	sub_device.dev[sub_device.cnt] = device_regist[i].regist(id,addr,channel);
+	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
+	sub_dev_list->append(sub_dev_list,&dev);
+
 	char rand[SUBDEV_RAND_BYTES] = {0};
 	char sign[17] = {0};
-	if (calc_subdev_signature(sub_device.dev[sub_device.cnt]->type_para->secret,
+	if (calc_subdev_signature(dev->type_para->secret,
 			   	rand, sign, sizeof(sign)) == NULL) {
 		printf("[%s:%s]__get_device_signature fail\n",
-				sub_device.dev[sub_device.cnt]->id,
-				sub_device.dev[sub_device.cnt]->type_para->name);
+				dev->id, dev->type_para->name);
 	}
 	ret = alink_subdev_register_device(
-			sub_device.dev[sub_device.cnt]->type_para->proto_type,
-			sub_device.dev[sub_device.cnt]->id,
-			sub_device.dev[sub_device.cnt]->type_para->short_model,
+			dev->type_para->proto_type,
+			dev->id,
+			dev->type_para->short_model,
 			rand, sign);
 	if (ret != 0) 
 		printf("[%s]register sub device fail,id:%s\n",
-				sub_device.dev[sub_device.cnt]->type_para->name,
-				sub_device.dev[sub_device.cnt]->id);
-	else
-		sub_device.cnt++;
+				dev->type_para->name, dev->id);
     return ret;
 }
 
@@ -207,51 +213,66 @@ int gwDevicePrivatePropertyTest(void)
 
 static int getAttrCb(const char *devid, const char *attr_set[])
 {
-	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		if (strcmp(sub_device.dev[i]->id,devid) == 0) {
-			sub_device.dev[i]->type_para->getAttr(sub_device.dev[i],attr_set);
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (strcmp(dev->id,devid) == 0) {
+			dev->type_para->getAttr(dev,attr_set);
 			break;
-		}
+		}		
+		sub_dev_list->foreachNext(sub_dev_list);
 	}
-
     return 0;
 }
 
 
 static int setAttrCb(const char *devid, const char *attr_name, const char *attr_value)
 {
-	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		if (strcmp(sub_device.dev[i]->id,devid) == 0) {
-			sub_device.dev[i]->type_para->setAttr(sub_device.dev[i],attr_name,attr_value);
+	printf("gate way id:%s,%s:%s\n", devid,attr_name,attr_value);
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		printf("dev:%s\n", dev->id);
+		if (strcmp(dev->id,devid) == 0) {
+			dev->type_para->setAttr(dev,attr_name,attr_value);
 			break;
-		}
+		}		
+		sub_dev_list->foreachNext(sub_dev_list);
 	}
-
     return 0;
 }
 
 static int execCmdCb(const char *devid, const char *cmd_name, const char *cmd_args)
 {
-	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		if (strcmp(sub_device.dev[i]->id,devid) == 0) {
-			sub_device.dev[i]->type_para->execCmd(sub_device.dev[i],cmd_name,cmd_args);
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (strcmp(dev->id,devid) == 0) {
+			dev->type_para->execCmd(dev,cmd_name,cmd_args);
 			break;
-		}
+		}		
+		sub_dev_list->foreachNext(sub_dev_list);
 	}
     return 0;
 }
 
 static int removeDeviceCb(const char *devid)
 {
-	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		if (strcmp(sub_device.dev[i]->id,devid) == 0) {
-			sub_device.dev[i]->type_para->remove(sub_device.dev[i]);
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	int i = 0;
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (strcmp(dev->id,devid) == 0) {
+			dev->type_para->remove(&dev);
+			sub_dev_list->delete(sub_dev_list,i);
 			break;
-		}
+		}		
+		sub_dev_list->foreachNext(sub_dev_list);
+		i++;
 	}
     return 0;
 }
@@ -259,7 +280,7 @@ static int removeDeviceCb(const char *devid)
 static int permitSubDeviceJoinCb(uint8_t duration)
 {
     printf("permitSubDeviceJoinCb, duration:%d\n",duration);
-	zigbeeNetIn();
+	zigbeeNetIn(duration);
 	return 0;
 }
 void gwDeviceInit(void)
@@ -304,6 +325,7 @@ void gwLoadDeviceData(void)
 	char id[32];
 	int type;
 	uint16_t addr,channel;
+	sub_dev_list = listCreate(sizeof(DeviceStr *));
 	for (i=0; i<device_num; i++) {
 		sqlGetDevice(id,&type,&addr,&channel);	
 		gwRegisterSubDevice(id,type,addr,channel);
@@ -313,18 +335,25 @@ void gwLoadDeviceData(void)
 
 static DeviceStr *getSubDevice(char *id)
 {
-	unsigned int i;
-	for (i=0; i<sub_device.cnt; i++) {
-		if (strcmp(sub_device.dev[i]->id,id) == 0) {
-			break;	
-		}
-	}	
-	return sub_device.dev[i];
+	DeviceStr *dev = NULL;
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (strcmp(dev->id,id) == 0) {
+			break;
+		}		
+		sub_dev_list->foreachNext(sub_dev_list);
+	}
+
+	return dev;
 }
 
 void gwReportPowerOn(char *id,char *param)
 {
+	printf("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
 	if (dev->type_para->reportPowerOn)
 		dev->type_para->reportPowerOn(dev,param);
 }
@@ -332,7 +361,24 @@ void gwReportPowerOn(char *id,char *param)
 void gwReportPowerOff(char *id)
 {
 	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
 	if (dev->type_para->reportPowerOff)
 		dev->type_para->reportPowerOff(dev);
 }
 
+void gwGetSwichStatus(void)
+{
+	if (!sub_dev_list)
+		return;
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	int i = 1;
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (dev->type_para->getSwichStatus)
+			dev->type_para->getSwichStatus(dev);
+		sub_dev_list->foreachNext(sub_dev_list);
+		i++;
+	}
+}
