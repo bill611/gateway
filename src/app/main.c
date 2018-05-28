@@ -147,7 +147,7 @@ int main_loop(void)
     int loop = 0;
 
     //设备私有属性设置和读取
-    gwDevicePrivatePropertyTest();
+    // gwDevicePrivatePropertyTest();
 
     //注册子设备
 	// register_sub_device();

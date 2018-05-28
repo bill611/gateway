@@ -339,6 +339,14 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				gwReportPowerOff(id);
 			} break;
 		
+		case Demand_Device_Alarm_Type_Res:		//查询单元的警报状态返回
+			{
+				printf("alarm_status:%x,%d\n",packet->addr,packet->param[0]);
+				char id[32];
+				smarthomeGetId(packet,id);
+				gwReportAlarmStatus(id,packet->param);
+			} break;
+			
 		case Device_Scene:		//情景控制
 			// SceneStart(packet->param[0],1);
 			break;

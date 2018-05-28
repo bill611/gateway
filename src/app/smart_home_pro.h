@@ -55,6 +55,8 @@ typedef enum
 	Device_Syn_Res					= 0xfb,			//设备同步返回
 	Demand_Sw_Status				= 0,			//查询开关状态
 	Demand_Sw_Status_Res			= 1,			//查询开关状态返回
+	Demand_Device_Alarm_Type		= 0x02,			//查询单元的警报状态
+	Demand_Device_Alarm_Type_Res	= 0x03,			//查询单元的警报状态返回
 	Demand_Device_Type				= 0x04,			//查询设备类型
 	Demand_Device_Type_Res			= 0x05,			//查询设备类型返回
 	Demand_Device_Ver				= 0x06,			//查询设备固件版本号
@@ -71,6 +73,16 @@ typedef enum
 	Cmd_Null						= 0xff,			//空命令
 }TC_CMD;
 
+enum {
+	TC_ALARM_ACTION = 1,   // 感应报警
+	TC_ALARM_LOWPOWER,   // 低电压报警
+	TC_ALARM_TAMPER,   // 防拆报警
+	TC_ALARM_OPEN_WINDOW,   // 开门/窗报警
+	TC_ALARM_CLOSE_WINDOW,   // 关门/窗报警
+	TC_ALARM_ERR,   // 故障报警（机械手）
+	TC_ALARM_OPEN_DOOR,   // 非法开门报警
+	TC_ALARM_CLOSE_DOOR,   // 门未关报警
+}TC_ALARM_STATUS;
 
 #pragma pack(1)
 typedef struct 

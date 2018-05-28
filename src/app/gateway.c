@@ -30,6 +30,7 @@
 
 #include "device_light.h"
 #include "device_fresh_air.h"
+#include "device_motion_curtain.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -54,7 +55,6 @@ void gwGetSwichStatus(void);
 #define DEVMGR_SERVICE_PERMITJOIN_DEVICE        "PermitJoin"
 
 
-#define GW_ATTR_ARM_ENTRY_DELAY                "ArmEntryDelay"
 #define GW_SERVICE_FACTORY_RESET                "FactoryReset"
 
 typedef struct {
@@ -68,6 +68,13 @@ typedef struct {
 	DeviceStr* (*regist) (char *,uint16_t,uint16_t);
 }SubDeviceRegist;
 
+typedef struct {
+	char *attr;	
+	int (*getCb)(char *output_buf, unsigned int buf_sz);
+	int (*setCb)(char *value);
+	char *default_value;	
+}GateWayAttr;
+
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -76,8 +83,8 @@ static List *sub_dev_list = NULL; // 链表保存子设备
 static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,registDeviceLight},
 	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
+	{DEVICE_TYPE_HW,registDeviceMotionCurtain},
 };
-
 
 static char sound_alarm[2] = {'0', '\0'};
 
@@ -108,17 +115,36 @@ int gwRegisterGatewayService(void)
     return 0;
 }
 
-static int __sound_alarm_attr_get_cb(char *output_buf, unsigned int buf_sz)
+static int alarmEntryDelayGetCb(char *output_buf, unsigned int buf_sz)
 {
-    printf("get gateway sound_alarm attr, value:%s\n", sound_alarm);
+    printf("[%s]:%s\n", __FUNCTION__,sound_alarm);
     snprintf(output_buf, buf_sz - 1, sound_alarm);
 	gwGetSwichStatus();
     return 0;
 }
 
-static int __sound_alarm_attr_set_cb(char *value)
+static int alarmEntryDelaySetCb(char *value)
 {
-    printf("set gateway sound_alarm attr, value:%s\n", value);
+    printf("[%s]:%s\n", __FUNCTION__,value);
+    if (*value != '0' && *value != '1') {
+        printf("invalid sound_alarm attr value:%s\n", value);
+        return -1;
+    }
+    sound_alarm[0] = *value;
+
+    return 0;
+}
+
+static int alarmAlarmModeGetCb(char *output_buf, unsigned int buf_sz)
+{
+    printf("[%s]:%s\n", __FUNCTION__,sound_alarm);
+    snprintf(output_buf, buf_sz - 1, "1");
+    return 0;
+}
+
+static int alarmAlarmModeSetCb(char *value)
+{
+    printf("[%s]:%s\n", __FUNCTION__,value);
     if (*value != '0' && *value != '1') {
         printf("invalid sound_alarm attr value:%s\n", value);
         return -1;
@@ -129,14 +155,22 @@ static int __sound_alarm_attr_set_cb(char *value)
 }
 
 
+static GateWayAttr gw_attrs[] = {
+	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb},
+	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb},
+	{NULL},
+};
+
 int gwRegisterGatewayAttribute(void)
 {
-    int ret = alink_register_attribute(GW_ATTR_ARM_ENTRY_DELAY,
-		   	__sound_alarm_attr_get_cb, __sound_alarm_attr_set_cb);
-    if (0 != ret) {
-        printf("register attribute fail, attribute:%s\n", GW_ATTR_ARM_ENTRY_DELAY);
-        return -1;
-    }
+	int i;
+	for (i=0; gw_attrs[i].attr != NULL; i++) {
+		int ret = alink_register_attribute(gw_attrs[i].attr,
+				gw_attrs[i].getCb, gw_attrs[i].setCb);
+		if (0 != ret) {
+			printf("register attribute fail, attribute:%s\n", gw_attrs[i].attr);
+		}
+	}
 
     return 0;
 
@@ -365,6 +399,16 @@ void gwReportPowerOff(char *id)
 		return;
 	if (dev->type_para->reportPowerOff)
 		dev->type_para->reportPowerOff(dev);
+}
+
+void gwReportAlarmStatus(char *id,char *param)
+{
+	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
+	if (dev->type_para->reportAlarmStatus)
+		dev->type_para->reportAlarmStatus(dev,param);
 }
 
 void gwGetSwichStatus(void)

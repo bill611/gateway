@@ -53,6 +53,8 @@ extern "C" {
 		void (*getSwichStatus)(struct _DeviceStr *dev);
 		void (*reportPowerOn)(struct _DeviceStr *dev, char *param);
 		void (*reportPowerOff)(struct _DeviceStr *dev);
+
+		void (*reportAlarmStatus)(struct _DeviceStr *dev,char *param);
 	}DeviceTypePara;
 
 	typedef struct _DeviceStr {
