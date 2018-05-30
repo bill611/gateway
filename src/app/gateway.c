@@ -49,13 +49,18 @@ void gwGetSwichStatus(void);
  *                        macro define
  *----------------------------------------------------------------------------*/
 #define MAX_SUB_DEVICE_NUM 	 79  // 最大支持子设备数量
+
 #define DEVMGR_SERVICE_AUTHORISE_DEVICE_LIST    "AuthoriseDeviceList"
 #define DEVMGR_SERVICE_REMOVE_DEVICE            "RemoveDevice"
 #define DEVMGR_ATTRIBUTE_JOINED_DEVICE_LIST     "JoinedDeviceList"
 #define DEVMGR_SERVICE_PERMITJOIN_DEVICE        "PermitJoin"
 
-
 #define GW_SERVICE_FACTORY_RESET                "FactoryReset"
+
+enum {
+    GW_ARM_ENTRYDELAY,
+    GW_ARM_MODE,
+};
 
 typedef struct {
 	unsigned int cnt;
@@ -72,12 +77,14 @@ typedef struct {
 	char *attr;	
 	int (*getCb)(char *output_buf, unsigned int buf_sz);
 	int (*setCb)(char *value);
-	char *default_value;	
+	char value[32];	
 }GateWayAttr;
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
+static GateWayAttr gw_attrs[];
+
 static List *sub_dev_list = NULL; // 链表保存子设备
 // static SubDevice sub_device;
 static SubDeviceRegist device_regist[] = {
@@ -85,8 +92,6 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
 	{DEVICE_TYPE_HW,registDeviceMotionCurtain},
 };
-
-static char sound_alarm[2] = {'0', '\0'};
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
 {
@@ -117,8 +122,8 @@ int gwRegisterGatewayService(void)
 
 static int alarmEntryDelayGetCb(char *output_buf, unsigned int buf_sz)
 {
-    printf("[%s]:%s\n", __FUNCTION__,sound_alarm);
-    snprintf(output_buf, buf_sz - 1, sound_alarm);
+    printf("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_ENTRYDELAY].value);
+    snprintf(output_buf, buf_sz - 1, "%s",gw_attrs[GW_ARM_ENTRYDELAY].value);
 	gwGetSwichStatus();
     return 0;
 }
@@ -126,30 +131,32 @@ static int alarmEntryDelayGetCb(char *output_buf, unsigned int buf_sz)
 static int alarmEntryDelaySetCb(char *value)
 {
     printf("[%s]:%s\n", __FUNCTION__,value);
-    if (*value != '0' && *value != '1') {
-        printf("invalid sound_alarm attr value:%s\n", value);
+    int value_int = atoi(value);
+    if (value_int < 0 || value_int > 600) {
+        printf("invalid entry delay attr value:%s\n", value);
         return -1;
     }
-    sound_alarm[0] = *value;
+    sprintf(gw_attrs[GW_ARM_ENTRYDELAY].value,"%s",value);
 
     return 0;
 }
 
 static int alarmAlarmModeGetCb(char *output_buf, unsigned int buf_sz)
 {
-    printf("[%s]:%s\n", __FUNCTION__,sound_alarm);
-    snprintf(output_buf, buf_sz - 1, "1");
+    printf("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_MODE].value);
+    snprintf(output_buf, buf_sz - 1, "%s",gw_attrs[GW_ARM_MODE].value);
     return 0;
 }
 
 static int alarmAlarmModeSetCb(char *value)
 {
     printf("[%s]:%s\n", __FUNCTION__,value);
-    if (*value != '0' && *value != '1') {
-        printf("invalid sound_alarm attr value:%s\n", value);
+    int value_int = atoi(value);
+    if (value_int < 0 || value_int > 3) {
+        printf("invalid alarm mode attr value:%s\n", value);
         return -1;
     }
-    sound_alarm[0] = *value;
+    sprintf(gw_attrs[GW_ARM_MODE].value,"%s",value);
 
     return 0;
 }
