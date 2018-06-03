@@ -440,3 +440,54 @@ void smarthomeFreshAirCmdCtrClose(DeviceStr *dev)
 			dev->channel,
 			0,NULL,0);
 }
+
+void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
+{
+	uint8_t param[2] = {0};
+	param[0] = 6; // Ä¬ÈÏÎª£¶·ÖÖÓ
+	printf("[%s]type:%d,value:%d\n",
+			__FUNCTION__, 
+			dev->type_para->device_type,
+			param[0]);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			0,param,sizeof(param));
+}
+
+void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev)
+{
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Off,
+			dev->type_para->device_type,
+			dev->channel,
+			0,NULL,0);
+}
+
+void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t channel)
+{
+	uint8_t param[2] = {0xff,0};
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			channel,param,sizeof(param));
+}
+
+void smarthomeCurtainCmdCtrClose(DeviceStr *dev,uint16_t channel)
+{
+	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Off,
+			dev->type_para->device_type,
+			dev->channel,
+			channel, NULL, 0);
+}
+

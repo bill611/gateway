@@ -3,7 +3,7 @@
  *
  *       Filename:  device_motion_curtain.c
  *
- *    Description:  灯控设备 
+ *    Description:  红外幕帘设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55

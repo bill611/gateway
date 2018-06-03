@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_fresh_air.c
+ *       Filename:  device_air_condition.c
  *
- *    Description:  新风设备 
+ *    Description:  空调设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_fresh_air.h"
+#include "device_air_condition.h"
 #include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
@@ -40,6 +40,7 @@
 enum {
 	ATTR_ERROR,
 	ATTR_SWICH,
+	ATTR_MODE,
 	ATTR_SPEED,
 };
 
@@ -130,6 +131,17 @@ static void cmdSwich(DeviceStr *dev,char *value)
 		smarthomeFreshAirCmdCtrClose(dev);
 }
 
+static void cmdWorkMode(DeviceStr *dev,char *value)
+{
+	int value_int = atoi(value);
+	sprintf(dev->value[ATTR_SPEED],"%s",value);
+	if (value_int) {
+		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
+		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
+			speed -=1;
+		smarthomeFreshAirCmdCtrOpen(dev,speed);
+	}
+}
 static void cmdWindSpeed(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
@@ -178,20 +190,19 @@ static void reportPowerOffCb(DeviceStr *dev)
 			dev->id, attr_name,attr_value);
 }
 
-static DeviceTypePara fresh_air = {
-	.name = "fresh_air",
-	.short_model = 0x002824cd,
-	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
+static DeviceTypePara air_condition = {
+	.name = "air_condition",
+	.short_model = 0x00022531,
+	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
 	.proto_type = PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_XFXT,
+	.device_type = DEVICE_TYPE_ZYKT,
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
+		{"WorkMode",cmdWorkMode},
 		{"WindSpeed",cmdWindSpeed},
-		{"CurrentTemperature",NULL},
-		{"CurrentHumidity",NULL},
-		{"TVOC",NULL},
-		{"PM25",NULL},
+		{"CurrentTemp",NULL},
+		{"Temperature",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
@@ -204,13 +215,13 @@ static DeviceTypePara fresh_air = {
 };
 
 
-DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &fresh_air;
+	This->type_para = &air_condition;
 	This->addr = addr;
 	This->channel = channel;
 	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

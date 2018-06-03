@@ -41,6 +41,7 @@ typedef enum
 	DEVICE_TYPE_XFXT,			// 25	新风系统
 	DEVICE_TYPE_FS,		  		// 26	风扇
 	DEVICE_TYPE_SGBJQ,		 	// 27	声光报警器
+	DEVICE_TYPE_JD = 102,		// 102	警笛报警器
 }TC_Device_Type;
 
 typedef enum
@@ -130,4 +131,8 @@ extern void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel);
 extern void smarthomeLightCmdCtrClose(DeviceStr *dev,uint16_t channel);
 extern void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value);
 extern void smarthomeFreshAirCmdCtrClose(DeviceStr *dev);
+extern void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev);
+extern void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev);
+extern void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t channel);
+extern void smarthomeCurtainCmdCtrClose(DeviceStr *dev,uint16_t channel);
 #endif

@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_fresh_air.c
+ *       Filename:  device_door_contact.c
  *
- *    Description:  新风设备 
+ *    Description:  门磁设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_fresh_air.h"
+#include "device_door_contact.h"
 #include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
@@ -38,9 +38,9 @@
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
 enum {
-	ATTR_ERROR,
-	ATTR_SWICH,
-	ATTR_SPEED,
+	ATTR_ALARM,
+	ATTR_BATTERYPERCENTAGE,
+	ATTR_TAMPERALARM,
 };
 
 /* ---------------------------------------------------------------------------*
@@ -110,107 +110,59 @@ static int removeDeviceCb(DeviceStr **device)
     return 0;
 }
 
-static void cmdSwich(DeviceStr *dev,char *value)
-{
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SWICH],"%s",value);
-	printf("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
-			__FUNCTION__,
-			value,
-			value_int,
-			dev->value[ATTR_SWICH],
-			dev->value[ATTR_SPEED] );
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -= 1;
-		printf("%s:%d\n", __FUNCTION__,speed);
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	} else
-		smarthomeFreshAirCmdCtrClose(dev);
-}
 
-static void cmdWindSpeed(DeviceStr *dev,char *value)
+static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SPEED],"%s",value);
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	}
-}
-
-static void cmdGetSwichStatus(DeviceStr *dev)
-{
-	// smarthomeAllDeviceCmdGetSwichStatus(dev->addr,1,0);
-}
-
-static void reportPowerOnCb(DeviceStr *dev,char *param)
-{
-	// 固定为开
-	sprintf(dev->value[ATTR_SWICH],"1");
-	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
-	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1); 
-	const char *attr_name[3] = {
-		dev->type_para->attr[ATTR_SWICH].name,
-		dev->type_para->attr[ATTR_SPEED].name,
+	printf("[%s:%s]%d\n",__FUNCTION__,dev->type_para->name,param[0] );
+	int alarm_type = param[0];
+	if (alarm_type == TC_ALARM_ACTION)
+		sprintf(dev->value[ATTR_ALARM],"1");
+	else if (alarm_type == TC_ALARM_LOWPOWER)
+		sprintf(dev->value[ATTR_BATTERYPERCENTAGE],"20");
+	else if (alarm_type == TC_ALARM_TAMPER)
+		sprintf(dev->value[ATTR_TAMPERALARM],"0");
+	const char *attr_name[4] = {
+		dev->type_para->attr[ATTR_ALARM].name,
+		dev->type_para->attr[TC_ALARM_LOWPOWER].name,
+		dev->type_para->attr[ATTR_TAMPERALARM].name,
 		NULL};
-	const char *attr_value[3] = {
-		dev->value[ATTR_SWICH],
-		dev->value[ATTR_SPEED],
+	const char *attr_value[4] = {
+		dev->value[ATTR_ALARM],
+		dev->value[TC_ALARM_LOWPOWER],
+		dev->value[ATTR_TAMPERALARM],
 		NULL};
 	alink_subdev_report_attrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
-static void reportPowerOffCb(DeviceStr *dev)
-{
-	sprintf(dev->value[ATTR_SWICH],"0");
-	const char *attr_name[2] = {
-		dev->type_para->attr[ATTR_SWICH].name,
-		NULL};
-	const char *attr_value[2] = {
-		dev->value[ATTR_SWICH],
-		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
-			dev->id, attr_name,attr_value);
-}
 
-static DeviceTypePara fresh_air = {
-	.name = "fresh_air",
-	.short_model = 0x002824cd,
-	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
+static DeviceTypePara motion_cuntain = {
+	.name = "door_contact",
+	.short_model = 0x005c2503,
+	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
 	.proto_type = PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_XFXT,
+	.device_type = DEVICE_TYPE_MC,
 	.attr = {
-		{"ErrorCode",NULL},
-		{"Switch",cmdSwich},
-		{"WindSpeed",cmdWindSpeed},
-		{"CurrentTemperature",NULL},
-		{"CurrentHumidity",NULL},
-		{"TVOC",NULL},
-		{"PM25",NULL},
+		{"DoorContactAlarm",NULL},
+		{"BatteryPercentage",NULL},
+		{"TamperAlarm",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.execCmd = execCmdCb,
 	.remove = removeDeviceCb,
-	.getSwichStatus = cmdGetSwichStatus,
-	.reportPowerOn = reportPowerOnCb,
-	.reportPowerOff = reportPowerOffCb,
+	.reportAlarmStatus = reportAlarmStatus,
 };
 
 
-DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &fresh_air;
+	This->type_para = &motion_cuntain;
 	This->addr = addr;
 	This->channel = channel;
 	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

@@ -31,6 +31,10 @@
 #include "device_light.h"
 #include "device_fresh_air.h"
 #include "device_motion_curtain.h"
+#include "device_air_condition.h"
+#include "device_alarm_whistle.h"
+#include "device_curtain.h"
+#include "device_door_contact.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -91,6 +95,10 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,registDeviceLight},
 	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
 	{DEVICE_TYPE_HW,registDeviceMotionCurtain},
+	{DEVICE_TYPE_ZYKT,registDeviceAirCondition},
+	{DEVICE_TYPE_JD,registDeviceAlarmWhistle},
+	{DEVICE_TYPE_CL,registDeviceCurtain},
+	{DEVICE_TYPE_MC,registDeviceDoorContact},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)

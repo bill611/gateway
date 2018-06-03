@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_motion_curtain.h
+ *       Filename:  device_door_contact.h
  *
- *    Description:  红外幕帘设备
+ *    Description:  门磁设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:47:22 
@@ -14,8 +14,8 @@
  *
  * =============================================================================
  */
-#ifndef _DEVICE_MOTION_CURTAIN_H
-#define _DEVICE_MOTION_CURTAIN_H
+#ifndef _DEVICE_DOOR_CONTACT_H
+#define _DEVICE_DOOR_CONTACT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel);
+	extern DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel);
 
 #ifdef __cplusplus
 }

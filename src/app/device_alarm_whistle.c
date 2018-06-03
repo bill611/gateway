@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_fresh_air.c
+ *       Filename:  device_alarm_whistle.c
  *
- *    Description:  新风设备 
+ *    Description:  警笛设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_fresh_air.h"
+#include "device_alarm_whistle.h"
 #include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
@@ -40,7 +40,6 @@
 enum {
 	ATTR_ERROR,
 	ATTR_SWICH,
-	ATTR_SPEED,
 };
 
 /* ---------------------------------------------------------------------------*
@@ -114,33 +113,17 @@ static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	sprintf(dev->value[ATTR_SWICH],"%s",value);
-	printf("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
+	printf("[%s]value:%s,int:%d,buf:%s\n",
 			__FUNCTION__,
 			value,
 			value_int,
-			dev->value[ATTR_SWICH],
-			dev->value[ATTR_SPEED] );
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -= 1;
-		printf("%s:%d\n", __FUNCTION__,speed);
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	} else
-		smarthomeFreshAirCmdCtrClose(dev);
+			dev->value[ATTR_SWICH]);
+	if (value_int)
+		smarthomeAlarmWhistleCmdCtrOpen(dev);
+	else
+		smarthomeAlarmWhistleCmdCtrClose(dev);
 }
 
-static void cmdWindSpeed(DeviceStr *dev,char *value)
-{
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SPEED],"%s",value);
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	}
-}
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
@@ -152,14 +135,11 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
 	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
-	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1); 
-	const char *attr_name[3] = {
+	const char *attr_name[2] = {
 		dev->type_para->attr[ATTR_SWICH].name,
-		dev->type_para->attr[ATTR_SPEED].name,
 		NULL};
-	const char *attr_value[3] = {
+	const char *attr_value[2] = {
 		dev->value[ATTR_SWICH],
-		dev->value[ATTR_SPEED],
 		NULL};
 	alink_subdev_report_attrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
@@ -178,20 +158,15 @@ static void reportPowerOffCb(DeviceStr *dev)
 			dev->id, attr_name,attr_value);
 }
 
-static DeviceTypePara fresh_air = {
-	.name = "fresh_air",
-	.short_model = 0x002824cd,
-	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
+static DeviceTypePara alarm_whistle = {
+	.name = "alarm_whistle",
+	.short_model = 0x00022531,
+	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
 	.proto_type = PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_XFXT,
+	.device_type = DEVICE_TYPE_JD,
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
-		{"WindSpeed",cmdWindSpeed},
-		{"CurrentTemperature",NULL},
-		{"CurrentHumidity",NULL},
-		{"TVOC",NULL},
-		{"PM25",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
@@ -204,13 +179,13 @@ static DeviceTypePara fresh_air = {
 };
 
 
-DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &fresh_air;
+	This->type_para = &alarm_whistle;
 	This->addr = addr;
 	This->channel = channel;
 	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
@@ -218,7 +193,7 @@ DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
-	}	
+	}
 
 	return This;
 }
