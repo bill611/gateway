@@ -364,7 +364,7 @@ int platform_awss_connect_ap(
 	sys_net_is_ready = 1;
 	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
 	ret = (char *)system(buf);
-	printf("system:%s\n",ret);
+	printf("[%s]system:%s,%s\n",__FUNCTION__,buf,ret);
 
     //TODO: wait dhcp ready here
     return 0;
@@ -376,7 +376,9 @@ int platform_wifi_scan(platform_wifi_scan_result_cb_t cb)
 	printf("app----------------->[%s]\n", __FUNCTION__);
 	char *cmd[] = { "gw", "wlan0", "scan" };
 	memset(ap_info,0,sizeof(TcWifiScan)*100);
+	ap_cnt = 0;
 	iwlist(3,cmd,&ap_info,&ap_cnt);
+	printf("ap cnt:%d\n",ap_cnt );
     for (i=0; i<ap_cnt; i++) {
         int is_last_ap = 0;
         if(i == ap_cnt - 1)
@@ -646,7 +648,21 @@ int platform_wifi_send_80211_raw_frame(_IN_ enum platform_awss_frame_type type,
 
 void resetWifi(void)
 {
+	char *ret;
+	char buf[256];
+	int cnt = 50;
 	sprintf(tc_wifi_config.ssid,"aha");
 	sprintf(tc_wifi_config.auth_key,"12345678");
 	tcSetNetwork(TC_SET_STATION);
+	snprintf(buf, sizeof(buf), "./wpa_cli -p %s -i %s status | grep wpa_state",
+			WPA_PATH, WLAN_IFNAME);
+	do {
+		ret = excuteCmd(buf,NULL);
+		usleep(100 * 1000);
+	} while ((strncmp(ret,"wpa_state=COMPLETED",strlen("wpa_state=COMPLETED")) != 0) && --cnt != 0);
+
+	sys_net_is_ready = 1;
+	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
+	ret = (char *)system(buf);
+	printf("[%s]system:%s,%s\n",__FUNCTION__,buf,ret);
 }

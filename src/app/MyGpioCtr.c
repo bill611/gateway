@@ -617,6 +617,6 @@ void gpioInit(void)
 {
 	printf("gpio init\n");
 	gpio = myGpioPrivCreate(gpiotbl);	
-	// gpio->creatOutputThread(gpio);
+	gpio->creatOutputThread(gpio);
 }
 

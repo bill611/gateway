@@ -154,8 +154,8 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 {
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
-	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 	const char *attr_name[2] = {
+	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
 	const char *attr_value[2] = {
@@ -187,7 +187,6 @@ static DeviceTypePara outlet = {
 	.attr = {
 		{"ErrorCode",NULL},
 		{"Switch",cmdSwich},
-		{"Luminance",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,

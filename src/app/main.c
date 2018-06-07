@@ -275,6 +275,8 @@ int main(int argc, char *argv[])
 
     alink_set_loglevel(loglevel);
 
+	gpioInit();
+	gpio->creatInputThread(gpio,gpioInputTread);
     if (env == SANDBOX) {
         alink_enable_sandbox_mode();
     } else if (env == DAILY) {
@@ -293,17 +295,16 @@ int main(int argc, char *argv[])
 
     //设置设备认证模式:DEFAULT(阿里智能),SDS+DEVICEID,SDS_WHITELIST
     alink_set_auth_mode(ALINK_AUTH_MODE_DEFAULT);
-	// awss_start();
     alink_start();
-	// awss_end();
     alink_wait_connect(ALINK_WAIT_FOREVER);
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
+	gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
+
 	gwDeviceInit();
-	gpioInit();
-	gpio->creatInputThread(gpio,gpioInputTread);
 	zigbeeInit();
 	smarthomeInit();
 	gwLoadDeviceData();
-	udpDebugInit();
+	// udpDebugInit();
 	// register_sub_device();
 	// testUartSend();
 loop:
