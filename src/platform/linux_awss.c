@@ -96,9 +96,9 @@ static TcWifiConfig tc_wifi_config = {
 	.boot_proto = "DHCP",
 	.network_type = "Infra",
 	.ssid = "aha",
-	.auth_mode = "OPEN",
-	.encrypt_type = "NONE",
-	.auth_key = "TC.86kb.com",
+	.auth_mode = "WPA2PSK",
+	.encrypt_type = "AES",
+	.auth_key = "12345678",
 
 	.ap_addr = "192.168.100.1",
 	.ap_ssid = "AliGateWay",
@@ -644,3 +644,9 @@ int platform_wifi_send_80211_raw_frame(_IN_ enum platform_awss_frame_type type,
     // return 0;
 }
 
+void resetWifi(void)
+{
+	sprintf(tc_wifi_config.ssid,"aha");
+	sprintf(tc_wifi_config.auth_key,"12345678");
+	tcSetNetwork(TC_SET_STATION);
+}

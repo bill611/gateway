@@ -35,6 +35,7 @@
 #include "device_alarm_whistle.h"
 #include "device_curtain.h"
 #include "device_door_contact.h"
+#include "device_outlet.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -99,6 +100,7 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_JD,registDeviceAlarmWhistle},
 	{DEVICE_TYPE_CL,registDeviceCurtain},
 	{DEVICE_TYPE_MC,registDeviceDoorContact},
+	{DEVICE_TYPE_JLCZ,registDeviceOutlet},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
@@ -403,8 +405,10 @@ void gwReportPowerOn(char *id,char *param)
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
-	if (dev->type_para->reportPowerOn)
+	if (dev->type_para->reportPowerOn) {
+		printf("[%s]---->", dev->type_para->name);
 		dev->type_para->reportPowerOn(dev,param);
+	}
 }
 
 void gwReportPowerOff(char *id)
@@ -412,8 +416,10 @@ void gwReportPowerOff(char *id)
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
-	if (dev->type_para->reportPowerOff)
+	if (dev->type_para->reportPowerOff) {
+		printf("[%s]---->", dev->type_para->name);
 		dev->type_para->reportPowerOff(dev);
+	}
 }
 
 void gwReportAlarmStatus(char *id,char *param)
@@ -422,8 +428,10 @@ void gwReportAlarmStatus(char *id,char *param)
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
-	if (dev->type_para->reportAlarmStatus)
+	if (dev->type_para->reportAlarmStatus) {
+		printf("[%s]---->", dev->type_para->name);
 		dev->type_para->reportAlarmStatus(dev,param);
+	}
 }
 
 void gwGetSwichStatus(void)
@@ -435,8 +443,10 @@ void gwGetSwichStatus(void)
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
 		DeviceStr *dev;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
-		if (dev->type_para->getSwichStatus)
+		if (dev->type_para->getSwichStatus) {
+			// printf("[%s]---->", dev->type_para->name);
 			dev->type_para->getSwichStatus(dev);
+		}
 		sub_dev_list->foreachNext(sub_dev_list);
 		i++;
 	}

@@ -42,6 +42,8 @@ enum {
 	ATTR_SWICH,
 	ATTR_MODE,
 	ATTR_SPEED,
+	ATTR_CURRENT_TEMP,
+	ATTR_TEMP,
 };
 
 /* ---------------------------------------------------------------------------*
@@ -131,47 +133,116 @@ static void cmdSwich(DeviceStr *dev,char *value)
 		smarthomeFreshAirCmdCtrClose(dev);
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief cmdWorkMode 空调工作模式
+ *
+ * @param dev
+ * @param value APP端对应模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
+ * 协议对应为
+ * 第1个Byte为空调温度，范围16-32℃
+ * 第2个byte:
+ * 高4位:0制冷  1制热  2自动
+ *        3除湿  4送风
+ *        低4位: 0自动    1风高速 
+ *        2风中速  3风低速
+ *
+ */
+/* ---------------------------------------------------------------------------*/
 static void cmdWorkMode(DeviceStr *dev,char *value)
 {
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SPEED],"%s",value);
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	}
+	// char change[] = {2,0,1,4,3}; // 模式转换
+	// int value_int = atoi(value);
+	sprintf(dev->value[ATTR_MODE],"%s",value);
+	smarthomeAirCondtionCmdCtrOpen(dev,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
 }
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief cmdWindSpeed APP端对应模式为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * 协议对应为
+ * 第1个Byte为空调温度，范围16-32℃
+ * 第2个byte:
+ * 高4位:0制冷  1制热  2自动
+ *        3除湿  4送风
+ *        低4位: 0自动    1风高速 
+ *        2风中速  3风低速
+ * @param dev
+ * @param value
+ */
+/* ---------------------------------------------------------------------------*/
 static void cmdWindSpeed(DeviceStr *dev,char *value)
 {
-	int value_int = atoi(value);
+	// char change[] = {0,0,3,2,1}; // 模式转换
+	// int value_int = atoi(value);
 	sprintf(dev->value[ATTR_SPEED],"%s",value);
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	}
+	smarthomeAirCondtionCmdCtrOpen(dev,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
+}
+
+static void cmdTemperature(DeviceStr *dev,char *value)
+{
+	// int value_int = atoi(value);
+	sprintf(dev->value[ATTR_TEMP],"%s",value);
+	// if (value_int) {
+		// printf("[%s]%d\n", __FUNCTION__,value_int);
+		// // uint8_t speed = atoi(dev->value[ATTR_TEMP]);
+		// // if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
+			// // speed -=1;
+		// smarthomeFreshAirCmdCtrOpen(dev,value_int);
+	// }
+	smarthomeAirCondtionCmdCtrOpen(dev,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
 }
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
-	// smarthomeAllDeviceCmdGetSwichStatus(dev->addr,1,0);
+	smarthomeAllDeviceCmdGetSwichStatus(dev,1);
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief reportPowerOnCb 
+ *
+ * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
+ * 协议对应为
+ * 第1个Byte为空调温度，范围16-32℃
+ * 第2个byte:
+ * 高4位:0制冷  1制热  2自动
+ *        3除湿  4送风
+ *        低4位: 0自动    1风高速 
+ *        2风中速  3风低速
+ * @param dev
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
 static void reportPowerOnCb(DeviceStr *dev,char *param)
 {
+	char speed_change[] = {0,4,3,2}; // 速度转换
+	char mode_change[] = {1,2,0,4,3}; // 模式转换
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
-	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
-	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1); 
-	const char *attr_name[3] = {
+	sprintf(dev->value[ATTR_TEMP],"%d",param[0]); 
+	sprintf(dev->value[ATTR_SPEED],"%d",speed_change[param[1] & 0x0f]); 
+	sprintf(dev->value[ATTR_MODE],"%d",mode_change[param[1] >> 4]); 
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		dev->type_para->attr[ATTR_SPEED].name,
+		dev->type_para->attr[ATTR_MODE].name,
+		dev->type_para->attr[ATTR_TEMP].name,
 		NULL};
-	const char *attr_value[3] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		dev->value[ATTR_SPEED],
+		dev->value[ATTR_MODE],
+		dev->value[ATTR_TEMP],
 		NULL};
 	alink_subdev_report_attrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
@@ -202,7 +273,7 @@ static DeviceTypePara air_condition = {
 		{"WorkMode",cmdWorkMode},
 		{"WindSpeed",cmdWindSpeed},
 		{"CurrentTemp",NULL},
-		{"Temperature",NULL},
+		{"Temperature",cmdTemperature},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,

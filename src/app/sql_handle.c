@@ -118,7 +118,7 @@ int sqlGetDeviceId(uint16_t addr,char *id)
 	int ret = sql_local.sql->RecordCount(sql_local.sql);
 	if (ret)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
-	printf("ret:%d,id:%s\n", ret,id);
+	// printf("ret:%d,id:%s\n", ret,id);
 	sql_local.sql->Close(sql_local.sql);
 	return ret;
 }

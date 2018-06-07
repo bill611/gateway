@@ -144,7 +144,7 @@ static void cmdWindSpeed(DeviceStr *dev,char *value)
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
-	// smarthomeAllDeviceCmdGetSwichStatus(dev->addr,1,0);
+	// smarthomeAllDeviceCmdGetSwichStatus(dev,1);
 }
 
 static void reportPowerOnCb(DeviceStr *dev,char *param)

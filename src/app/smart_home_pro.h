@@ -41,6 +41,7 @@ typedef enum
 	DEVICE_TYPE_XFXT,			// 25	新风系统
 	DEVICE_TYPE_FS,		  		// 26	风扇
 	DEVICE_TYPE_SGBJQ,		 	// 27	声光报警器
+	DEVICE_TYPE_JLCZ = 48,			// 48	计量插座	
 	DEVICE_TYPE_JD = 102,		// 102	警笛报警器
 }TC_Device_Type;
 
@@ -64,6 +65,11 @@ typedef enum
 	Demand_Device_Ver_Res			= 0x07,			//查询设备固件版本号返回
 	Demand_Time						= 0x08,			//查询时间
 	Demand_Time_Res					= 0x09,			//查询时间返回
+	Device_Ele_Quantity				= 0x58,			//设备每隔30分钟上报用电量
+	Device_Ele_Quantity_Res			= 0x59,			//设备每隔30分钟上报用电量返回
+	Device_Ele_Power				= 0x5a,			//设备每隔30分钟上报当前功率，或功率异常时立即上报当前功率，功率异常范围值：
+   													//	1、10A：≥1800w；  2、16A：≥3000w；
+	Device_Ele_Power_Res			= 0x5b,			//立即上报功率返回
 	Device_On						= 0x90,			//开启单元
 	Device_On_Res					= 0x91,			//开启单元返回
 	Device_Off						= 0x92,			//关闭单元
@@ -133,6 +139,10 @@ extern void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value);
 extern void smarthomeFreshAirCmdCtrClose(DeviceStr *dev);
 extern void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev);
 extern void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev);
-extern void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t channel);
-extern void smarthomeCurtainCmdCtrClose(DeviceStr *dev,uint16_t channel);
+extern void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t value);
+extern void smarthomeCurtainCmdCtrClose(DeviceStr *dev);
+extern void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
+		uint8_t temp,
+		uint8_t mode,
+		uint8_t speed);
 #endif

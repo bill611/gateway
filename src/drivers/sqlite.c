@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "sqlite3.h"
 #include "sqlite.h"
 
@@ -356,13 +357,17 @@ static void SQLite_bind_text(struct _TSqlite *This,char *text)
 TSqlite * CreateLocalQuery(const char *FileName)
 {
 	int ret;
+	pthread_mutexattr_t mutexattr;
+	pthread_mutexattr_init(&mutexattr);
 
     TSqlite * This = (TSqlite *)malloc(sizeof(TSqlite));
     memset(This,0,sizeof(TSqlite));
     This->Private = (struct SqlitePrivate*)malloc(sizeof(struct SqlitePrivate));
 	This->sql_lock = (struct Sqlite_mutex *)malloc(sizeof(struct Sqlite_mutex));
     memset(This->Private,0,sizeof(struct SqlitePrivate));
-    pthread_mutex_init(&This->sql_lock->mutex, NULL);
+    pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutex_init(&This->sql_lock->mutex, &mutexattr);
+	pthread_mutexattr_destroy(&mutexattr);
 
 	ret = sqlite3_open(FileName, &This->Private->db);
 	if(ret!=SQLITE_OK) {

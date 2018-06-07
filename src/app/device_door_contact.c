@@ -3,7 +3,7 @@
  *
  *       Filename:  device_door_contact.c
  *
- *    Description:  门磁设备 
+ *    Description:  门磁设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -113,14 +113,17 @@ static int removeDeviceCb(DeviceStr **device)
 
 static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
-	printf("[%s:%s]%d\n",__FUNCTION__,dev->type_para->name,param[0] );
+	printf("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
-	if (alarm_type == TC_ALARM_ACTION)
+	if (alarm_type == TC_ALARM_OPEN_WINDOW) {
 		sprintf(dev->value[ATTR_ALARM],"1");
-	else if (alarm_type == TC_ALARM_LOWPOWER)
+	} else if (alarm_type == TC_ALARM_CLOSE_WINDOW){
+		sprintf(dev->value[ATTR_ALARM],"0");
+	} else if (alarm_type == TC_ALARM_LOWPOWER) {
 		sprintf(dev->value[ATTR_BATTERYPERCENTAGE],"20");
-	else if (alarm_type == TC_ALARM_TAMPER)
-		sprintf(dev->value[ATTR_TAMPERALARM],"0");
+	} else if (alarm_type == TC_ALARM_TAMPER) {
+		sprintf(dev->value[ATTR_TAMPERALARM],"1");
+	}
 	const char *attr_name[4] = {
 		dev->type_para->attr[ATTR_ALARM].name,
 		dev->type_para->attr[TC_ALARM_LOWPOWER].name,
@@ -138,12 +141,12 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 
 static DeviceTypePara motion_cuntain = {
 	.name = "door_contact",
-	.short_model = 0x005c2503,
-	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
+	.short_model = 0x00332560,
+	.secret = "i7ctpLwEHLYoOys5IjCnEiUGxyAIlwcMUEQus385",
 	.proto_type = PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_MC,
 	.attr = {
-		{"DoorContactAlarm",NULL},
+		{"ContactAlarm",NULL},
 		{"BatteryPercentage",NULL},
 		{"TamperAlarm",NULL},
 		{NULL,NULL},
@@ -170,7 +173,8 @@ DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
-	}	
+	}
+	sprintf(This->value[ATTR_BATTERYPERCENTAGE],"%s","100");
 
 	return This;
 }

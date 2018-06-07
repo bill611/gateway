@@ -34,6 +34,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "debug.h"
+#include "MyGpioCtr.h"
 #include "alink_export_gateway.h"
 #include "alink_export_subdev.h"
 #include "device_protocol.h"
@@ -50,6 +52,8 @@ extern char *optarg;
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
+static void gpioResetHandle(void *arg,int port);
+static void gpioRegistHandle(void *arg,int port);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -64,9 +68,18 @@ enum SERVER_ENV {
     PREPUB
 };
 
+typedef struct _GpioInputHandle {
+	GPIO_TBL port;
+	void (*func)(void *,int);
+}GpioInputHandle;
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
+static GpioInputHandle gpio_input_handle[] =
+{
+    {ENUM_GPIO_RESET,	gpioResetHandle},
+    {ENUM_GPIO_MODE,	gpioRegistHandle},
+};
 const char *env_str[] = {"daily", "sandbox", "online"};
 static unsigned char env = ONLINE;
 static char dead_loop = 0;
@@ -231,7 +244,7 @@ static void * testUartSendThead(void *arg)
 		ret = aws_notify_app_nonblock();
 		printf("ret :%d\n", ret);
 		sleep(1);
-	}	
+	}
 }
 
 static void testUartSend(void)
@@ -242,6 +255,18 @@ static void testUartSend(void)
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
 	pthread_create(&id,&attr,(void *)testUartSendThead,NULL);
 	pthread_attr_destroy(&attr);
+}
+
+static void * gpioInputTread(void *arg)
+{
+	unsigned int i;
+	while (1) {
+		for (i=0; i<NELEMENTS(gpio_input_handle); i++) {
+			gpio_input_handle[i].func(arg,gpio_input_handle[i].port);
+		}
+		usleep(100000);
+	}
+	return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -273,6 +298,8 @@ int main(int argc, char *argv[])
 	// awss_end();
     alink_wait_connect(ALINK_WAIT_FOREVER);
 	gwDeviceInit();
+	gpioInit();
+	gpio->creatInputThread(gpio,gpioInputTread);
 	zigbeeInit();
 	smarthomeInit();
 	gwLoadDeviceData();
@@ -290,4 +317,36 @@ loop:
     //alink_factory_reset(ALINK_REBOOT);
 
     alink_end();
+}
+
+static void gpioResetHandle(void *arg,int port)
+{
+	MyGpio *This = arg;
+	static int cnt = 0;
+	int activ_time = This->getActiveTime(This,port);
+	if (This->inputHandle(This,port)) {
+		if (cnt == activ_time) {
+			gpio->FlashStart(gpio,ENUM_GPIO_LED_RESET,FLASH_SLOW,FLASH_FOREVER);
+			resetWifi();
+			printf("[%s]:%d\n", __FUNCTION__,activ_time);
+		} 
+		cnt++;
+	} else {
+		cnt = 0;
+	}
+}
+static void gpioRegistHandle(void *arg,int port)
+{
+	MyGpio *This = arg;
+	static int cnt = 0;
+	int activ_time = This->getActiveTime(This,port);
+	if (This->inputHandle(This,port)) {
+		if (cnt == activ_time) {
+			gwDevicePrivatePropertyTest();
+			printf("[%s]:%d\n", __FUNCTION__,activ_time);
+		} 
+		cnt++;
+	} else {
+		cnt = 0;
+	}
 }

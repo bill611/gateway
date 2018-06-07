@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "MyGpioCtr.h"
 
@@ -35,7 +37,10 @@
 
 /* ----------------------------------------------------------------*
  *                        macro define
- *-----------------------------------------------------------------*/
+ *----------------------------------------------------------------------------*/
+static pthread_mutex_t gpioLock;
+#define GPIO_MUTEX_LOCK()   pthread_mutex_lock(&gpioLock)
+#define GPIO_MUTEX_UNLOCK() pthread_mutex_unlock(&gpioLock)
 #define GPIO_GROUP_A 'a'
 #define GPIO_GROUP_B 'b'
 #define GPIO_GROUP_C 'c'
@@ -46,6 +51,10 @@
 
 
 #define GPIO_ZIGBEE_POWER		GPIO_GROUP_C,15
+#define GPIO_LED_POWER			GPIO_GROUP_D,11
+#define GPIO_LED_RESET			GPIO_GROUP_D,10
+#define GPIO_RESET				GPIO_GROUP_D,3
+#define GPIO_MODE				GPIO_GROUP_E,1
 
 /* ----------------------------------------------------------------*
  *                      variables define
@@ -54,167 +63,156 @@ MyGpio *gpio = NULL;
 
 MyGpioPriv gpiotbl[]={
 	{GPIO_ZIGBEE_POWER,		"1",IO_ACTIVE,0},
+	{GPIO_LED_POWER,		"1",IO_ACTIVE,0},
+	{GPIO_LED_RESET,		"1",IO_INACTIVE,0},
+
+	{GPIO_RESET,			"0",IO_INPUT,30},
+	{GPIO_MODE,				"0",IO_INPUT,1},
 };
 
-/* ----------------------------------------------------------------*/
-/**
- * @brief myGpioFlashStop GPIO停止闪烁
- *
- * @param this
- * @param port IO口
- */
-/* ----------------------------------------------------------------*/
-static void myGpioFlashStop(MyGpio *this,int port)
-{
-	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if ((Priv+port)->default_value == IO_NO_EXIST) {
-		return;
-	}
-
-	(Priv+port)->flash_delay_time = 0;
-	(Priv+port)->flash_set_time = FLASH_STOP;
-	(Priv+port)->flash_times = 0;
-	(Priv+port)->flash_even_flag = 0;
-}
-
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioSetValue GPIO口输出赋值，不立即执行
  *
- * @param this
+ * @param This
  * @param port IO口
  * @param Value 有效IO_ACTIVE or 无效IO_INACTIVE
  */
-/* ----------------------------------------------------------------*/
-static void myGpioSetValue(MyGpio *this,int port,int  Value)
+/* ---------------------------------------------------------------------------*/
+static void myGpioSetValue(MyGpio *This,int port,int  Value)
 {
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if (	((Priv+port)->default_value == IO_INPUT)
-		||  ((Priv+port)->default_value == IO_NO_EXIST) ) {   //输出
+	Priv = This->Priv+port;
+	if (	(Priv->default_value == IO_INPUT)
+		||  (Priv->default_value == IO_NO_EXIST) ) {   //输出
 		printf("[%d]set value fail,it is input or not exist!\n",port);
 		return;
 	}
 
 	if (Value == IO_ACTIVE) {
-		(Priv+port)->current_value = *((Priv+port)->active) - '0';
+		Priv->current_value = *(Priv->active) - '0';
 	} else {
-		(Priv+port)->current_value = !(*((Priv+port)->active) - '0');
+		Priv->current_value = !(*(Priv->active) - '0');
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioSetValueNow GPIO口输出赋值，并立即执行
  *
- * @param this
+ * @param This
  * @param port IO口
  * @param Value 有效IO_ACTIVE or 无效IO_INACTIVE
  */
-/* ----------------------------------------------------------------*/
-static void myGpioSetValueNow(MyGpio *this,int port,int  Value)
+/* ---------------------------------------------------------------------------*/
+static void myGpioSetValueNow(MyGpio *This,int port,int  Value)
 {
+	GPIO_MUTEX_LOCK();
 	FILE *fp;
 	char string_buf[50],buffer[10];
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if (	((Priv+port)->default_value == IO_INPUT)
-		||  ((Priv+port)->default_value == IO_NO_EXIST) ) {   //输出
+	Priv = This->Priv+port;
+	if (	(Priv->default_value == IO_INPUT)
+		||  (Priv->default_value == IO_NO_EXIST) ) {   //输出
 		printf("[%d]set value fail,it is input!\n",port);
+		GPIO_MUTEX_UNLOCK();
 		return;
 	}
 
 	if (Value == IO_ACTIVE) {
-		(Priv+port)->current_value = *((Priv+port)->active) - '0';
+		Priv->current_value = *(Priv->active) - '0';
 	} else {
-		(Priv+port)->current_value = !(*((Priv+port)->active) - '0');
+		Priv->current_value = !(*(Priv->active) - '0');
 	}
 
-	sprintf(string_buf,"/sys/class/gpio/gpio%d/value",(Priv+port)->portnum);
+	// printf("port:%d,value:%d\n",Priv->portnum,Priv->current_value);
+	sprintf(string_buf,"/sys/class/gpio/gpio%d/value",Priv->portnum);
 	if ((fp = fopen(string_buf, "rb+")) == NULL) {
 		printf("SetValueNow[%d][%c%d]Cannot open value file.\n",
-				port,(Priv+port)->portid,(Priv+port)->portmask);
+				port,Priv->portid,Priv->portmask);
 		// exit(1);
 	} else {
-		sprintf(buffer,"%d",(Priv+port)->current_value);
+		sprintf(buffer,"%d",Priv->current_value);
 		fwrite(buffer, sizeof(char), sizeof(buffer) - 1, fp);
 		fclose(fp);
 	}
+	GPIO_MUTEX_UNLOCK();
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioRead 读输入口的值
  *
- * @param this
+ * @param This
  * @param port IO口
  *
  * @returns 真正的值 0或1
  */
-/* ----------------------------------------------------------------*/
-static int myGpioRead(MyGpio *this,int port)
+/* ---------------------------------------------------------------------------*/
+static int myGpioRead(MyGpio *This,int port)
 {
 	FILE *fp;
 	char string_buf[50];
 	char buffer[10];
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if ((Priv+port)->default_value == IO_INPUT) {
-		sprintf(string_buf,"/sys/class/gpio/gpio%d/value",(Priv+port)->portnum);
-		if ((fp = fopen(string_buf, "rb")) == NULL) {
-			printf("Read[%d][%c%d]Cannot open value file.\n",
-					port,Priv->portid,Priv->portmask);
-			// exit(1);
-		} else {
-			fread(buffer, sizeof(char), sizeof(buffer) - 1, fp);
-			(Priv+port)->current_value = atoi(buffer);
-			fclose(fp);
-		}
+	Priv = This->Priv+port;
+	if (Priv->default_value != IO_INPUT) {
+		goto return_value;
 	}
-	return (Priv+port)->current_value;
+	sprintf(string_buf,"/sys/class/gpio/gpio%d/value",Priv->portnum);
+	if ((fp = fopen(string_buf, "rb")) == NULL) {
+		printf("Read[%d][%c%d]Cannot open value file.\n",
+				port,Priv->portid,Priv->portmask);
+		// exit(1);
+	} else {
+		fread(buffer, sizeof(char), sizeof(buffer) - 1, fp);
+		Priv->current_value = atoi(buffer);
+		fclose(fp);
+	}
+return_value:
+	return Priv->current_value;
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioIsActive 读取输入IO值，并判断是否IO有效
  *
- * @param this
+ * @param This
  * @param port IO口
  *
  * @returns 有效IO_ACTIVE or 无效IO_INACTIVE
  */
-/* ----------------------------------------------------------------*/
-static int myGpioIsActive(MyGpio *this,int port)
+/* ---------------------------------------------------------------------------*/
+static int myGpioIsActive(MyGpio *This,int port)
 {
 	char value[2];
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if ((Priv+port)->default_value == IO_NO_EXIST) {
+	Priv = This->Priv+port;
+	if (Priv->default_value == IO_NO_EXIST) {
 		return IO_NO_EXIST;
 	}
-	sprintf(value,"%d",myGpioRead(this,port));
-	if (strcmp(value,(Priv+port)->active) == 0){
+	sprintf(value,"%d",myGpioRead(This,port));
+	if (strcmp(value,Priv->active) == 0){
 		return IO_ACTIVE;
 	} else {
 		return IO_INACTIVE;
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioFlashTimer GPIO闪烁执行函数，在单独的定时线程中执行
  * IO口电平变化到还原算一次
  *
- * @param this
+ * @param This
  */
-/* ----------------------------------------------------------------*/
-static void myGpioFlashTimer(MyGpio *this)
+/* ---------------------------------------------------------------------------*/
+static void myGpioFlashTimer(MyGpio *This)
 {
 	int i;
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	for (i=0; i<this->io_num; i++) {
+	Priv = This->Priv;
+	for (i=0; i<This->io_num; i++) {
 		if (Priv->default_value == IO_NO_EXIST) {
 			Priv++;
 			continue;
@@ -236,54 +234,175 @@ static void myGpioFlashTimer(MyGpio *this)
 
 			Priv->flash_delay_time = Priv->flash_set_time;
 
-			if (myGpioIsActive(this,i) == IO_ACTIVE)
-				myGpioSetValue(this,i,IO_INACTIVE);
+			if (myGpioIsActive(This,i) == IO_ACTIVE)
+				myGpioSetValueNow(This,i,IO_INACTIVE);
 			else
-				myGpioSetValue(this,i,IO_ACTIVE);
+				myGpioSetValueNow(This,i,IO_ACTIVE);
 		}
 		Priv++;
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioFlashStart 设置GPIO闪烁，并执行
  *
- * @param this
+ * @param This
  * @param port IO口
  * @param freq 频率 根据myGpioFlashTimer 执行时间决定
  * @param times 闪烁总次数 FLASH_FOREVER为循环闪烁
  */
-/* ----------------------------------------------------------------*/
-static void myGpioFlashStart(MyGpio *this,int port,int freq,int times)
+/* ---------------------------------------------------------------------------*/
+static void myGpioFlashStart(MyGpio *This,int port,int freq,int times)
 {
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	if ((Priv+port)->default_value == IO_NO_EXIST) {
+	Priv = This->Priv+port;
+	if (Priv->default_value == IO_NO_EXIST) {
 		return;
 	}
-	if ((Priv+port)->flash_set_time != freq) {
-		(Priv+port)->flash_delay_time = freq;
-		(Priv+port)->flash_set_time = freq;
-		(Priv+port)->flash_times = times;
+	if (Priv->flash_set_time != freq) {
+		Priv->flash_delay_time = freq;
+		Priv->flash_set_time = freq;
+		Priv->flash_times = times;
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioFlashStop GPIO停止闪烁
+ *
+ * @param This
+ * @param port IO口
+ */
+/* ---------------------------------------------------------------------------*/
+static void myGpioFlashStop(MyGpio *This,int port)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+	if (Priv->default_value == IO_NO_EXIST) {
+		return;
+	}
+
+	Priv->flash_delay_time = 0;
+	Priv->flash_set_time = FLASH_STOP;
+	Priv->flash_times = 0;
+	Priv->flash_even_flag = 0;
+	myGpioSetValue(This,port,IO_INACTIVE);
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioSetActiveTime 设置输入IO口的有效电平时间
+ *
+ * @param This
+ * @param port IO口
+ * @param value 时间
+ */
+/* ---------------------------------------------------------------------------*/
+static void myGpioSetActiveTime(struct _MyGpio *This,int port,int value)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+	if (Priv->default_value != IO_INPUT) {
+		return;
+	}
+	Priv->active_time = value;
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioSetActiveValue 设置输入IO口的有效值
+ *
+ * @param This
+ * @param port IO口
+ * @param value 时间
+ */
+/* ---------------------------------------------------------------------------*/
+static void myGpioSetActiveValue(struct _MyGpio *This,int port,int value)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+
+	char buf[2] = {0};
+	sprintf(buf,"%d",value);
+	if (strcmp(buf,Priv->active) != 0) {
+		if (value == 1 )
+			Priv->active = "1";
+		else
+			Priv->active = "0";
+	}
+}
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioGetActiveValue 获取输入IO口的有效值
+ *
+ * @param This
+ * @param port IO口
+ * @param value 时间
+ */
+/* ---------------------------------------------------------------------------*/
+static int myGpioGetActiveValue(struct _MyGpio *This,int port)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+
+	return atoi(Priv->active);
+}
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioInputHandle 检测输入IO电平
+ *
+ * @param This
+ * @param port
+ *
+ * @returns 1为有效 0为无效
+ */
+/* ---------------------------------------------------------------------------*/
+static int myGpioInputHandle(struct _MyGpio *This,int port)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+	int ret = myGpioIsActive(This,port);
+	// printf("port:%d,ret:%d,delay_time:%d\n",
+		 // port,ret,(This->Priv+port)->delay_time );
+	if (ret != IO_ACTIVE) {
+		return 0;
+	} else 
+		return 1;
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioGetActiveTime 获取输入IO的输入有效电平时间
+ *
+ * @param This
+ * @param port
+ *
+ * @returns 
+ */
+/* ---------------------------------------------------------------------------*/
+static int myGpioGetActiveTime(struct _MyGpio *This,int port)
+{
+	MyGpioPriv *Priv;
+	Priv = This->Priv+port;
+	return Priv->active_time;
+}
+
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioInit GPIO初始化，在创建IO对象后必须执行
  *
- * @param this
+ * @param This
  */
-/* ----------------------------------------------------------------*/
-static void myGpioInit(MyGpio *this)
+/* ---------------------------------------------------------------------------*/
+static void myGpioInit(MyGpio *This)
 {
 	FILE *fp;
 	int i;
 	char string_buf[50];
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	for (i=0; i<this->io_num; i++) {
+	Priv = This->Priv;
+	for (i=0; i<This->io_num; i++) {
 		if (Priv->default_value == IO_NO_EXIST) {
 			Priv++;
 			continue;
@@ -325,7 +444,7 @@ static void myGpioInit(MyGpio *this)
 		}
 		fclose(fp);
 		if (Priv->default_value != IO_INPUT)//设置默认值
-			myGpioSetValueNow(this,i,Priv->default_value);
+			myGpioSetValueNow(This,i,Priv->default_value);
 
 		Priv->flash_delay_time = 0;
 		Priv->flash_set_time = FLASH_STOP;
@@ -336,18 +455,18 @@ static void myGpioInit(MyGpio *this)
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioDestroy 销毁GPIO对象
  *
- * @param this
+ * @param This
  */
-/* ----------------------------------------------------------------*/
-static void myGpioDestroy(MyGpio *this)
+/* ---------------------------------------------------------------------------*/
+static void myGpioDestroy(MyGpio *This)
 {
-	free(this->Priv);
-	free(this);
-	this = NULL;
+	free(This->Priv);
+	free(This);
+	This = NULL;
 }
 
 /* ----------------------------------------------------------------*/
@@ -357,15 +476,15 @@ static void myGpioDestroy(MyGpio *this)
  *
  * @param this
  */
-/* ----------------------------------------------------------------*/
-static void myGpioHandle(MyGpio *this)
+/* ---------------------------------------------------------------------------*/
+static void myGpioHandle(MyGpio *This)
 {
 	FILE *fp;
 	int i;
 	char string_buf[50],buffer[10];
 	MyGpioPriv *Priv;
-	Priv = this->Priv;
-	for (i=0; i<this->io_num; i++) {
+	Priv = This->Priv;
+	for (i=0; i<This->io_num; i++) {
 		if (Priv->default_value == IO_NO_EXIST) {
 			Priv++;
 			continue;
@@ -389,7 +508,67 @@ static void myGpioHandle(MyGpio *this)
 	}
 }
 
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioThread Gpio处理函数，50ms处理一次
+ *
+ * @param arg
+ */
+/* ---------------------------------------------------------------------------*/
+static void * myGpioThread(void *arg)
+{
+	MyGpio *This = arg;
+	while (This != NULL) {
+		This->Handle(This);
+		This->FlashTimer(This);
+		usleep(50000);// 50ms
+	}
+	return NULL;
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioHandleThreadCreate 创建Gpio处理线程
+ */
+/* ---------------------------------------------------------------------------*/
+static void myGpioHandleThreadCreate(MyGpio *This)
+{
+	int result;
+	pthread_t m_pthread;					//线程号
+	pthread_attr_t threadAttr1;				//线程属性
+	pthread_attr_init(&threadAttr1);		//附加参数
+	//设置线程为自动销毁
+	pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
+	//创建线程，无传递参数
+	result = pthread_create(&m_pthread,&threadAttr1,myGpioThread,This);
+	if(result) {
+		printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
+	}
+	pthread_attr_destroy(&threadAttr1);		//释放附加参数
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief myGpioInputThreadCreate 创建检测输入线程
+ */
+/* ---------------------------------------------------------------------------*/
+static void myGpioInputThreadCreate(MyGpio *This,
+		void *(*checkInputHandle)(void *))
+{
+    int result;
+    pthread_t m_pthread;
+    pthread_attr_t threadAttr1;
+
+    pthread_attr_init(&threadAttr1);
+    pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
+    result = pthread_create(&m_pthread,&threadAttr1,checkInputHandle,This);
+    if(result) {
+        printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
+    }
+    pthread_attr_destroy(&threadAttr1);
+}
+
+/* ---------------------------------------------------------------------------*/
 /**
  * @brief myGpioPrivCreate 创建GPIO对象
  *
@@ -397,35 +576,47 @@ static void myGpioHandle(MyGpio *this)
  *
  * @returns GPIO对象
  */
-/* ----------------------------------------------------------------*/
+/* ---------------------------------------------------------------------------*/
 MyGpio* myGpioPrivCreate(MyGpioPriv *gpio_table)
 {
-	MyGpio *this = (MyGpio *)malloc(sizeof(MyGpio));
-	memset(this,0,sizeof(MyGpio));
+	pthread_mutexattr_t mutexattr;
+	pthread_mutexattr_init(&mutexattr);
+	MyGpio *This = (MyGpio *)malloc(sizeof(MyGpio));
+	memset(This,0,sizeof(MyGpio));
     if (gpio_table == gpiotbl) {
-		this->io_num = sizeof(gpiotbl) / sizeof(MyGpioPriv);
-		// printf("gpio_tbl:%d\n",this->io_num);
+		This->io_num = sizeof(gpiotbl) / sizeof(MyGpioPriv);
+		// printf("gpio_tbl:%d\n",This->io_num);
 	}
-	this->Priv = (MyGpioPriv *)malloc(sizeof(MyGpioPriv) * this->io_num);
-	memset(this->Priv,0,sizeof(MyGpioPriv) * this->io_num);
+	This->Priv = (MyGpioPriv *)malloc(sizeof(MyGpioPriv) * This->io_num);
+	memset(This->Priv,0,sizeof(MyGpioPriv) * This->io_num);
+    pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutex_init(&gpioLock, &mutexattr);
+	pthread_mutexattr_destroy(&mutexattr);
 
-	this->Priv = gpio_table;
-	this->Init = myGpioInit;
-	this->SetValue = myGpioSetValue;
-	this->SetValueNow = myGpioSetValueNow;
-	this->FlashStart = myGpioFlashStart;
-	this->FlashStop = myGpioFlashStop;
-	this->FlashTimer = myGpioFlashTimer;
-	this->Destroy = myGpioDestroy;
-	this->Handle = myGpioHandle;
-	this->IsActive = myGpioIsActive;
-	return this;
+	This->Priv = gpio_table;
+	This->SetValue = myGpioSetValue;
+	This->SetValueNow = myGpioSetValueNow;
+	This->FlashStart = myGpioFlashStart;
+	This->FlashStop = myGpioFlashStop;
+	This->FlashTimer = myGpioFlashTimer;
+	This->Destroy = myGpioDestroy;
+	This->Handle = myGpioHandle;
+	This->IsActive = myGpioIsActive;
+	This->setActiveTime = myGpioSetActiveTime;
+	This->getActiveTime = myGpioGetActiveTime;
+	This->setActiveValue = myGpioSetActiveValue;
+	This->getActiveValue = myGpioGetActiveValue;
+	This->inputHandle = myGpioInputHandle;
+	This->creatOutputThread = myGpioHandleThreadCreate;
+	This->creatInputThread = myGpioInputThreadCreate;
+	myGpioInit(This);
+	return This;
 }
 
 void gpioInit(void)
 {
 	printf("gpio init\n");
 	gpio = myGpioPrivCreate(gpiotbl);	
-	gpio->Init(gpio);
+	// gpio->creatOutputThread(gpio);
 }
 

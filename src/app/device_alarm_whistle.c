@@ -127,7 +127,7 @@ static void cmdSwich(DeviceStr *dev,char *value)
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
-	// smarthomeAllDeviceCmdGetSwichStatus(dev->addr,1,0);
+	smarthomeAllDeviceCmdGetSwichStatus(dev,1);
 }
 
 static void reportPowerOnCb(DeviceStr *dev,char *param)
@@ -160,13 +160,13 @@ static void reportPowerOffCb(DeviceStr *dev)
 
 static DeviceTypePara alarm_whistle = {
 	.name = "alarm_whistle",
-	.short_model = 0x00022531,
-	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
+	.short_model = 0x005b255f,
+	.secret = "bQ0N06R7q5bRb50fwn4NluMrVPPutr0EjKWaIAFh",
 	.proto_type = PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JD,
 	.attr = {
 		{"ErrorCode",NULL},
-		{"Switch",cmdSwich},
+		{"SirenWarningMode",cmdSwich},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,

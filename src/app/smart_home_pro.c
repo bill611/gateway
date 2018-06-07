@@ -351,6 +351,36 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			// SceneStart(packet->param[0],1);
 			break;
 			
+		case Device_Ele_Quantity:		//计量插座每隔30分钟上报用电量
+			{
+				printf("ele quantity:%x\n",packet->addr);
+				char id[32];
+				smarthomeGetId(packet,id);
+				// gwReportPowerOn(id,packet->param);
+				smarthomeSendDataPacket(
+						packet->addr,
+						Device_Ele_Quantity_Res,
+						packet->device_type,
+						packet->channel_num,
+						packet->current_channel,
+						NULL,0);
+			} break;
+			
+		case Device_Ele_Power:		//计量插座每隔30分钟上报用功率
+			{
+				printf("ele power:%x\n",packet->addr);
+				char id[32];
+				smarthomeGetId(packet,id);
+				// gwReportPowerOn(id,packet->param);
+				smarthomeSendDataPacket(
+						packet->addr,
+						Device_Ele_Power_Res,
+						packet->device_type,
+						packet->channel_num,
+						packet->current_channel,
+						NULL,0);
+			} break;
+			
 	default:
 		break;
 	}
@@ -468,19 +498,20 @@ void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev)
 			0,NULL,0);
 }
 
-void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t channel)
+void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t value)
 {
 	uint8_t param[2] = {0xff,0};
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	param[0] = value;
+	printf("[%s]type:%d,value:%d\n",__FUNCTION__, dev->type_para->device_type,value);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_On,
 			dev->type_para->device_type,
 			dev->channel,
-			channel,param,sizeof(param));
+			1,param,sizeof(param));
 }
 
-void smarthomeCurtainCmdCtrClose(DeviceStr *dev,uint16_t channel)
+void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
 {
 	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
@@ -488,6 +519,49 @@ void smarthomeCurtainCmdCtrClose(DeviceStr *dev,uint16_t channel)
 			Device_Off,
 			dev->type_para->device_type,
 			dev->channel,
-			channel, NULL, 0);
+			1, NULL, 0);
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief smarthomeAirCondtionCmdCtrOpen 
+ * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
+ * 协议对应为
+ * 第1个Byte为空调温度，范围16-32℃
+ * 第2个byte:
+ * 高4位:0制冷  1制热  2自动
+ *        3除湿  4送风
+ *        低4位: 0自动    1风高速 
+ *        2风中速  3风低速
+ *
+ * @param dev
+ * @param temp
+ * @param mode
+ * @param speed
+ */
+/* ---------------------------------------------------------------------------*/
+void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
+		uint8_t temp,
+		uint8_t mode,
+		uint8_t speed)
+{
+	char speed_change[] = {0,0,3,2,1}; // 速度转换
+	char mode_change[] = {2,0,1,4,3}; // 模式转换
+	uint8_t param[2] = {0};
+	printf("[%s]type:%d,temp:%d:,mode:%d,speed:%d\n",
+			__FUNCTION__, 
+			dev->type_para->device_type,
+			temp,
+			mode_change[mode],
+			speed_change[speed]);
+	param[0] = temp;
+	param[1] = mode_change[mode]<< 4 | speed_change[speed];
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			1,param,sizeof(param));
 }
 

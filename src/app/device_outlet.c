@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_curtain.c
+ *       Filename:  device_outlet.c
  *
- *    Description:  窗帘设备 
+ *    Description:  灯控设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -23,7 +23,7 @@
 
 #include "cJSON.h"
 #include "sql_handle.h"
-#include "device_curtain.h"
+#include "device_outlet.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -73,7 +73,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 	// char uuid[33] = {0};
 	// int ret = -1;
 	// char req_params[256] = {0};
-	// ret = alink_subdev_get_uuid(curtain.proto_type,curtain.dev[0].id,uuid, sizeof(uuid));//or alink_subdev_get_uuid
+	// ret = alink_subdev_get_uuid(outlet.proto_type,outlet.dev[0].id,uuid, sizeof(uuid));//or alink_subdev_get_uuid
 	// if (ret != 0)
 		// return ret;
 	// root = cJSON_CreateObject();
@@ -133,13 +133,13 @@ static int removeDeviceCb(DeviceStr **device)
     return 0;
 }
 
-static void cmdPosition(DeviceStr *dev,char *value)
+static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	if (value_int)
-		smarthomeCurtainCmdCtrOpen(dev,value_int);
+		smarthomeLightCmdCtrOpen(dev,1);
 	else
-		smarthomeCurtainCmdCtrClose(dev);
+		smarthomeLightCmdCtrClose(dev,1);
 }
 
 static void cmdGetSwichStatus(DeviceStr *dev)
@@ -153,8 +153,8 @@ static void cmdGetSwichStatus(DeviceStr *dev)
 static void reportPowerOnCb(DeviceStr *dev,char *param)
 {
 	// 固定为开
-	sprintf(dev->value[ATTR_SWICH],"%d",param[0]);
-	printf("value:%s\n",dev->value[ATTR_SWICH] );
+	sprintf(dev->value[ATTR_SWICH],"1");
+	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 	const char *attr_name[2] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
@@ -178,15 +178,16 @@ static void reportPowerOffCb(DeviceStr *dev)
 			dev->id, attr_name,attr_value);
 }
 
-static DeviceTypePara curtain = {
-	.name = "curtain",
-	.short_model = 0x00042564,
-	.secret = "W8m15EVFuNuAEfYbecXchzXdcDFuC1EBhie6Enrz",
+static DeviceTypePara outlet = {
+	.name = "outlet",
+	.short_model = 0x000a23c3,
+	.secret = "tPIMShBYjubW3SWJKw1o1XqxRbM8bcTrR2Fi0nsQ",
 	.proto_type = PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_CL,
+	.device_type = DEVICE_TYPE_JLCZ,
 	.attr = {
 		{"ErrorCode",NULL},
-		{"CurtainPosition",cmdPosition},
+		{"Switch",cmdSwich},
+		{"Luminance",NULL},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
@@ -195,16 +196,17 @@ static DeviceTypePara curtain = {
 	.remove = removeDeviceCb,
 	.getSwichStatus = cmdGetSwichStatus,
 	.reportPowerOn = reportPowerOnCb,
+	.reportPowerOff = reportPowerOffCb,
 };
 
 
-DeviceStr * registDeviceCurtain(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceOutlet(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &curtain;
+	This->type_para = &outlet;
 	This->addr = addr;
 	This->channel = channel;
 	// 初始化属性

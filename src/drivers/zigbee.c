@@ -466,7 +466,6 @@ static void *zigbeeModuleTask(void *arg)
 int zigbeeInit(void)
 {
 	int ret = -1;
-	gpioInit();
 	if(uartInit(callbackProcess) == 0) {
 		printf("Err:uart init fail!\n");
 		goto end;

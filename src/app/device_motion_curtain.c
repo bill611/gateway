@@ -113,7 +113,7 @@ static int removeDeviceCb(DeviceStr **device)
 
 static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
-	printf("[%s:%s]%d\n",__FUNCTION__,dev->type_para->name,param[0] );
+	printf("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
 	if (alarm_type == TC_ALARM_ACTION)
 		sprintf(dev->value[ATTR_ALARM],"1");
