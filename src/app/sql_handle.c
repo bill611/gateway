@@ -19,6 +19,7 @@
  *----------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
+#include "externfunc.h"
 #include "sqlite3.h"
 #include "sqlite.h"
 #include "sql_handle.h"
@@ -48,16 +49,31 @@ TSqliteData sql_local = {
 static int sqlCheck(TSqlite *sql)
 {
     int ret;
+	char *string = "CREATE TABLE  DeviceList(\
+		ID char(32) PRIMARY KEY,\
+		DevType INTEGER,\
+		Addr INTEGER,\
+		Channel INTEGER\
+	   	)";
     if (sql == NULL)
         goto sqlCheck_fail;
 
     ret = LocalQueryOpen(sql,"select ID from DeviceList limit 1");
     sql->Close(sql);
-    if (ret == 1)
-        return TRUE;
+	if (ret == 1) {
+		backData(sql->file_name);
+		return TRUE;
+	}
 
 sqlCheck_fail:
     printf("sql locoal err\n");
+	if (recoverData(sql_local.file_name) == 0) {
+		printf("creat new db\n");
+		LocalQueryExec(sql_local.sql,string);
+	} else {
+		sql_local.sql->Destroy(sql_local.sql);
+		sql_local.sql = CreateLocalQuery(sql_local.sql->file_name);
+	}
 	return FALSE;
 }
 
@@ -110,6 +126,15 @@ void sqlDeleteDevice(char *id)
 	sync();
 }
 
+void sqlClearDevice(void)
+{
+	char buf[128];
+	sprintf(buf, "Delete From DeviceList");
+	printf("%s\n",buf);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+}
 int sqlGetDeviceId(uint16_t addr,char *id)
 {
 	char buf[128];

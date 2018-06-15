@@ -22,7 +22,7 @@ extern "C" {
 #endif  /* __cplusplus */
 
 #include <stdint.h>
-#include "alink_export_subdev.h"
+#include "ali_sdk_platform.h"
 
 #define NELEMENTS(array)  \
 	        (sizeof (array) / sizeof ((array) [0]))                       
@@ -33,6 +33,10 @@ extern "C" {
 
 #define MAX_DEVICE_PARA 30   // 每个设备最参数个数
 
+	enum {
+		DEVICE_VELUE_TYPE_NUMBER,
+		DEVICE_VELUE_TYPE_STRING,
+	};
 	struct _DeviceStr;
 	typedef struct {
 		char *name; // 设备类型名称 如灯控为light,调试使用
@@ -64,6 +68,22 @@ extern "C" {
 		char *value[MAX_DEVICE_PARA];
 		DeviceTypePara *type_para;
 	}DeviceStr;
+
+	typedef struct _GateWayPrivateAttr{
+		char *attr;	
+		int (*getCb)(char *output_buf, unsigned int buf_sz);
+		int (*setCb)(char *value);
+		int value_type;
+		char value[32];	
+	}GateWayPrivateAttr;
+
+	typedef struct _GateWayAttr{
+		int (*getCb)(const char *devid, const char *attr_set[]);
+		int (*setCb)(const char *devid, const char *attr_name, const char *attr_value);
+		int (*execCmdCb)(const char *devid, const char *cmd_name, const char *cmd_args);
+		int (*removeDeviceCb)(const char *devid);
+		int (*permitSubDeviceJoinCb)(uint8_t duration);
+	}GateWayAttr;
 
 #ifdef __cplusplus
 }

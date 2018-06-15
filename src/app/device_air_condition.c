@@ -63,7 +63,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			alink_subdev_report_attrs(dev->type_para->proto_type,
+			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 					dev->id, attr_name,attr_value);
 		}
 	}
@@ -151,8 +151,6 @@ static void cmdSwich(DeviceStr *dev,char *value)
 /* ---------------------------------------------------------------------------*/
 static void cmdWorkMode(DeviceStr *dev,char *value)
 {
-	// char change[] = {2,0,1,4,3}; // 模式转换
-	// int value_int = atoi(value);
 	sprintf(dev->value[ATTR_MODE],"%s",value);
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
@@ -175,8 +173,6 @@ static void cmdWorkMode(DeviceStr *dev,char *value)
 /* ---------------------------------------------------------------------------*/
 static void cmdWindSpeed(DeviceStr *dev,char *value)
 {
-	// char change[] = {0,0,3,2,1}; // 模式转换
-	// int value_int = atoi(value);
 	sprintf(dev->value[ATTR_SPEED],"%s",value);
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
@@ -186,15 +182,7 @@ static void cmdWindSpeed(DeviceStr *dev,char *value)
 
 static void cmdTemperature(DeviceStr *dev,char *value)
 {
-	// int value_int = atoi(value);
 	sprintf(dev->value[ATTR_TEMP],"%s",value);
-	// if (value_int) {
-		// printf("[%s]%d\n", __FUNCTION__,value_int);
-		// // uint8_t speed = atoi(dev->value[ATTR_TEMP]);
-		// // if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			// // speed -=1;
-		// smarthomeFreshAirCmdCtrOpen(dev,value_int);
-	// }
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
@@ -244,20 +232,20 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 		dev->value[ATTR_MODE],
 		dev->value[ATTR_TEMP],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
 static void reportPowerOffCb(DeviceStr *dev)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
-	const char *attr_name[2] = {
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	const char *attr_value[2] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
@@ -265,7 +253,7 @@ static DeviceTypePara air_condition = {
 	.name = "air_condition",
 	.short_model = 0x00022531,
 	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
-	.proto_type = PROTO_TYPE_ZIGBEE,
+	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_ZYKT,
 	.attr = {
 		{"ErrorCode",NULL},

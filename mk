@@ -1,23 +1,23 @@
 #!/bin/bash
 set -e
 
-if [ "$#" == 0 ]; then
-	echo 'CC = arm-linux-gcc
-STRIP = arm-linux-strip $(BIN_TARGET)
-LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/sdk/lib
+if [ "$#" -lt 1 ]; then
+	echo 'please input version like "./mk 1 or 2"'
+	exit
+elif [ "$1" -eq 1 ]; then
+	echo '
 COMPILE = $(CC) -muclibc -g -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
-CFLAGS = -muclibc -g -c -DWATCHDOG_DEBUG -O0
+CFLAGS += -muclibc -g -c -DWATCHDOG_DEBUG -O0
 CP_TARGET = cp -u ${BIN_TARGET} ~/arm_share/' > evn.mk
+make VERSION=1
 
-else
-	echo 'CC = gcc
-STRIP=
-LIB_DIR += $(MAKEROOT)/lib_x86
-COMPILE = $(CC) -g -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
-CFLAGS = -g -DPC -DWATCHDOG_DEBUG -c -O0
-CP_TARGET =' > evn.mk
+elif [ "$1" -eq 2 ]; then
+	echo '
+COMPILE = $(CC) -muclibc -g -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
+CFLAGS += -muclibc -g -c -DWATCHDOG_DEBUG -O0
+CP_TARGET = cp -u ${BIN_TARGET} ~/arm_share/' > evn.mk
+make VERSION=2
 fi
 
 # make clean -s
-make
 

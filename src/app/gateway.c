@@ -18,15 +18,14 @@
  *                      include head files
  *----------------------------------------------------------------------------*/
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "debug.h"
 #include "linklist.h"		/* Header */
 #include "device_protocol.h"
 #include "sql_handle.h"
 #include "zigbee.h"
-#include "alink_export_gateway.h"
-#include "alink_export_subdev.h"
-#include "platform.h"		/* Header */
-#include "iwlib.h"		/* Header */
+#include "ali_sdk_platform.h"
 
 #include "device_light.h"
 #include "device_fresh_air.h"
@@ -40,10 +39,6 @@
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
  *----------------------------------------------------------------------------*/
-extern char *calc_subdev_signature(const char *secret,
-		const uint8_t rand[SUBDEV_RAND_BYTES],
-        char *sign_buff,
-	   	uint32_t buff_size);
 
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
@@ -53,13 +48,6 @@ void gwGetSwichStatus(void);
 /* ---------------------------------------------------------------------------*
  *                        macro define
  *----------------------------------------------------------------------------*/
-#define MAX_SUB_DEVICE_NUM 	 79  // 最大支持子设备数量
-
-#define DEVMGR_SERVICE_AUTHORISE_DEVICE_LIST    "AuthoriseDeviceList"
-#define DEVMGR_SERVICE_REMOVE_DEVICE            "RemoveDevice"
-#define DEVMGR_ATTRIBUTE_JOINED_DEVICE_LIST     "JoinedDeviceList"
-#define DEVMGR_SERVICE_PERMITJOIN_DEVICE        "PermitJoin"
-
 #define GW_SERVICE_FACTORY_RESET                "FactoryReset"
 
 enum {
@@ -78,17 +66,10 @@ typedef struct {
 	DeviceStr* (*regist) (char *,uint16_t,uint16_t);
 }SubDeviceRegist;
 
-typedef struct {
-	char *attr;	
-	int (*getCb)(char *output_buf, unsigned int buf_sz);
-	int (*setCb)(char *value);
-	char value[32];	
-}GateWayAttr;
-
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
-static GateWayAttr gw_attrs[];
+static GateWayPrivateAttr gw_attrs[];
 
 static List *sub_dev_list = NULL; // 链表保存子设备
 // static SubDevice sub_device;
@@ -111,7 +92,7 @@ static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int
     //reset config, ....
 
     //2.alink reset
-    ret = alink_factory_reset(ALINK_REBOOT);
+    ret = aliSdkReset(1);
     if (ret != 0) {
         printf("call function alink_factory_reset fail!\n");
     }
@@ -120,12 +101,12 @@ static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int
 }
 int gwRegisterGatewayService(void)
 {
-    //register service
-    int ret = alink_register_service(GW_SERVICE_FACTORY_RESET, __factory_reset_service_cb);
-    if (0 != ret) {
-        printf("register service fail, service:%s\n", GW_SERVICE_FACTORY_RESET);
-        return -1;
-    }
+	int ret = aliSdkRegistGwService(GW_SERVICE_FACTORY_RESET,
+			__factory_reset_service_cb);
+	if (0 != ret) {
+		printf("register service fail, service:%s\n", GW_SERVICE_FACTORY_RESET);
+		return -1;
+	}
 
     return 0;
 }
@@ -172,25 +153,16 @@ static int alarmAlarmModeSetCb(char *value)
 }
 
 
-static GateWayAttr gw_attrs[] = {
-	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb},
-	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb},
+static GateWayPrivateAttr gw_attrs[] = {
+	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb,DEVICE_VELUE_TYPE_NUMBER},
+	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb,DEVICE_VELUE_TYPE_NUMBER},
 	{NULL},
 };
 
 int gwRegisterGatewayAttribute(void)
 {
-	int i;
-	for (i=0; gw_attrs[i].attr != NULL; i++) {
-		int ret = alink_register_attribute(gw_attrs[i].attr,
-				gw_attrs[i].getCb, gw_attrs[i].setCb);
-		if (0 != ret) {
-			printf("register attribute fail, attribute:%s\n", gw_attrs[i].attr);
-		}
-	}
-
+	aliSdkRegisterAttribute(gw_attrs);
     return 0;
-
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -219,47 +191,16 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 	}
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
 	sub_dev_list->append(sub_dev_list,&dev);
-
-	char rand[SUBDEV_RAND_BYTES] = {0};
-	char sign[17] = {0};
-	if (calc_subdev_signature(dev->type_para->secret,
-			   	rand, sign, sizeof(sign)) == NULL) {
-		printf("[%s:%s]__get_device_signature fail\n",
-				dev->id, dev->type_para->name);
-	}
-	ret = alink_subdev_register_device(
-			dev->type_para->proto_type,
-			dev->id,
-			dev->type_para->short_model,
-			rand, sign);
+	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0) 
 		printf("[%s]register sub device fail,id:%s\n",
 				dev->type_para->name, dev->id);
     return ret;
 }
 
-int gwDevicePrivatePropertyTest(void)
+int gwDeviceReportRegist(void)
 {
-    int ret = -1;
-    char req_params[256] = {0};
-    char uuid[33] = {0};
-    char key[16] = "ArmMode";
-    char value[16] = "1";
-
-    ret = alink_get_main_uuid(uuid, sizeof(uuid));//or alink_subdev_get_uuid
-    if (ret != 0)
-        return ret;
-
-    snprintf(req_params, sizeof(req_params) - 1, SET_PROPERTY_REQ_FMT, uuid, key, value);
-    ret = alink_report("postDeviceData", "{\"ArmMode\": { \"value\": \"1\"  }}");
-    if (ret != 0)
-        printf("report msg fail, params: %s\n", req_params);
-
-    // ret = set_property_to_cloud(key, value);
-    // value[0] = '0';
-    // ret = get_property_from_cloud(key, value, sizeof(key));
-
-    return ret;
+	return aliSdkRegisterGw("{\"ArmMode\": { \"value\": \"1\"  }}");
 }
 
 static int getAttrCb(const char *devid, const char *attr_set[])
@@ -336,37 +277,8 @@ static int permitSubDeviceJoinCb(uint8_t duration)
 }
 void gwDeviceInit(void)
 {
-    int ret = -1;
-	proto_info_t proto_info;
-    memset(&proto_info, 0, sizeof(proto_info));
-    proto_info.proto_type = PROTO_TYPE_ZIGBEE;
-    strncpy(proto_info.protocol_name, "zigbee", sizeof(proto_info.protocol_name) - 1);
-
-    int i = 0;
-    proto_info.callback[i].cb_type = GET_SUB_DEVICE_ATTR;
-    proto_info.callback[i].cb_func = getAttrCb;
-
-    i++;
-    proto_info.callback[i].cb_type = SET_SUB_DEVICE_ATTR;
-    proto_info.callback[i].cb_func = setAttrCb;
-
-    i++;
-    proto_info.callback[i].cb_type = EXECUTE_SUB_DEVICE_CMD;
-    proto_info.callback[i].cb_func = execCmdCb;
-
-    i++;
-    proto_info.callback[i].cb_type = REMOVE_SUB_DEVICE;
-    proto_info.callback[i].cb_func = removeDeviceCb;
-
-    i++;
-    proto_info.callback[i].cb_type = PERMIT_JOIN_SUB_DEVICE;
-    proto_info.callback[i].cb_func = permitSubDeviceJoinCb;
-
-	ret = alink_subdev_register_device_type(&proto_info);
-
-	if (ret != 0) 
-		printf("register sub device type fail");
-
+	GateWayAttr gw_attr;
+	aliSdkRegistGwAttr("zigbee",ALI_SDK_PROTO_TYPE_ZIGBEE,&gw_attr);
 }
 
 void gwLoadDeviceData(void)

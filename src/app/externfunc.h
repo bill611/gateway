@@ -44,5 +44,7 @@ int GetFilesNum(char *pPathDir,void (*func)(void *));
 void WatchDogOpen(void);
 void WatchDogFeed(void);
 void WatchDogClose(void);
+
+int recoverData(const char *file);
 #endif
 

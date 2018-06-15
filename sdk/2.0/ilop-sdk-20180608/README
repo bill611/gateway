@@ -1,0 +1,35 @@
+在云端控制台创建网关产品，新建测试设备，获取productKey、deviceName和deviceSecret，修改src/hal/HAL_OS_linux.c，将以下字符串用对应的值替换：
+
+static char DEMO_CASE_PRODUCT_KEY[PRODUCT_KEY_MAXLEN] = {"a139alxxo0W"};
+static char DEMO_CASE_DEVICE_NAME[DEVICE_NAME_MAXLEN] = {"IoTGatewayTest"};
+static char DEMO_CASE_DEVICE_SECRET[DEVICE_SECRET_MAXLEN] = {"G43smopQ3mJ1Mo8MuzCyONkjnIbybNDR"};
+
+在云端控制台创建灯产品，新建两个测试设备，获取productKey、deviceName和deviceSecret，修改src/example/light.c，将以下灯的三元组配置修改为刚申请的设备三元组：
+
+static const light_conf_t light_maps[] = {
+    {"a1DQA90NlFe", "Light01", "xQXstmFgUqWc36oOqzvHAHynAta843yZ"},
+    {"a1DQA90NlFe", "Light02", "FQz3CiUyQ8bCMc6vGKTdu5xRTBx2CJ4x"},
+};
+
+修改Makefile，将以下行修改为自己主机对应交叉编译工具的路径：
+
+CC=arm-linux-gnueabihf-gcc
+
+执行以下命令编译example程序：
+
+make
+
+将以下库文件和可执行文件放到开发版上：
+
+lib/libilop-hal.so
+lib/libilop-hal.so
+linkkit-example
+
+在开发板上执行以下命令运行测试程序：
+
+./linkkit-example
+
+参考：
+    文档中心：https://living.aliyun.com/doc#index.html
+    网关SDK开发指南：https://living.aliyun.com/doc#gateway.html
+    网关API使用说明：https://living.aliyun.com/doc#ig8qxy.html

@@ -3,7 +3,7 @@
  *
  *       Filename:  device_outlet.h
  *
- *    Description:  灯控设备
+ *    Description:  插座设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:47:22 

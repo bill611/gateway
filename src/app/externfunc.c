@@ -72,19 +72,20 @@
  * @brief WatchDogOpen 打开并初始化看门狗
  */
 /* ---------------------------------------------------------------------------*/
+static int watchdog_fd = 0;
 void WatchDogOpen(void)
 {
 #ifndef WATCHDOG_DEBUG
-	// if(Public.WatchDog_fd > 0) {
-		// return;
-	// }
+	if(watchdog_fd > 0) {
+		return;
+	}
 
-	// Public.WatchDog_fd = open("/dev/watchdog", O_WRONLY);
-	// if (Public.WatchDog_fd == -1) {
-		// perror("watchdog");
-	// } else {
-		// printf("Init WatchDog!!!!!!!!!!!!!!!!!!\n");
-	// }
+	watchdog_fd = open("/dev/watchdog", O_WRONLY);
+	if (watchdog_fd == -1) {
+		perror("watchdog");
+	} else {
+		printf("Init WatchDog!!!!!!!!!!!!!!!!!!\n");
+	}
 #endif
 }
 
@@ -96,10 +97,10 @@ void WatchDogOpen(void)
 void WatchDogFeed(void)
 {
 #ifndef WATCHDOG_DEBUG
-	// if(Public.WatchDog_fd <= 0) {
-		// return;
-	// }
-	// ioctl(Public.WatchDog_fd, WDIOC_KEEPALIVE);
+	if(watchdog_fd <= 0) {
+		return;
+	}
+	ioctl(watchdog_fd, WDIOC_KEEPALIVE);
 #endif
 }
 
@@ -111,13 +112,13 @@ void WatchDogFeed(void)
 void WatchDogClose(void)
 {
 #ifndef WATCHDOG_DEBUG
-	// if(Public.WatchDog_fd <= 0) {
-		// return;
-	// }
-	// char * closestr="V";
-	// write(Public.WatchDog_fd,closestr,strlen(closestr));
-	// close(Public.WatchDog_fd);
-	// Public.WatchDog_fd = -2;
+	if(watchdog_fd <= 0) {
+		return;
+	}
+	char * closestr="V";
+	write(watchdog_fd,closestr,strlen(closestr));
+	close(watchdog_fd);
+	watchdog_fd = -2;
 #endif
 }
 
@@ -342,14 +343,19 @@ int adjustdate(int year,int mon,int mday,int hour,int min,int sec)
  * @param reboot 1需要重启 0不需要重启
  */
 /* ---------------------------------------------------------------------------*/
-void recoverData(char *file,int reboot)
+int recoverData(const char *file)
 {
 	int size = strlen(file);
 	char *backfile = (char *) malloc (sizeof(char) * size + 5);
 	sprintf(backfile,"%s_bak",file);
-	excuteCmd("cp",backfile,file,NULL);
-	sync();
+	if (fileexists(backfile)) {
+		excuteCmd("cp",backfile,file,NULL);
+		sync();
+		free(backfile);
+		return 1;
+	}
 	free(backfile);
+	return 0;
 }
 
 /* ---------------------------------------------------------------------------*/

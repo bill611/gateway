@@ -1,9 +1,15 @@
 SIBDIR=\
-	   platform \
-	   product \
 	   wireless \
 	   app\
 	   drivers\
+	   
+ifeq ($(VERSION), 1)
+	SIBDIR += platform 
+	SIBDIR += product 
+endif
+ifeq ($(VERSION), 2)
+	SIBDIR += hal
+endif
 
 define make_loop
 	@for mkdir in $(SIBDIR); do \

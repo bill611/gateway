@@ -145,4 +145,5 @@ extern void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t mode,
 		uint8_t speed);
+extern void smarthomeInit(void);
 #endif

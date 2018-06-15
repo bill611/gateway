@@ -25,8 +25,11 @@ extern "C" {
 
 	typedef enum {
 		ENUM_GPIO_ZIGBEE_POWER,	// zigbee 电源
+		ENUM_GPIO_WIFI_POWER,	// wifi 电源
 		ENUM_GPIO_LED_POWER,	// 电源灯
 		ENUM_GPIO_LED_RESET,	// 复位灯
+		ENUM_GPIO_LED_WIFI,		// wifi灯
+		ENUM_GPIO_LED_RESERVED,	// 预留灯
 		ENUM_GPIO_RESET,	// 复位按键
 		ENUM_GPIO_MODE,	// 激活按键
 	}GPIO_TBL;
@@ -100,7 +103,7 @@ extern "C" {
 	MyGpio* myGpioPrivCreate(MyGpioPriv *gpio_table);
 
 	extern MyGpio *gpio;
-	extern MyGpioPriv gpiotbl[];
+	extern void gpioInit(void);
 
 #ifdef __cplusplus
 }

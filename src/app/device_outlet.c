@@ -3,7 +3,7 @@
  *
  *       Filename:  device_outlet.c
  *
- *    Description:  灯控设备 
+ *    Description:  插座设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cJSON.h"
 #include "sql_handle.h"
 #include "device_outlet.h"
 
@@ -52,10 +51,6 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
     while (attr_set[i++]) {
         printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
     }
-	// const char *attr_name["a","b",NULL];
-	// const char *attr_value["1","2",NULL];
-			// alink_subdev_report_attrs(dev->type_para->proto_type,
-					// dev->id, attr_name,attr_value);
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
 			const char *attr_name[2] = {NULL};
@@ -63,34 +58,10 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			alink_subdev_report_attrs(dev->type_para->proto_type,
+			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 					dev->id, attr_name,attr_value);
 		}
 	}
-
-
-	// cJSON *root,*par,*par1;
-	// char uuid[33] = {0};
-	// int ret = -1;
-	// char req_params[256] = {0};
-	// ret = alink_subdev_get_uuid(outlet.proto_type,outlet.dev[0].id,uuid, sizeof(uuid));//or alink_subdev_get_uuid
-	// if (ret != 0)
-		// return ret;
-	// root = cJSON_CreateObject();
-	// // cJSON_AddItemToObject(root, "items", par=cJSON_CreateArray());
-	// cJSON_AddStringToObject(root, "uuid", uuid);
-	// cJSON_AddItemToObject(root, "Luminance", par1=cJSON_CreateObject());
-	// cJSON_AddStringToObject(par1, "value", "50");
-	// // cJSON_AddStringToObject(par1, "Luminance", "50");
-	// char *out = cJSON_PrintUnformatted(root);
-	// cJSON_Delete(root);
-	// // snprintf(req_params, sizeof(req_params) - 1, SET_PROPERTY_REQ_FMT, uuid, "Luminance", "50");
-	// ret = alink_report("postDeviceData", out);
-	// printf("req_params:%s\n", out);
-	// if (ret != 0)
-		// printf("report msg fail, params: %s\n", out);
-	// free(out);
-
     return 0;
 }
 
@@ -154,27 +125,27 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 {
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
-	const char *attr_name[2] = {
+	const char *attr_name[] = {
 	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	const char *attr_value[2] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
 static void reportPowerOffCb(DeviceStr *dev)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
-	const char *attr_name[2] = {
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	const char *attr_value[2] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
@@ -182,7 +153,7 @@ static DeviceTypePara outlet = {
 	.name = "outlet",
 	.short_model = 0x000a23c3,
 	.secret = "tPIMShBYjubW3SWJKw1o1XqxRbM8bcTrR2Fi0nsQ",
-	.proto_type = PROTO_TYPE_ZIGBEE,
+	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JLCZ,
 	.attr = {
 		{"ErrorCode",NULL},

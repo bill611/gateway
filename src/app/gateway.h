@@ -27,6 +27,11 @@ extern "C" {
 	extern void gwReportPowerOff(char *id);
 	extern void gwReportAlarmStatus(char *id,char *param);
 	extern void gwGetSwichStatus(void);
+	extern void gwLoadDeviceData(void);
+	extern void gwDeviceInit(void);
+	extern int gwRegisterGatewayService(void);
+	extern int gwRegisterGatewayAttribute(void);
+	extern int gwDeviceReportRegist(void);
 
 #ifdef __cplusplus
 }

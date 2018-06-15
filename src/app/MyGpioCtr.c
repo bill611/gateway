@@ -51,10 +51,14 @@ static pthread_mutex_t gpioLock;
 
 
 #define GPIO_ZIGBEE_POWER		GPIO_GROUP_C,15
-#define GPIO_LED_POWER			GPIO_GROUP_D,11
-#define GPIO_LED_RESET			GPIO_GROUP_D,10
-#define GPIO_RESET				GPIO_GROUP_D,3
-#define GPIO_MODE				GPIO_GROUP_E,1
+#define GPIO_WIFI_POWER			GPIO_GROUP_E,0
+#define GPIO_LED_POWER			GPIO_GROUP_D,10
+#define GPIO_LED_RESET			GPIO_GROUP_D,13
+#define GPIO_LED_WIFI			GPIO_GROUP_C,14
+#define GPIO_LED_RESERVED		GPIO_GROUP_D,11
+
+#define GPIO_RESET				GPIO_GROUP_E,1
+#define GPIO_MODE				GPIO_GROUP_D,3
 
 /* ----------------------------------------------------------------*
  *                      variables define
@@ -63,10 +67,13 @@ MyGpio *gpio = NULL;
 
 MyGpioPriv gpiotbl[]={
 	{GPIO_ZIGBEE_POWER,		"1",IO_ACTIVE,0},
-	{GPIO_LED_POWER,		"1",IO_ACTIVE,0},
-	{GPIO_LED_RESET,		"1",IO_INACTIVE,0},
+	{GPIO_WIFI_POWER,		"1",IO_ACTIVE,0},
+	{GPIO_LED_POWER,		"0",IO_ACTIVE,0},
+	{GPIO_LED_RESET,		"0",IO_INACTIVE,0},
+	{GPIO_LED_WIFI,			"0",IO_INACTIVE,0},
+	{GPIO_LED_RESERVED,		"0",IO_INACTIVE,0},
 
-	{GPIO_RESET,			"0",IO_INPUT,30},
+	{GPIO_RESET,			"0",IO_INPUT,80},
 	{GPIO_MODE,				"0",IO_INPUT,1},
 };
 

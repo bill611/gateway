@@ -59,7 +59,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			alink_subdev_report_attrs(dev->type_para->proto_type,
+			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 					dev->id, attr_name,attr_value);
 		}
 	}
@@ -135,26 +135,26 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
 	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
-	const char *attr_name[2] = {
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	const char *attr_value[2] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
 static void reportPowerOffCb(DeviceStr *dev)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
-	const char *attr_name[2] = {
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		NULL};
-	const char *attr_value[2] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
@@ -162,7 +162,7 @@ static DeviceTypePara alarm_whistle = {
 	.name = "alarm_whistle",
 	.short_model = 0x005b255f,
 	.secret = "bQ0N06R7q5bRb50fwn4NluMrVPPutr0EjKWaIAFh",
-	.proto_type = PROTO_TYPE_ZIGBEE,
+	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JD,
 	.attr = {
 		{"ErrorCode",NULL},

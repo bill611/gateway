@@ -371,6 +371,8 @@ TSqlite * CreateLocalQuery(const char *FileName)
 
 	ret = sqlite3_open(FileName, &This->Private->db);
 	if(ret!=SQLITE_OK) {
+		printf("open db err:%s\n",sqlite3_errmsg(This->Private->db));
+		sqlite3_close(This->Private->db);
 		free(This->Private);
 		free(This);
 		return NULL;
@@ -474,8 +476,8 @@ void LocalQueryLoad(TSqliteData *sql)
 		printf("Open %s successfully\n",sql->file_name);
 	} else {
 		printf("Err:%s open failed\n",sql->file_name);
-		// char file_bak[32];
-		// sprintf(file_bak,"%s_bak",sql->file_name);
+		char file_bak[32];
+		sprintf(file_bak,"%s_bak",sql->file_name);
 		// if (fileexists(file_bak) == 1) {
 			// recoverData(sql->file_name,0);
 			// sql->sql = CreateLocalQuery(sql->file_name);

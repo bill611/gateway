@@ -60,7 +60,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			alink_subdev_report_attrs(dev->type_para->proto_type,
+			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 					dev->id, attr_name,attr_value);
 		}
 	}
@@ -121,17 +121,17 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 		sprintf(dev->value[ATTR_BATTERYPERCENTAGE],"20");
 	else if (alarm_type == TC_ALARM_TAMPER)
 		sprintf(dev->value[ATTR_TAMPERALARM],"0");
-	const char *attr_name[4] = {
+	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_ALARM].name,
 		dev->type_para->attr[TC_ALARM_LOWPOWER].name,
 		dev->type_para->attr[ATTR_TAMPERALARM].name,
 		NULL};
-	const char *attr_value[4] = {
+	const char *attr_value[] = {
 		dev->value[ATTR_ALARM],
 		dev->value[TC_ALARM_LOWPOWER],
 		dev->value[ATTR_TAMPERALARM],
 		NULL};
-	alink_subdev_report_attrs(dev->type_para->proto_type,
+	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
 			dev->id, attr_name,attr_value);
 }
 
@@ -140,7 +140,7 @@ static DeviceTypePara motion_cuntain = {
 	.name = "motion_curtain",
 	.short_model = 0x005c2503,
 	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
-	.proto_type = PROTO_TYPE_ZIGBEE,
+	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_HW,
 	.attr = {
 		{"MotionCurtainAlarm",NULL},

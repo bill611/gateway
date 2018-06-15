@@ -3,12 +3,12 @@ set -e
 
 echo 'CC = arm-linux-gcc
 STRIP = arm-linux-strip $(BIN_TARGET)
-LIB_DIR += $(MAKEROOT)/lib_arm $(MAKEROOT)/libs/libs
+LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/sdk/lib
 COMPILE = $(CC) -muclibc -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
 CFLAGS = -muclibc -c -O2' > evn.mk
 
 if [ "$1" == "g"  ]; then
-	echo 'CP_TARGET = cp -u ${BIN_TARGET} ../nand_bak/nand1-2' >> evn.mk
+	echo 'CP_TARGET = cp -u ${BIN_TARGET} ../nand/nand1-2/' >> evn.mk
 else
 	echo 'CP_TARGET = ' >> evn.mk
 fi

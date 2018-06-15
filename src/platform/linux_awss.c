@@ -661,6 +661,8 @@ void resetWifi(void)
 		usleep(100 * 1000);
 	} while ((strncmp(ret,"wpa_state=COMPLETED",strlen("wpa_state=COMPLETED")) != 0) && --cnt != 0);
 
+	if (cnt == 0)
+		return;
 	sys_net_is_ready = 1;
 	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
 	ret = (char *)system(buf);
