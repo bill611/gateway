@@ -149,7 +149,7 @@ static void callbackProcess(void)
 	}
 	if (len <= 0)
 		return;
-#if 1
+#if 0
 	printf("[callbackProcess] rx_len:%d :", len);
 	int i = 0;
 	for (; i < len; i++)

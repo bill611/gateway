@@ -44,6 +44,7 @@
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
 void gwGetSwichStatus(void);
+void gwDeviceInit(void);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -81,7 +82,8 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_JD,registDeviceAlarmWhistle},
 	{DEVICE_TYPE_CL,registDeviceCurtain},
 	{DEVICE_TYPE_MC,registDeviceDoorContact},
-	{DEVICE_TYPE_JLCZ,registDeviceOutlet},
+	{DEVICE_TYPE_JLCZ10,registDeviceOutlet10},
+	{DEVICE_TYPE_JLCZ16,registDeviceOutlet16},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
@@ -154,14 +156,17 @@ static int alarmAlarmModeSetCb(char *value)
 
 
 static GateWayPrivateAttr gw_attrs[] = {
-	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb,DEVICE_VELUE_TYPE_NUMBER},
-	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb,DEVICE_VELUE_TYPE_NUMBER},
+	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb,DEVICE_VELUE_TYPE_INT},
+	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb,DEVICE_VELUE_TYPE_INT},
 	{NULL},
 };
 
 int gwRegisterGatewayAttribute(void)
 {
 	aliSdkRegisterAttribute(gw_attrs);
+#if (defined V2)
+	gwDeviceInit();
+#endif
     return 0;
 }
 
@@ -243,7 +248,7 @@ static int execCmdCb(const char *devid, const char *cmd_name, const char *cmd_ar
 		DeviceStr *dev;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
 		if (strcmp(dev->id,devid) == 0) {
-			dev->type_para->execCmd(dev,cmd_name,cmd_args);
+			// dev->type_para->execCmd(dev,cmd_name,cmd_args);
 			break;
 		}		
 		sub_dev_list->foreachNext(sub_dev_list);
@@ -259,7 +264,16 @@ static int removeDeviceCb(const char *devid)
 		DeviceStr *dev;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
 		if (strcmp(dev->id,devid) == 0) {
-			dev->type_para->remove(&dev);
+			aliSdkUnRegisterSubDevice(dev);
+			int i;
+			for (i=0; dev->type_para->attr[i].name != NULL; i++) {
+				if (dev->value[i])
+					free(dev->value[i]);
+				dev->value[i] = NULL;
+			}
+			sqlDeleteDevice(dev->id);
+			free(dev);
+			dev = NULL;
 			sub_dev_list->delete(sub_dev_list,i);
 			break;
 		}		
@@ -275,9 +289,15 @@ static int permitSubDeviceJoinCb(uint8_t duration)
 	zigbeeNetIn(duration);
 	return 0;
 }
+static GateWayAttr gw_attr = {
+	.getCb = getAttrCb,
+	.setCb = setAttrCb,
+	.execCmdCb = execCmdCb,
+	.removeDeviceCb = removeDeviceCb,
+	.permitSubDeviceJoinCb = permitSubDeviceJoinCb,
+};
 void gwDeviceInit(void)
 {
-	GateWayAttr gw_attr;
 	aliSdkRegistGwAttr("zigbee",ALI_SDK_PROTO_TYPE_ZIGBEE,&gw_attr);
 }
 
@@ -311,6 +331,14 @@ static DeviceStr *getSubDevice(char *id)
 	return dev;
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportPowerOn 上报设备开启
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
 void gwReportPowerOn(char *id,char *param)
 {
 	printf("[%s]id:%s\n", __FUNCTION__,id);
@@ -323,6 +351,13 @@ void gwReportPowerOn(char *id,char *param)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportPowerOff 上报设备关闭
+ *
+ * @param id
+ */
+/* ---------------------------------------------------------------------------*/
 void gwReportPowerOff(char *id)
 {
 	DeviceStr * dev = getSubDevice(id);
@@ -334,6 +369,14 @@ void gwReportPowerOff(char *id)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportAlarmStatus 上报报警信息
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
 void gwReportAlarmStatus(char *id,char *param)
 {
 	printf("[%s]id:%s\n", __FUNCTION__,id);
@@ -346,6 +389,11 @@ void gwReportAlarmStatus(char *id,char *param)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwGetSwichStatus 上报开关状态
+ */
+/* ---------------------------------------------------------------------------*/
 void gwGetSwichStatus(void)
 {
 	if (!sub_dev_list)
@@ -363,3 +411,44 @@ void gwGetSwichStatus(void)
 		i++;
 	}
 }
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportEleQuantity 上报电量
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
+void gwReportEleQuantity(char *id,char *param)
+{
+	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
+	if (dev->type_para->reportEleQuantity) {
+		printf("[%s]---->", dev->type_para->name);
+		dev->type_para->reportEleQuantity(dev,param);
+	}
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportElePower 上报功率
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
+void gwReportElePower(char *id,char *param)
+{
+	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
+	if (dev->type_para->reportElePower) {
+		printf("[%s]---->", dev->type_para->name);
+		dev->type_para->reportElePower(dev,param);
+	}
+}
+

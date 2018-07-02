@@ -45,11 +45,16 @@ struct _GateWayAttr;
 	extern void aliSdkEnd(void);
 	extern int aliSdkReset(int is_reboot);
 	extern int aliSdkRegisterSubDevice(struct _DeviceStr *dev);
+	extern int aliSdkUnRegisterSubDevice(struct _DeviceStr *dev);
 	extern int aliSdkRegistGwService(char *name, void *func);
 	extern int aliSdkRegisterAttribute(struct _GateWayPrivateAttr *attrs);
 	extern int aliSdkRegisterGw(char *value);
 	extern void aliSdkRegistGwAttr(char *proto_name,int proto_type,struct _GateWayAttr *attr);
-	extern void aliSdkSubDevReportAttrs(int protocol,char *id,const char *attr_name[],const char *attr_value[]);
+
+	extern void aliSdkSubDevReportAttrs(struct _DeviceStr *dev,
+		const char *attr_name[],
+		const char *attr_value[],
+		int attr_value_type[]);
 
 	extern void aliSdkresetWifi(void);
 #ifdef __cplusplus

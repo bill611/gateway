@@ -6,12 +6,12 @@
 #include "iniparser/iniparser.h"
 #include "config.h"
 
-#define CFG_PUBLIC_DRIVE "/mnt/nand1-2"
-#define CFG_PRIVATE_DRIVE "/mnt/nand1-2"
-#define CFG_TEMP_DRIVE "/mnt/nand1-2"
+#define CFG_PUBLIC_DRIVE "/mnt/nand1-2/"
+#define CFG_PRIVATE_DRIVE "/mnt/nand1-2/"
+#define CFG_TEMP_DRIVE "/mnt/nand1-2/"
 
-#define INI_PUBLIC_FILENAME "config_public.ini"
-#define INI_PRIVATE_FILENAME "config_private.ini"
+#define INI_PUBLIC_FILENAME "config_para.ini"
+#define INI_PRIVATE_FILENAME "config.ini"
 #define SIZE_CONFIG(x)  x,sizeof(x) - 1
 
 #define NELEMENTS(array)  (sizeof (array) / sizeof ((array) [0]))
@@ -31,13 +31,69 @@ static dictionary* cfg_private_ini;
 static pthread_mutex_t cfg_mutex  = PTHREAD_MUTEX_INITIALIZER;
 
 static EtcValueInt etc_public_int[]={
-// {"Public",	"zigbeeOk",				&theConfig.zigbee_ok,		0},
+// {"Params",	"ele_quantity",				&theConfig.ele_quantity,		0},
 };
 // static EtcValueChar etc_public_char[]={
 // };
 
 static EtcValueInt etc_private_int[]={
 // {"Public",	"devicetype",		&theConfig.devType,6},
+};
+
+static EtcValueChar etc_private_char[]={
+{"AirCondition",	"product_key",		SIZE_CONFIG(theConfig.air_condition.product_key),	"0"},
+{"AirCondition",	"device_secret",	SIZE_CONFIG(theConfig.air_condition.device_secret),	"0"},
+{"AlarmWhistle",	"product_key",		SIZE_CONFIG(theConfig.alarm_whistle.product_key),	"0"},
+{"AlarmWhistle",	"device_secret",	SIZE_CONFIG(theConfig.alarm_whistle.device_secret),	"0"},
+{"Curtain",			"product_key",		SIZE_CONFIG(theConfig.curtain.product_key),			"0"},
+{"Curtain",			"device_secret",	SIZE_CONFIG(theConfig.curtain.device_secret),		"0"},
+{"DoorContact",		"product_key",		SIZE_CONFIG(theConfig.door_contact.product_key),	"0"},
+{"DoorContact",		"device_secret",	SIZE_CONFIG(theConfig.door_contact.device_secret),	"0"},
+{"FreshAir",		"product_key",		SIZE_CONFIG(theConfig.fresh_air.product_key),		"0"},
+{"FreshAir",		"device_secret",	SIZE_CONFIG(theConfig.fresh_air.device_secret),		"0"},
+{"Light",			"product_key",		SIZE_CONFIG(theConfig.light.product_key),			"0"},
+{"Light",			"device_secret",	SIZE_CONFIG(theConfig.light.device_secret),			"0"},
+{"MotionCurtain",	"product_key",		SIZE_CONFIG(theConfig.motion_curtain.product_key),	"0"},
+{"MotionCurtain",	"device_secret",	SIZE_CONFIG(theConfig.motion_curtain.device_secret),"0"},
+{"Outlet",			"product_key",		SIZE_CONFIG(theConfig.outlet.product_key),			"0"},
+{"Outlet",			"device_secret",	SIZE_CONFIG(theConfig.outlet.device_secret),		"0"},
+};
+
+char *auth_mode[] = {
+	"OPEN",
+	"SHARED",
+	"WPAPSK",
+	"WPA8021X",
+	"WPA2PSK",
+	"WPA28021X",
+	"WPAPSKWPA2PSK",
+	"AWSS_AUTH_TYPE_WPAPSKWPA2PSK",
+};
+
+char *encrypt_type[] = {
+	"NONE",
+	"WEP",
+	"TKIP",
+	"AES",
+	"TKIPAES",
+	"AWSS_ENC_TYPE_TKIPAES",
+};
+
+
+TcWifiConfig tc_wifi_config = {
+	.boot_proto = "DHCP",
+	.network_type = "Infra",
+	.ssid = "aha",
+	.auth_mode = "WPA2PSK",
+	.encrypt_type = "AES",
+	.auth_key = "12345678",
+
+	.ap_addr = "192.168.100.1",
+	.ap_ssid = "AliGateWay",
+	.ap_auth_mode = "OPEN",
+	.ap_encrypt_type = "NONE",
+	.ap_auth_key = "12345678",
+	.ap_channel = 11,
 };
 
 void configSync(void)
@@ -107,21 +163,19 @@ void configPrivateFileCheck(void)
 		// copyfile(CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME,CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME "_bak");
 }
 
-void ConfigLoad(void)
+void configLoad(void)
 {
-    cfg_public_ini = iniparser_load(CFG_PUBLIC_DRIVE ":/" INI_PUBLIC_FILENAME);
-    if (!cfg_public_ini) {
-        cfg_public_ini = dictionary_new(0);
-        assert(cfg_public_ini);
+	// cfg_public_ini = iniparser_load(CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
+	// if (!cfg_public_ini) {
+		// cfg_public_ini = dictionary_new(0);
+		// assert(cfg_public_ini);
 
-    }
+	// }
 
-    cfg_private_ini = iniparser_load(CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME);
+    cfg_private_ini = iniparser_load(CFG_PRIVATE_DRIVE INI_PRIVATE_FILENAME);
 	if (!cfg_private_ini) {
 	    cfg_private_ini = dictionary_new(0);
         assert(cfg_private_ini);
-
-        dictionary_set(cfg_private_ini, "doorbell", NULL);
 	}
 
     // cfg_temp_ini = iniparser_load(CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME);
@@ -131,9 +185,10 @@ void ConfigLoad(void)
 
         // dictionary_set(cfg_temp_ini, "doorbell", NULL);
 	// }
-	configLoadEtcInt(cfg_public_ini,etc_public_int,NELEMENTS(etc_public_int));
+	// configLoadEtcInt(cfg_public_ini,etc_public_int,NELEMENTS(etc_public_int));
 	// configLoadEtcChar(cfg_public_ini,etc_public_char,NELEMENTS(etc_public_char));
 	configLoadEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
+	configLoadEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -185,9 +240,9 @@ static void SavePublic(void)
 	// configSaveEtcChar(cfg_public_ini,etc_public_char,NELEMENTS(etc_public_char));
 
     // save to file
-    f = fopen(CFG_PUBLIC_DRIVE ":/" INI_PUBLIC_FILENAME, "wb");
+    f = fopen(CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME, "wb");
 	if (!f) {
-	    printf("cannot open ini file: %s\n", CFG_PUBLIC_DRIVE ":/" INI_PUBLIC_FILENAME);
+	    printf("cannot open ini file: %s\n", CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
         return;
     }
 
@@ -203,11 +258,12 @@ static void SavePrivate(void)
 
 	// configSaveEtcInt(etc_public_int,NELEMENTS(etc_public_int));
 	configSaveEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
+	configSaveEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
 
     // save to file
-    f = fopen(CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME, "wb");
+    f = fopen(CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME, "wb");
 	if (!f) {
-	    printf("cannot open ini file: %s\n", CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME);
+	    printf("cannot open ini file: %s\n", CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
         return;
     }
 
@@ -291,7 +347,7 @@ void ConfigSave(void (*func)(void))
     static int args[3];
 
     args[0] = CONFIG_SAVE;
-    args[1] = (int)CFG_PUBLIC_DRIVE ":/" INI_PUBLIC_FILENAME;
+    args[1] = (int)CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME;
 	args[2] = (int)func;
 
     CreateWorkerThread(ConfigSaveTask, args);
@@ -302,7 +358,7 @@ void ConfigSavePrivate(void)
     static int args[3];
 
     args[0] = CONFIG_SAVE_PRIVATE;
-    args[1] = (int)CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME;
+    args[1] = (int)CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME;
 
     CreateWorkerThread(ConfigSaveTask, args);
 }
@@ -312,7 +368,7 @@ void ConfigSavePrivateCallback(void (*func)(void))
     static int args[3];
 
     args[0] = CONFIG_SAVE_PRIVATE;
-    args[1] = (int)CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME;
+    args[1] = (int)CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME;
 	args[2] = (int)func;
 
     CreateWorkerThread(ConfigSaveTask, args);
@@ -322,8 +378,63 @@ void ConfigSaveTemp(void)
     static int args[3];
 
     args[0] = CONFIG_SAVE_TEMP;
-    args[1] = (int)CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME;
+    args[1] = (int)CFG_TEMP_DRIVE  INI_PUBLIC_FILENAME;
 
     CreateWorkerThread(ConfigSaveTask, args);
 }
 
+void tcSetNetwork(int type)
+{
+	FILE *fp;
+	printf("[%s]\n",__FUNCTION__);
+	fp = fopen("network_config","wb");	
+	if (fp == NULL) {
+		printf("Can't open network_config\n");
+		return;
+	}
+	fprintf(fp,"BOOTPROTO %s\n",	tc_wifi_config.boot_proto);
+	fprintf(fp,"NETWORK_TYPE %s\n",	tc_wifi_config.network_type);
+	fprintf(fp,"SSID %s\n",			tc_wifi_config.ssid);
+	fprintf(fp,"AUTH_MODE %s\n"	,	tc_wifi_config.auth_mode);
+	fprintf(fp,"ENCRYPT_TYPE %s\n",	tc_wifi_config.encrypt_type);
+	fprintf(fp,"AUTH_KEY %s\n",		tc_wifi_config.auth_key);
+
+	fprintf(fp,"AP_IPADDR %s\n",	tc_wifi_config.ap_addr);
+	fprintf(fp,"AP_SSID %s\n",		tc_wifi_config.ap_ssid);
+	fprintf(fp,"AP_AUTH_MODE %s\n",	tc_wifi_config.ap_auth_mode);
+	fprintf(fp,"AP_ENCRYPT_TYPE %s\n",tc_wifi_config.ap_encrypt_type);
+	fprintf(fp,"AP_AUTH_KEY %s\n",	tc_wifi_config.ap_auth_key);
+	fprintf(fp,"AP_CHANNEL %d\n",	tc_wifi_config.ap_channel);
+	fflush(fp);
+	fclose(fp);
+	sync();
+
+	if (type == TC_SET_AP){
+		excuteCmd("./network.sh","SoftAP",NULL);
+	} else {
+		excuteCmd("./network.sh","Infra",NULL);
+	}
+}
+
+void resetWifi(void)
+{
+	char *ret;
+	char buf[256];
+	int cnt = 50;
+	sprintf(tc_wifi_config.ssid,"aha");
+	sprintf(tc_wifi_config.auth_key,"12345678");
+	tcSetNetwork(TC_SET_STATION);
+	snprintf(buf, sizeof(buf), "./wpa_cli -p %s -i %s status | grep wpa_state",
+			WPA_PATH, WLAN_IFNAME);
+	do {
+		ret = excuteCmd(buf,NULL);
+		usleep(100 * 1000);
+	} while ((strncmp(ret,"wpa_state=COMPLETED",strlen("wpa_state=COMPLETED")) != 0) && --cnt != 0);
+
+	if (cnt == 0)
+		return;
+	// sys_net_is_ready = 1;
+	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
+	ret = (char *)system(buf);
+	printf("[%s]system:%s,%s\n",__FUNCTION__,buf,ret);
+}

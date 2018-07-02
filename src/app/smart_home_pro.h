@@ -41,7 +41,8 @@ typedef enum
 	DEVICE_TYPE_XFXT,			// 25	新风系统
 	DEVICE_TYPE_FS,		  		// 26	风扇
 	DEVICE_TYPE_SGBJQ,		 	// 27	声光报警器
-	DEVICE_TYPE_JLCZ = 48,			// 48	计量插座	
+	DEVICE_TYPE_JLCZ10 = 47,			// 47	10A计量插座	
+	DEVICE_TYPE_JLCZ16 = 48,			// 48	16A计量插座	
 	DEVICE_TYPE_JD = 102,		// 102	警笛报警器
 }TC_Device_Type;
 

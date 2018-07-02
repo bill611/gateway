@@ -24,6 +24,7 @@
 
 #include "device_door_contact.h"
 #include "sql_handle.h"
+#include "config.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -57,11 +58,12 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
 			const char *attr_name[2] = {NULL};
 			const char *attr_value[2] = {NULL};
+			int attr_value_type[2];
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
+			attr_value_type[0] = dev->type_para->attr[i].value_type;
 			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
-					dev->id, attr_name,attr_value);
+			aliSdkSubDevReportAttrs(dev, attr_name,attr_value,attr_value_type);
 		}
 	}
 
@@ -86,31 +88,6 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static int execCmdCb(DeviceStr *dev, const char *cmd_name, const char *cmd_args)
-{
-    printf("exec cmd, devid:%s, cmd_name:%s, cmd_args:%s\n",
-           dev->id, cmd_name, cmd_args);
-    return 0;
-}
-
-static int removeDeviceCb(DeviceStr **device)
-{
-	DeviceStr *dev = *device;
-    printf("remove device, devid:%s\n",dev->id);
-	int i;
-	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
-		if (dev->value[i]) {
-			free(dev->value[i]);
-		}
-		dev->value[i] = NULL;
-	}
-	sqlDeleteDevice(dev->id);
-	free(dev);
-	*device = NULL;
-    return 0;
-}
-
-
 static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
 	printf("[%s]%d\n",__FUNCTION__,param[0] );
@@ -134,27 +111,37 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 		dev->value[TC_ALARM_LOWPOWER],
 		dev->value[ATTR_TAMPERALARM],
 		NULL};
-	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
-			dev->id, attr_name,attr_value);
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_ALARM].value_type,
+		dev->type_para->attr[TC_ALARM_LOWPOWER].value_type,
+		dev->type_para->attr[ATTR_TAMPERALARM].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
 }
 
 
-static DeviceTypePara motion_cuntain = {
+static DeviceTypePara motion_curtain = {
 	.name = "door_contact",
 	.short_model = 0x00332560,
 	.secret = "i7ctpLwEHLYoOys5IjCnEiUGxyAIlwcMUEQus385",
+
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_MC,
 	.attr = {
+#if (defined V1)
 		{"ContactAlarm",NULL},
-		{"BatteryPercentage",NULL},
-		{"TamperAlarm",NULL},
+		{"BatteryPercentage",NULL,DEVICE_VELUE_TYPE_INT},
+		{"TamperAlarm",NULL,DEVICE_VELUE_TYPE_INT},
+#else
+		{"ContactState",NULL,DEVICE_VELUE_TYPE_INT},
+		{"BatteryPercentage",NULL,DEVICE_VELUE_TYPE_INT},
+		{"TamperAlarm",NULL,DEVICE_VELUE_TYPE_INT},
+#endif
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
-	.execCmd = execCmdCb,
-	.remove = removeDeviceCb,
 	.reportAlarmStatus = reportAlarmStatus,
 };
 
@@ -165,7 +152,9 @@ DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &motion_cuntain;
+	motion_curtain.product_key = theConfig.motion_curtain.product_key;
+	motion_curtain.device_secret = theConfig.motion_curtain.device_secret;
+	This->type_para = &motion_curtain;
 	This->addr = addr;
 	This->channel = channel;
 	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

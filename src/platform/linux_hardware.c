@@ -43,6 +43,7 @@
 
 #include "platform.h"
 #include "platform_config.h"
+#include "config.h"
 
 #define ALINK_CONFIG_FILE_NAME      "alinkconfig.db"
 #define ROUTER_INFO_PATH        "/proc/net/route"

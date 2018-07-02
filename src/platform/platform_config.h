@@ -29,13 +29,6 @@
  * alink retrieve ip & mac address from this interface
  * mac address may used as unique device id
  */
-#define IFNAME                      "wlan0"
-
-/* awss used this interface to sniffer 80211 package */
-#define WLAN_IFNAME                 "wlan0"
-#define AP_IFNAME                 	"wlan1"
-#define WPA_PATH                 	"/tmp/wpa_supplicant/"
-
 
 /* alink data partition(flash storage) */
 #define ALINK_STORAGE_PATH          "/mnt/nand1-2/"

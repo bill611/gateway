@@ -31,6 +31,7 @@
 #include "device_protocol.h"
 #include "gateway.h"
 #include "smart_home_pro.h"
+#include "config.h"
 
 
 /* ---------------------------------------------------------------------------*
@@ -96,12 +97,13 @@ static void gpioResetHandle(void *arg,int port)
 	if (This->inputHandle(This,port)) {
 		if (cnt == activ_time) {
 			gpio->FlashStart(gpio,ENUM_GPIO_LED_RESET,FLASH_SLOW,FLASH_FOREVER);
-			aliSdkresetWifi();
+			// aliSdkresetWifi();
 			gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
 			gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
 			printf("[%s]:%d\n", __FUNCTION__,activ_time);
+			exit(0);
 		} 
 		cnt++;
 	} else {
@@ -134,6 +136,7 @@ static void gpioRegistHandle(void *arg,int port)
 
 int main(int argc, char *argv[])
 {
+	configLoad();
 	gpioInit();
 	gpio->creatInputThread(gpio,gpioInputTread);
 	aliSdkInit(argc, argv);
@@ -145,7 +148,9 @@ int main(int argc, char *argv[])
 	gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
 	gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
 
+#if (defined V1)
 	gwDeviceInit();
+#endif
 	zigbeeInit();
 	smarthomeInit();
 	gwLoadDeviceData();

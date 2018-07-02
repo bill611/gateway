@@ -36,6 +36,8 @@ extern "C" {
 	extern int sqlGetDeviceId(uint16_t addr,char *id);
 	extern void sqlInit(void);
 	extern void sqlClearDevice(void);
+	extern void sqlSetEleQuantity(int value,char *id);
+	extern int sqlGetEleQuantity(char *id);
 
 
 #ifdef __cplusplus

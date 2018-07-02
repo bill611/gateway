@@ -10,6 +10,13 @@
 extern "C" {
 #endif
 
+#define IFNAME                      "wlan0"
+
+/* awss used this interface to sniffer 80211 package */
+#define WLAN_IFNAME                 "wlan0"
+#define AP_IFNAME                 	"wlan1"
+#define WPA_PATH                 	"/tmp/wpa_supplicant/"
+
 
 #define Ver_Major	1
 #define Ver_Minor	0
@@ -17,170 +24,203 @@ extern "C" {
 #define Ver_Reserve	0
 
 
-typedef struct _EtcValueChar {
-	const char* section;	
-	const char* key;
-	char *value;
-	unsigned int leng;
-	const char *default_char;
-} EtcValueChar;
+	typedef struct _EtcValueChar {
+		const char* section;	
+		const char* key;
+		char *value;
+		unsigned int leng;
+		const char *default_char;
+	} EtcValueChar;
 
-typedef struct _EtcValueInt {
-	const char* section;	
-	const char* key;
-	int *value;
-	int default_int;
-} EtcValueInt;
+	typedef struct _EtcValueInt {
+		const char* section;	
+		const char* key;
+		int *value;
+		int default_int;
+	} EtcValueInt;
 
-/**
- * Configuration definition.
- */
-typedef struct _Config {
-	int		devType;			//设备类型
-	int		zigbee_ok;			//设备是否入网
-} Config;
+	struct DevConfig{
+		char product_key[64];
+		char device_secret[64];
+	};
+	/**
+	 * Configuration definition.
+	 */
+	typedef struct _Config {
+		struct DevConfig air_condition;	//空调
+		struct DevConfig alarm_whistle;	//声光报警
+		struct DevConfig curtain;		//窗帘
+		struct DevConfig door_contact;	//门磁
+		struct DevConfig fresh_air;		//新风系统
+		struct DevConfig light;			//灯控
+		struct DevConfig motion_curtain;//红外幕帘
+		struct DevConfig outlet;		//插座
+		int  ele_quantity;				//电量x1000
+	} Config;
 
-/**
- * Global instance variable of configuration.
- */
+	enum {
+		TC_SET_STATION,
+		TC_SET_AP,
+	};
+	typedef struct {
+		// station 
+		char boot_proto[64];
+		char network_type[64];
+		char ssid[128];
+		char auth_mode[64];
+		char encrypt_type[64];
+		char auth_key[64];
 
-extern Config theConfig;
+		// ap
+		char ap_addr[64];
+		char ap_ssid[64];
+		char ap_auth_mode[128];
+		char ap_encrypt_type[64];
+		char ap_auth_key[64];
+		char ap_channel;
+	}TcWifiConfig;
+	extern TcWifiConfig tc_wifi_config;
+	/**
+	 * Global instance variable of configuration.
+	 */
 
-/**
- * Loads configuration file.
- */
-void ConfigLoad(void);
+	extern Config theConfig;
 
-/**
- * Saves the configuration to file.
- */
-void ConfigSave(void (*func)(void));
-void ConfigSavePrivate(void);
-void ConfigSaveTemp(void);
-void configSync(void);
+	/**
+	 * Loads configuration file.
+	 */
+	void configLoad(void);
 
-/** @defgroup doorbell_indoor_audio Audio Player
- *  @{
- */
-typedef int (*AudioPlayCallback)(int state);
+	/**
+	 * Saves the configuration to file.
+	 */
+	void ConfigSave(void (*func)(void));
+	void ConfigSavePrivate(void);
+	void ConfigSaveTemp(void);
+	void configSync(void);
 
-/**
- * Initializes audio module.
- */
-void AudioInit(void);
+	/** @defgroup doorbell_indoor_audio Audio Player
+	 *  @{
+	 */
+	typedef int (*AudioPlayCallback)(int state);
 
-/**
- * Exits audio module.
- */
-void AudioExit(void);
+	/**
+	 * Initializes audio module.
+	 */
+	void AudioInit(void);
 
-/**
- * Plays the specified wav file.
- *
- * @param filename The specified wav file to play.
- * @param func The callback function.
- * @return 0 for success, otherwise failed.
- */
-int AudioPlay(char* filename, AudioPlayCallback func);
+	/**
+	 * Exits audio module.
+	 */
+	void AudioExit(void);
 
-/**
- * Stops playing sound.
- */
-void AudioStop(void);
+	/**
+	 * Plays the specified wav file.
+	 *
+	 * @param filename The specified wav file to play.
+	 * @param func The callback function.
+	 * @return 0 for success, otherwise failed.
+	 */
+	int AudioPlay(char* filename, AudioPlayCallback func);
 
-/**
- * Plays keypad sound.
- */
-void AudioPlayKeySound(void);
-void AudioPauseKeySound(void);
-void AudioResumeKeySound(void);
+	/**
+	 * Stops playing sound.
+	 */
+	void AudioStop(void);
 
-/**
- * Sets the volume of keypad sound.
- *
- * @param level the percentage of volume.
- */
-void AudioSetKeyLevel(int level);
+	/**
+	 * Plays keypad sound.
+	 */
+	void AudioPlayKeySound(void);
+	void AudioPauseKeySound(void);
+	void AudioResumeKeySound(void);
 
-/**
- * Mutes all audio.
- */
-void AudioMute(void);
+	/**
+	 * Sets the volume of keypad sound.
+	 *
+	 * @param level the percentage of volume.
+	 */
+	void AudioSetKeyLevel(int level);
 
-/**
- * Un-mutes all audio.
- */
-void AudioUnMute(void);
+	/**
+	 * Mutes all audio.
+	 */
+	void AudioMute(void);
 
-/**
- * Determines whether this audio is muted or not.
- *
- * @return true muted, false otherwise.
- */
-bool AudioIsMuted(void);
+	/**
+	 * Un-mutes all audio.
+	 */
+	void AudioUnMute(void);
 
-bool AudioIsPlaying(void);
+	/**
+	 * Determines whether this audio is muted or not.
+	 *
+	 * @return true muted, false otherwise.
+	 */
+	bool AudioIsMuted(void);
 
-void AudioSetVolume(int level);
-int AudioGetVolume(void);
+	bool AudioIsPlaying(void);
 
-/** @} */ // end of doorbell_indoor_audio
+	void AudioSetVolume(int level);
+	int AudioGetVolume(void);
 
-/** @defgroup doorbell_indoor_audiorecord Audio Recorder
- *  @{
- */
-/**
- * Initializes audio recorder module.
- */
-void AudioRecordInit(void);
+	/** @} */ // end of doorbell_indoor_audio
 
-/**
- * Exits audio recorder module.
- */
-void AudioRecordExit(void);
+	/** @defgroup doorbell_indoor_audiorecord Audio Recorder
+	 *  @{
+	 */
+	/**
+	 * Initializes audio recorder module.
+	 */
+	void AudioRecordInit(void);
 
-/**
- * Start recording to the specified file.
- *
- * @param filepath The specified file to record.
- * @return 0 for success, otherwise failed.
- */
-int AudioRecordStartRecord(char* filepath);
+	/**
+	 * Exits audio recorder module.
+	 */
+	void AudioRecordExit(void);
 
-/**
- * Stop recording.
- *
- * @return 0 for success, otherwise failed.
- */
-int AudioRecordStopRecord(void);
+	/**
+	 * Start recording to the specified file.
+	 *
+	 * @param filepath The specified file to record.
+	 * @return 0 for success, otherwise failed.
+	 */
+	int AudioRecordStartRecord(char* filepath);
 
-/**
- * Gets the time length of the specified recorded file, in seconds.
- *
- * @param filepath The specified file path.
- * @return The time length, in seconds.
- */
-int AudioRecordGetTimeLength(char* filepath);
+	/**
+	 * Stop recording.
+	 *
+	 * @return 0 for success, otherwise failed.
+	 */
+	int AudioRecordStopRecord(void);
 
-/**
- * Plays the specified recorded file.
- *
- * @param filepath The specified recorded file to play.
- * @return 0 for success, otherwise failed.
- */
-int AudioRecordStartPlay(char* filepath);
+	/**
+	 * Gets the time length of the specified recorded file, in seconds.
+	 *
+	 * @param filepath The specified file path.
+	 * @return The time length, in seconds.
+	 */
+	int AudioRecordGetTimeLength(char* filepath);
 
-/**
- * Stops playing recorded file.
- */
-void AudioRecordStopPlay(void);
+	/**
+	 * Plays the specified recorded file.
+	 *
+	 * @param filepath The specified recorded file to play.
+	 * @return 0 for success, otherwise failed.
+	 */
+	int AudioRecordStartPlay(char* filepath);
 
-/** @} */ // end of doorbell_indoor_audiorecord
+	/**
+	 * Stops playing recorded file.
+	 */
+	void AudioRecordStopPlay(void);
 
-/**
- * Stops audio player.
- */
-void AudioPlayerStop(void);
+	/** @} */ // end of doorbell_indoor_audiorecord
+
+	/**
+	 * Stops audio player.
+	 */
+	void AudioPlayerStop(void);
 
 	// sdk 调用
 	// 获取3000或U9协议 
@@ -190,6 +230,9 @@ void AudioPlayerStop(void);
 	// 1为主机 0为分机
 	int isConfigMaster(void);
 
+	void tcSetNetwork(int type);
+	char *auth_mode[];
+	char *encrypt_type[];
 #ifdef __cplusplus
 }
 #endif

@@ -24,6 +24,7 @@
 
 #include "device_alarm_whistle.h"
 #include "sql_handle.h"
+#include "config.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -56,11 +57,12 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
 			const char *attr_name[2] = {NULL};
 			const char *attr_value[2] = {NULL};
+			int attr_value_type[2];
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
+			attr_value_type[0] = dev->type_para->attr[i].value_type;
 			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
-			aliSdkSubDevReportAttrs(dev->type_para->proto_type,
-					dev->id, attr_name,attr_value);
+			aliSdkSubDevReportAttrs(dev, attr_name,attr_value,attr_value_type);
 		}
 	}
 
@@ -82,30 +84,6 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 		}
 	}
 
-    return 0;
-}
-
-static int execCmdCb(DeviceStr *dev, const char *cmd_name, const char *cmd_args)
-{
-    printf("exec cmd, devid:%s, cmd_name:%s, cmd_args:%s\n",
-           dev->id, cmd_name, cmd_args);
-    return 0;
-}
-
-static int removeDeviceCb(DeviceStr **device)
-{
-	DeviceStr *dev = *device;
-    printf("remove device, devid:%s\n",dev->id);
-	int i;
-	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
-		if (dev->value[i]) {
-			free(dev->value[i]);
-		}
-		dev->value[i] = NULL;
-	}
-	sqlDeleteDevice(dev->id);
-	free(dev);
-	*device = NULL;
     return 0;
 }
 
@@ -141,8 +119,11 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
-			dev->id, attr_name,attr_value);
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_SWICH].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
 }
 
 static void reportPowerOffCb(DeviceStr *dev)
@@ -154,8 +135,11 @@ static void reportPowerOffCb(DeviceStr *dev)
 	const char *attr_value[] = {
 		dev->value[ATTR_SWICH],
 		NULL};
-	aliSdkSubDevReportAttrs(dev->type_para->proto_type,
-			dev->id, attr_name,attr_value);
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_SWICH].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
 }
 
 static DeviceTypePara alarm_whistle = {
@@ -165,14 +149,12 @@ static DeviceTypePara alarm_whistle = {
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JD,
 	.attr = {
-		{"ErrorCode",NULL},
-		{"SirenWarningMode",cmdSwich},
+		{"ErrorCode",NULL,DEVICE_VELUE_TYPE_INT},
+		{"SirenWarningMode",cmdSwich,DEVICE_VELUE_TYPE_INT},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
-	.execCmd = execCmdCb,
-	.remove = removeDeviceCb,
 	.getSwichStatus = cmdGetSwichStatus,
 	.reportPowerOn = reportPowerOnCb,
 	.reportPowerOff = reportPowerOffCb,
@@ -185,6 +167,8 @@ DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
+	alarm_whistle.product_key = theConfig.alarm_whistle.product_key;
+	alarm_whistle.device_secret = theConfig.alarm_whistle.device_secret;
 	This->type_para = &alarm_whistle;
 	This->addr = addr;
 	This->channel = channel;

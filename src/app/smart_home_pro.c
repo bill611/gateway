@@ -218,7 +218,8 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 *********************************************************************************************************/
 static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf,char *id)
 {
-	printf("id:%s,type:%d,addr:%x\n", id,cmdBuf->device_type,cmdBuf->addr);
+	printf("[%s]id:%s,type:%d,addr:%x\n", 
+			__FUNCTION__,id,cmdBuf->device_type,cmdBuf->addr);
 	sqlInsertDevice(id,
 			cmdBuf->device_type,
 			cmdBuf->addr,
@@ -325,25 +326,25 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 		
 		case Device_On_Res:		//设备开
 			{
-				printf("on:%x\n",packet->addr);
 				char id[32];
 				smarthomeGetId(packet,id);
+				printf("on:%s\n",id);
 				gwReportPowerOn(id,packet->param);
 			} break;
 			
 		case Device_Off_Res:	//设备关
-			printf("off:%x\n",packet->addr);
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
+				printf("off:%s\n",id);
 				gwReportPowerOff(id);
 			} break;
 		
 		case Demand_Device_Alarm_Type_Res:		//查询单元的警报状态返回
 			{
-				printf("alarm_status:%x,%d\n",packet->addr,packet->param[0]);
 				char id[32];
 				smarthomeGetId(packet,id);
+				printf("alarm_status:%s,%d\n",id,packet->param[0]);
 				gwReportAlarmStatus(id,packet->param);
 			} break;
 			
@@ -353,10 +354,10 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			
 		case Device_Ele_Quantity:		//计量插座每隔30分钟上报用电量
 			{
-				printf("ele quantity:%x\n",packet->addr);
 				char id[32];
 				smarthomeGetId(packet,id);
-				// gwReportPowerOn(id,packet->param);
+				printf("ele quantity:%s\n",id);
+				gwReportEleQuantity(id,packet->param);
 				smarthomeSendDataPacket(
 						packet->addr,
 						Device_Ele_Quantity_Res,
@@ -368,10 +369,10 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			
 		case Device_Ele_Power:		//计量插座每隔30分钟上报用功率
 			{
-				printf("ele power:%x\n",packet->addr);
 				char id[32];
 				smarthomeGetId(packet,id);
-				// gwReportPowerOn(id,packet->param);
+				printf("ele power:%s\n",id);
+				gwReportElePower(id,packet->param);
 				smarthomeSendDataPacket(
 						packet->addr,
 						Device_Ele_Power_Res,

@@ -54,6 +54,7 @@ static int sqlCheck(TSqlite *sql)
 		DevType INTEGER,\
 		Addr INTEGER,\
 		Channel INTEGER\
+		EleQuantity INTEGER\
 	   	)";
     if (sql == NULL)
         goto sqlCheck_fail;
@@ -144,6 +145,25 @@ int sqlGetDeviceId(uint16_t addr,char *id)
 	if (ret)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
 	// printf("ret:%d,id:%s\n", ret,id);
+	sql_local.sql->Close(sql_local.sql);
+	return ret;
+}
+
+void sqlSetEleQuantity(int value,char *id)
+{
+	char buf[128];
+	sprintf(buf, "UPDATE DeviceList SET EleQuantity ='%d' Where id = \"%s\"",
+			value,id);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+}
+int sqlGetEleQuantity(char *id)
+{
+	char buf[128];
+	sprintf(buf, "select EleQuantity From DeviceList Where ID=\"%s\"", id);
+	LocalQueryOpen(sql_local.sql,buf);
+	int ret = LocalQueryOfInt(sql_local.sql,"EleQuantity");
 	sql_local.sql->Close(sql_local.sql);
 	return ret;
 }

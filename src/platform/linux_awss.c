@@ -44,102 +44,12 @@
 #include "platform.h"
 #include "platform_config.h"
 #include "iwlib.h"
+#include "config.h"
 
 typedef struct{
     AES_KEY ctx;
     uint8_t iv[32];
 }platform_aes_t;
-
-enum {
-	TC_SET_STATION,
-	TC_SET_AP,
-};
-typedef struct {
-	// station 
-	char boot_proto[64];
-	char network_type[64];
-	char ssid[128];
-	char auth_mode[64];
-	char encrypt_type[64];
-	char auth_key[64];
-
-	// ap
-	char ap_addr[64];
-	char ap_ssid[64];
-	char ap_auth_mode[128];
-	char ap_encrypt_type[64];
-	char ap_auth_key[64];
-	char ap_channel;
-}TcWifiConfig;
-
-static char *auth_mode[] = {
-	"OPEN",
-	"SHARED",
-	"WPAPSK",
-	"WPA8021X",
-	"WPA2PSK",
-	"WPA28021X",
-	"WPAPSKWPA2PSK",
-	"AWSS_AUTH_TYPE_WPAPSKWPA2PSK",
-};
-
-static char *encrypt_type[] = {
-	"NONE",
-	"WEP",
-	"TKIP",
-	"AES",
-	"TKIPAES",
-	"AWSS_ENC_TYPE_TKIPAES",
-};
-
-static TcWifiConfig tc_wifi_config = {
-	.boot_proto = "DHCP",
-	.network_type = "Infra",
-	.ssid = "aha",
-	.auth_mode = "WPA2PSK",
-	.encrypt_type = "AES",
-	.auth_key = "12345678",
-
-	.ap_addr = "192.168.100.1",
-	.ap_ssid = "AliGateWay",
-	.ap_auth_mode = "OPEN",
-	.ap_encrypt_type = "NONE",
-	.ap_auth_key = "12345678",
-	.ap_channel = 11,
-};
-
-static void tcSetNetwork(int type)
-{
-	FILE *fp;
-	printf("[%s]\n",__FUNCTION__);
-	fp = fopen("network_config","wb");	
-	if (fp == NULL) {
-		printf("Can't open network_config\n");
-		return;
-	}
-	fprintf(fp,"BOOTPROTO %s\n",	tc_wifi_config.boot_proto);
-	fprintf(fp,"NETWORK_TYPE %s\n",	tc_wifi_config.network_type);
-	fprintf(fp,"SSID %s\n",			tc_wifi_config.ssid);
-	fprintf(fp,"AUTH_MODE %s\n"	,	tc_wifi_config.auth_mode);
-	fprintf(fp,"ENCRYPT_TYPE %s\n",	tc_wifi_config.encrypt_type);
-	fprintf(fp,"AUTH_KEY %s\n",		tc_wifi_config.auth_key);
-
-	fprintf(fp,"AP_IPADDR %s\n",	tc_wifi_config.ap_addr);
-	fprintf(fp,"AP_SSID %s\n",		tc_wifi_config.ap_ssid);
-	fprintf(fp,"AP_AUTH_MODE %s\n",	tc_wifi_config.ap_auth_mode);
-	fprintf(fp,"AP_ENCRYPT_TYPE %s\n",tc_wifi_config.ap_encrypt_type);
-	fprintf(fp,"AP_AUTH_KEY %s\n",	tc_wifi_config.ap_auth_key);
-	fprintf(fp,"AP_CHANNEL %d\n",	tc_wifi_config.ap_channel);
-	fflush(fp);
-	fclose(fp);
-	sync();
-
-	if (type == TC_SET_AP){
-		excuteCmd("./network.sh","SoftAP",NULL);
-	} else {
-		excuteCmd("./network.sh","Infra",NULL);
-	}
-}
 
 //一键配置超时时间, 建议超时时间1-3min, APP侧一键配置1min超时
 int platform_awss_get_timeout_interval_ms(void)
@@ -646,25 +556,3 @@ int platform_wifi_send_80211_raw_frame(_IN_ enum platform_awss_frame_type type,
     // return 0;
 }
 
-void resetWifi(void)
-{
-	char *ret;
-	char buf[256];
-	int cnt = 50;
-	sprintf(tc_wifi_config.ssid,"aha");
-	sprintf(tc_wifi_config.auth_key,"12345678");
-	tcSetNetwork(TC_SET_STATION);
-	snprintf(buf, sizeof(buf), "./wpa_cli -p %s -i %s status | grep wpa_state",
-			WPA_PATH, WLAN_IFNAME);
-	do {
-		ret = excuteCmd(buf,NULL);
-		usleep(100 * 1000);
-	} while ((strncmp(ret,"wpa_state=COMPLETED",strlen("wpa_state=COMPLETED")) != 0) && --cnt != 0);
-
-	if (cnt == 0)
-		return;
-	sys_net_is_ready = 1;
-	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
-	ret = (char *)system(buf);
-	printf("[%s]system:%s,%s\n",__FUNCTION__,buf,ret);
-}

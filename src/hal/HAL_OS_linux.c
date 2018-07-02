@@ -40,9 +40,9 @@
 
 #include "kv.h"
 
-static char DEMO_CASE_PRODUCT_KEY[PRODUCT_KEY_MAXLEN] = {"a139alxxo0W"};
-static char DEMO_CASE_DEVICE_NAME[DEVICE_NAME_MAXLEN] = {"IoTGatewayTest"};
-static char DEMO_CASE_DEVICE_SECRET[DEVICE_SECRET_MAXLEN] = {"G43smopQ3mJ1Mo8MuzCyONkjnIbybNDR"};
+static char DEMO_CASE_PRODUCT_KEY[PRODUCT_KEY_MAXLEN] = {"a1xWFmuD674"};
+static char DEMO_CASE_DEVICE_NAME[DEVICE_NAME_MAXLEN] = {"taichuan_gw_test"};
+static char DEMO_CASE_DEVICE_SECRET[DEVICE_SECRET_MAXLEN] = {"WSzsZYSxMeFV6eHanuXCikyz2pWGWyCr"};
 static char DEMO_CASE_PRODUCT_SECRET[PRODUCT_SECRET_MAXLEN] = {0};
 
 void *HAL_MutexCreate(void)
@@ -158,6 +158,7 @@ void HAL_Printf(_IN_ const char *fmt, ...)
     fflush(stdout);
 }
 
+// todo
 int HAL_GetPartnerID(char pid_str[PID_STR_MAXLEN])
 {
     memset(pid_str, 0x0, PID_STR_MAXLEN);
@@ -165,6 +166,7 @@ int HAL_GetPartnerID(char pid_str[PID_STR_MAXLEN])
     return strlen(pid_str);
 }
 
+// todo
 int HAL_GetModuleID(char mid_str[MID_STR_MAXLEN])
 {
     memset(mid_str, 0x0, MID_STR_MAXLEN);
@@ -310,7 +312,7 @@ void HAL_ThreadDelete(_IN_ void *thread_handle)
 
 static FILE *fp;
 
-#define otafilename "/tmp/alinkota.bin"
+#define otafilename "/mnt/nand1-2/alinkota.bin"
 void HAL_Firmware_Persistence_Start(void)
 {
     fp = fopen(otafilename, "w");
@@ -528,7 +530,7 @@ uint32_t HAL_Wifi_Get_IP(char ip_str[NETWORK_ADDR_LEN], const char *ifname)
 
 static kv_file_t *kvfile = NULL;
 
-#define KVFILE_DEFAULT_PATH "/tmp/kvfile.db"
+#define KVFILE_DEFAULT_PATH "/mnt/nand1-2/kvfile.db"
 
 int HAL_Kv_Set(const char *key, const void *val, int len, int sync)
 {

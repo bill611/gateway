@@ -51,8 +51,6 @@ extern char *optarg;
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
-static int gateway_get_property(char *in, char *out, int out_len, void *ctx);
-static int gateway_set_property(char *in, void *ctx);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -64,12 +62,21 @@ enum SERVER_ENV {
     PREPUB
 };
 
+#if (defined V1)
 #define DPRINT(...)                                      \
 do {                                                     \
-    printf("\033[1;31;40m%s.%d: ", __func__, __LINE__);  \
+    printf("\033[1;35;40m%s.%d: ", __func__, __LINE__);  \
     printf(__VA_ARGS__);                                 \
     printf("\033[0m");                                   \
 } while (0)
+#else
+#define DPRINT(...)                                      \
+do {                                                     \
+    printf("\033[1;33;40m%s.%d: ", __func__, __LINE__);  \
+    printf(__VA_ARGS__);                                 \
+    printf("\033[0m");                                   \
+} while (0)
+#endif
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -84,18 +91,15 @@ static char loglevel = ALINK_LL_INFO;
 #if (defined V2)
 static linkkit_params_t *initParams;
 static int link_fd;
-static linkkit_cbs_t alink_cbs = {
-    .get_property = gateway_get_property,
-    .set_property = gateway_set_property,
-};
-
+static GateWayAttr *gw_attr = NULL;
+static GateWayPrivateAttr *gw_priv_attrs = NULL;
 static int gateway_get_property(char *in, char *out, int out_len, void *ctx)
 {
 
 }
 static int gateway_set_property(char *in, void *ctx)
 {
-	
+
 }
 static int gateway_call_service(char *identifier, char *in, char *out, int out_len, void *ctx)
 {
@@ -103,8 +107,13 @@ static int gateway_call_service(char *identifier, char *in, char *out, int out_l
     if (strcmp(identifier, service_name) == 0) {
 		service_func(ctx,out,out_len);
     }
-	
 }
+
+static linkkit_cbs_t alink_cbs = {
+    .get_property = gateway_get_property,
+    .set_property = gateway_set_property,
+};
+
 static void ota_callback(int event, const char *version, void *ctx)
 {
     DPRINT("event: %d\n", event);
@@ -220,7 +229,7 @@ void parse_opt(int argc, char *argv[])
 #if (defined V2)
 static int event_handler(linkkit_event_t *ev, void *ctx)
 {
-    // gateway_t *gw = ctx;
+	GateWayAttr  *gw = ctx;
 
     switch (ev->event_type) {
     case LINKKIT_EVENT_CLOUD_CONNECTED:
@@ -238,6 +247,7 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
         {
             char *productKey = ev->event_data.subdev_deleted.productKey;
             char *deviceName = ev->event_data.subdev_deleted.deviceName;
+			gw->removeDeviceCb(deviceName);
             DPRINT("delete subdev %s<%s>\n", productKey, deviceName);
         }
         break;
@@ -245,6 +255,8 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
         {
             char *productKey = ev->event_data.subdev_permited.productKey;
             int   timeoutSec = ev->event_data.subdev_permited.timeoutSec;
+
+			gw->permitSubDeviceJoinCb(timeoutSec);
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
         }
         break;
@@ -279,7 +291,6 @@ void aliSdkInit(int argc, char *argv[])
     int loglevel = 5;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_LOG_LEVEL, &loglevel, sizeof(int));
 
-    linkkit_gateway_set_event_callback(initParams, event_handler, NULL);
 
 #endif
 }
@@ -291,11 +302,12 @@ void aliSdkStart(void)
     alink_start();
     alink_wait_connect(ALINK_WAIT_FOREVER);
 #else
+    linkkit_gateway_set_event_callback(initParams, event_handler, gw_attr);
     if (linkkit_gateway_init(initParams) < 0) {
         DPRINT("linkkit_gateway_init failed\n");
         return ;
     }
-    link_fd = linkkit_gateway_start(&alink_cbs, NULL);
+    link_fd = linkkit_gateway_start(&alink_cbs, gw_priv_attrs);
     if (link_fd < 0) {
         DPRINT("linkkit_gateway_start failed\n");
         return ;
@@ -320,6 +332,7 @@ int aliSdkReset(int is_reboot)
 	else
 		return 	alink_factory_reset(ALINK_NOT_REBOOT);
 #else
+	linkkit_gateway_reset(link_fd);
 #endif
 }
 
@@ -335,12 +348,147 @@ int aliSdkRegistGwService(char *name, void *func)
     }
 #else
     alink_cbs.call_service = gateway_call_service;
+	return 0;
 #endif
 }
+#if (defined V2)
+static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
+{
+	printf("[%s]in:%s,out:%s,out_len:%d\n",
+			__FUNCTION__,in,out,out_len);
+	DeviceStr *dev = ctx;
+	cJSON *rJson = cJSON_Parse(in);
+	if (!rJson)
+		return -1;
+
+	int iSize = cJSON_GetArraySize(rJson);
+	if (iSize <= 0) {
+		cJSON_Delete(rJson);
+		return -1;
+	}
+	cJSON *pJson = cJSON_CreateObject();
+	if (!pJson) {
+		cJSON_Delete(rJson);
+		return -1;
+	}
+	int i,j;
+	for (i = 0; i < iSize; i++) {
+		cJSON *pSub = cJSON_GetArrayItem(rJson, i);
+		for (j=0; dev->type_para->attr[j].name != NULL; j++) {
+			if (strcmp(pSub->valuestring,dev->type_para->attr[j].name) == 0) {
+				switch(dev->type_para->attr[j].value_type)
+				{
+					case DEVICE_VELUE_TYPE_INT:
+						cJSON_AddNumberToObject(pJson, 
+								dev->type_para->attr[j].name, atoi(dev->value[j]));
+						break;
+					case DEVICE_VELUE_TYPE_DOUBLE:
+						cJSON_AddNumberToObject(pJson, 
+								dev->type_para->attr[j].name, atof(dev->value[j]));
+						break;
+					case DEVICE_VELUE_TYPE_STRING:
+						cJSON_AddStringToObject(pJson, 
+								dev->type_para->attr[j].name, dev->value[j]);
+						break;
+					default:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	char *p = cJSON_PrintUnformatted(pJson);
+	if (!p) {
+		cJSON_Delete(rJson);
+		cJSON_Delete(pJson);
+		return -1;
+	}
+
+	if (strlen(p) >= out_len) {
+		cJSON_Delete(rJson);
+		cJSON_Delete(pJson);
+		free(p);
+		return -1;
+	}
+
+	strcpy(out, p);
+
+	printf("out: %s\n", out);
+
+	cJSON_Delete(rJson);
+	cJSON_Delete(pJson);
+	free(p);
+	return 0;
+}
+static int subDevSetProperty(char *in, void *ctx)
+{
+	printf("[%s]in:%s\n", __FUNCTION__, in);
+	DeviceStr *dev = ctx;
+	cJSON *rJson = cJSON_Parse(in);
+	if (!rJson)
+		return -1;
+	int i = 0;
+	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
+		cJSON *json_value = cJSON_GetObjectItem(rJson, dev->type_para->attr[i].name);
+		if (json_value) {
+			switch(dev->type_para->attr[i].value_type)
+			{
+				case DEVICE_VELUE_TYPE_INT:
+					sprintf(dev->value[i],"%d",json_value->valueint);
+					break;
+				case DEVICE_VELUE_TYPE_DOUBLE:
+					sprintf(dev->value[i],"%f",json_value->valuedouble);
+					break;
+				case DEVICE_VELUE_TYPE_STRING:
+					sprintf(dev->value[i],"%s",json_value->valuestring);
+					break;
+				default:
+					break;
+			}
+			printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
+					dev->type_para->attr[i].name,dev->value[i]);
+			if (dev->type_para->attr[i].attrcb)
+				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
+		}
+	}
+	cJSON_Delete(rJson);
+	linkkit_gateway_post_property_json_sync(dev->devid, in, 10000);
+	return 0;
+}
+static int subDevService(char *identifier, char *in, char *out, int out_len, void *ctx) 
+{
+	printf("[%s]iden:%s,in:%s\n", __FUNCTION__,identifier, in);
+	DeviceStr *dev = ctx;
+	int i = 0;
+	// for (i=0; dev->type_para->attr[i].name != NULL; i++) {
+		// if (strcmp(identifier,dev->type_para->attr[i].name) == 0) {
+			// switch(dev->type_para->attr[i].value_type)
+			// {
+				// case DEVICE_VELUE_TYPE_INT:
+					// sprintf(dev->value[i],"%d",json_value->valueint);
+					// break;
+				// case DEVICE_VELUE_TYPE_DOUBLE:
+					// sprintf(dev->value[i],"%f",json_value->valuedouble);
+					// break;
+				// case DEVICE_VELUE_TYPE_STRING:
+					// sprintf(dev->value[i],"%s",json_value->valuestring);
+					// break;
+				// default:
+					// break;
+			// }
+			// printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
+					// dev->type_para->attr[i].name,dev->value[i]);
+			// if (dev->type_para->attr[i].attrcb)
+				// dev->type_para->attr[i].attrcb(dev,dev->value[i]);
+		// }
+	// }
+	linkkit_gateway_post_property_json_sync(dev->devid, in, 5000);	
+}
+#endif
 int aliSdkRegisterSubDevice(DeviceStr *dev)
 {
-#if (defined V1)
     int ret = -1;
+#if (defined V1)
 	char rand[SUBDEV_RAND_BYTES] = {0};
 	char sign[17] = {0};
 	if (calc_subdev_signature(dev->type_para->secret,
@@ -354,6 +502,45 @@ int aliSdkRegisterSubDevice(DeviceStr *dev)
 			dev->type_para->short_model,
 			rand, sign);
 #else
+	static linkkit_cbs_t cbs = {
+		.get_property = subDevGetProperty,
+		.set_property = subDevSetProperty,
+		.call_service = subDevService,
+	};
+	// linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
+	// return -1;
+	if (linkkit_gateway_subdev_register(dev->type_para->product_key,
+			   	dev->id, dev->type_para->device_secret) < 0) {
+		DPRINT("subdev regist fail:%d\n", dev->devid);
+		// return -1;
+	}
+	dev->devid = linkkit_gateway_subdev_create(dev->type_para->product_key,
+		   	dev->id, &cbs, dev);
+	DPRINT("dev_id:%d\n", dev->devid);
+	if (dev->devid < 0) {
+		DPRINT("linkkit_gateway_subdev_create %s<%s> failed\n", dev->id, dev->type_para->product_key);
+		linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
+		return -1;
+	}
+	if (linkkit_gateway_subdev_login(dev->devid) < 0) {
+		DPRINT("linkkit_gateway_subdev_login %s<%s> failed\n", dev->id, dev->type_para->product_key);
+		linkkit_gateway_subdev_destroy(dev->devid);
+		linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
+		return -1;
+	}
+	ret = 0;
+#endif
+	return ret;
+}
+int aliSdkUnRegisterSubDevice(DeviceStr *dev)
+{
+#if (defined V2)
+	linkkit_gateway_subdev_logout(dev->devid);
+	linkkit_gateway_subdev_destroy(dev->devid);
+	linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
+
+	DPRINT("linkkit_reset %d\n", dev->devid);
+	// linkkit_gateway_reset(dev->devid);
 #endif
 }
 
@@ -368,8 +555,9 @@ int aliSdkRegisterAttribute(GateWayPrivateAttr *attrs)
 			printf("register attribute fail, attribute:%s\n", attrs[i].attr);
 		}
 	}
-	
+
 #else
+	gw_priv_attrs = attrs;
 #endif
 }
 int aliSdkRegisterGw(char *value)
@@ -387,7 +575,7 @@ void aliSdkRegistGwAttr(char *proto_name,int proto_type,GateWayAttr *attr)
 #if (defined V1)
 	proto_info_t proto_info;
     memset(&proto_info, 0, sizeof(proto_info));
-    proto_info.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE;
+    proto_info.proto_type = proto_type;
     strncpy(proto_info.protocol_name, proto_name, sizeof(proto_info.protocol_name) - 1);
 
     int i = 0;
@@ -412,22 +600,56 @@ void aliSdkRegistGwAttr(char *proto_name,int proto_type,GateWayAttr *attr)
 
 	int	ret = alink_subdev_register_device_type(&proto_info);
 
-	if (ret != 0) 
+	if (ret != 0)
 		printf("register sub device type fail");
 #else
+	gw_attr = attr;
 #endif
 }
-void aliSdkSubDevReportAttrs(int protocol,char *id,const char *attr_name[],const char *attr_value[])
+void aliSdkSubDevReportAttrs(DeviceStr *dev,
+		const char *attr_name[],
+		const char *attr_value[],
+		int attr_value_type[])
 {
 #if (defined V1)
-	alink_subdev_report_attrs(protocol,id,attr_name,attr_value);
+	alink_subdev_report_attrs(dev->type_para->proto_type,dev->id,attr_name,attr_value);
 #else
+	cJSON *pJson = cJSON_CreateObject();
+	if (!pJson) {
+		return ;
+	}
+	int i;
+	for (i = 0; attr_name[i] != NULL; i++) {
+		switch(attr_value_type[i])
+		{
+			case DEVICE_VELUE_TYPE_INT:
+				cJSON_AddNumberToObject(pJson, 
+						attr_name[i], atoi(attr_value[i]));
+				break;
+			case DEVICE_VELUE_TYPE_DOUBLE:
+				cJSON_AddNumberToObject(pJson, 
+						attr_name[i], atof(attr_value[i]));
+				break;
+			case DEVICE_VELUE_TYPE_STRING:
+				cJSON_AddStringToObject(pJson, 
+						attr_name[i], attr_value[i]);
+				break;
+			default:
+				break;
+		}
+	}
+	char *p = cJSON_PrintUnformatted(pJson);
+	if (!p) {
+		cJSON_Delete(pJson);
+		return ;
+	}
+	printf("out: %s\n", p);
+	linkkit_gateway_post_property_json_sync(dev->devid, p, 5000);	
+	cJSON_Delete(pJson);
+	free(p);
 #endif
 }
 void aliSdkresetWifi(void)
 {
-#if (defined V1)
 	resetWifi();
-#else
-#endif
 }
