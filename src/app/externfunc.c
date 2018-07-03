@@ -410,6 +410,12 @@ char * excuteCmd(char *Cmd,...)
 		perror("popen");
 		return NULL;
 	}
+#if 0
+	int fd = fileno(fp);
+	int flags = fcntl(fd, F_GETFL, 0);
+	flags |= O_NONBLOCK;
+	fcntl(fd, F_SETFL, flags);
+#endif
 	memset(cmd_buf,0,sizeof(cmd_buf));
 	ret = fread( cmd_buf, sizeof(cmd_buf), sizeof(char), fp ); //将刚刚FILE* stream的数据流读取到cmd_buf
 	// DPRINT("r:%d\n",ret );

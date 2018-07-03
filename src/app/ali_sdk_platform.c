@@ -62,7 +62,7 @@ enum SERVER_ENV {
     PREPUB
 };
 
-#define LOG_LEVER_V2 3
+#define LOG_LEVER_V2 5
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -80,11 +80,106 @@ static GateWayAttr *gw_attr = NULL;
 static GateWayPrivateAttr *gw_priv_attrs = NULL;
 static int gateway_get_property(char *in, char *out, int out_len, void *ctx)
 {
+	DPRINT("in: %s\n", in);
+	GateWayPrivateAttr *gw = ctx;
+	cJSON *rJson = cJSON_Parse(in);
+	if (!rJson)
+		return -1;
 
+	int iSize = cJSON_GetArraySize(rJson);
+	if (iSize <= 0) {
+		cJSON_Delete(rJson);
+		return -1;
+	}
+
+	cJSON *pJson = cJSON_CreateObject();
+	if (!pJson) {
+		cJSON_Delete(rJson);
+		return -1;
+	}
+	int i,j;
+	for (i = 0; i < iSize; i++) {
+		cJSON *pSub = cJSON_GetArrayItem(rJson, i);
+		for (j=0; gw->attr != NULL; j++) {
+			if (strcmp(pSub->valuestring,gw->attr) == 0) {
+				switch(gw->value_type)
+				{
+					case DEVICE_VELUE_TYPE_INT:
+						cJSON_AddNumberToObject(pJson,
+								gw->attr, atoi(gw->value));
+						break;
+					case DEVICE_VELUE_TYPE_DOUBLE:
+						cJSON_AddNumberToObject(pJson,
+								gw->attr, atof(gw->value));
+						break;
+					case DEVICE_VELUE_TYPE_STRING:
+						cJSON_AddStringToObject(pJson,
+								gw->attr, gw->value);
+						break;
+					default:
+						break;
+				}
+				break;
+			}
+			gw++;
+		}
+	}
+
+	char *p = cJSON_PrintUnformatted(pJson);
+	if (!p) {                               
+		cJSON_Delete(rJson);                
+		cJSON_Delete(pJson);                
+		return -1;                          
+	}                                       
+
+	if (strlen(p) >= out_len) {             
+		cJSON_Delete(rJson);                
+		cJSON_Delete(pJson);                
+		free(p);                            
+		return -1;                          
+	}                                       
+
+	strcpy(out, p);                         
+
+	DPRINT("out: %s\n", out);               
+
+	cJSON_Delete(rJson);                    
+	cJSON_Delete(pJson);                    
+	free(p);                               
 }
 static int gateway_set_property(char *in, void *ctx)
 {
 
+	DPRINT("in: %s\n", in);
+	GateWayPrivateAttr *gw = ctx;
+	cJSON *rJson = cJSON_Parse(in);
+	if (!rJson)
+		return -1;
+	int i;
+	for (i=0; gw->attr != NULL; i++) {
+		cJSON *gw_json = cJSON_GetObjectItem(rJson, gw->attr);	
+		if (gw_json) {
+			switch(gw->value_type)
+			{
+				case DEVICE_VELUE_TYPE_INT:
+					sprintf(gw->value,"%d",gw_json->valueint);
+					break;
+				case DEVICE_VELUE_TYPE_DOUBLE:
+					sprintf(gw->value,"%f",gw_json->valuedouble);
+					break;
+				case DEVICE_VELUE_TYPE_STRING:
+					sprintf(gw->value,"%s",gw_json->string);
+					break;
+				default:
+					break;
+
+			}
+			gw->setCb(gw->value);
+		}
+		gw++;
+	}
+	linkkit_gateway_post_property_json_sync(link_fd, in, 5000);
+	cJSON_Delete(rJson);                                          
 }
 static int gateway_call_service(char *identifier, char *in, char *out, int out_len, void *ctx)
 {
@@ -111,19 +206,19 @@ static void ota_callback(int event, const char *version, void *ctx)
 #if (defined V1)
 void cloud_connected(void)
 {
-    printf("alink cloud connected!\n");
+    DPRINT("alink cloud connected!\n");
     const char *arrt_set[1] = {NULL};
     alink_report_attrs(arrt_set);
 }
 
 void cloud_disconnected(void)
 {
-    printf("alink cloud disconnected!\n");
+    DPRINT("alink cloud disconnected!\n");
 }
 
 void cloud_get_device_status(void)
 {
-    printf("cloud_get_device_status!\n");
+    DPRINT("cloud_get_device_status!\n");
 }
 
 static void * testUartSendThead(void *arg)
@@ -131,7 +226,7 @@ static void * testUartSendThead(void *arg)
 	int ret;
 	while (1) {
 		ret = aws_notify_app_nonblock();
-		printf("ret :%d\n", ret);
+		DPRINT("ret :%d\n", ret);
 		sleep(1);
 	}
 }
@@ -150,11 +245,11 @@ static void testUartSend(void)
 
 void usage(void)
 {
-    printf("\nalink_sample -e enviroment -l log_level\n");
-    printf("\t -e alink server environment, 'daily', 'sandbox' or 'online'(default)\n");
-    printf("\t -d dead loop, never return\n");
-    printf("\t -l log level, trace/debug/info/warn/error/fatal/none\n");
-    printf("\t -h show help text\n");
+    DPRINT("\nalink_sample -e enviroment -l log_level\n");
+    DPRINT("\t -e alink server environment, 'daily', 'sandbox' or 'online'(default)\n");
+    DPRINT("\t -d dead loop, never return\n");
+    DPRINT("\t -l log level, trace/debug/info/warn/error/fatal/none\n");
+    DPRINT("\t -h show help text\n");
 }
 
 
@@ -176,7 +271,7 @@ void parse_opt(int argc, char *argv[])
 				}
 				else {
                     env = ONLINE;
-                    printf("unknow opt %s, use default env\n", optarg);
+                    DPRINT("unknow opt %s, use default env\n", optarg);
                 }
                 break;
             case 'l':
@@ -205,7 +300,7 @@ void parse_opt(int argc, char *argv[])
         }
     }
 
-    printf("alink server: %s,  log level: %d\n",
+    DPRINT("alink server: %s,  log level: %d\n",
            env_str[env],  loglevel);
 #else
 #endif
@@ -328,7 +423,7 @@ int aliSdkRegistGwService(char *name, void *func)
 #if (defined V1)
     int ret = alink_register_service(name, service_func);
     if (0 != ret) {
-        printf("register service fail, service:%s\n", name);
+        DPRINT("register service fail, service:%s\n", name);
         return -1;
     }
 #else
@@ -339,7 +434,7 @@ int aliSdkRegistGwService(char *name, void *func)
 #if (defined V2)
 static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
 {
-	printf("[%s]in:%s,out:%s,out_len:%d\n",
+	DPRINT("[%s]in:%s,out:%s,out_len:%d\n",
 			__FUNCTION__,in,out,out_len);
 	DeviceStr *dev = ctx;
 	cJSON *rJson = cJSON_Parse(in);
@@ -364,15 +459,15 @@ static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
 				switch(dev->type_para->attr[j].value_type)
 				{
 					case DEVICE_VELUE_TYPE_INT:
-						cJSON_AddNumberToObject(pJson, 
+						cJSON_AddNumberToObject(pJson,
 								dev->type_para->attr[j].name, atoi(dev->value[j]));
 						break;
 					case DEVICE_VELUE_TYPE_DOUBLE:
-						cJSON_AddNumberToObject(pJson, 
+						cJSON_AddNumberToObject(pJson,
 								dev->type_para->attr[j].name, atof(dev->value[j]));
 						break;
 					case DEVICE_VELUE_TYPE_STRING:
-						cJSON_AddStringToObject(pJson, 
+						cJSON_AddStringToObject(pJson,
 								dev->type_para->attr[j].name, dev->value[j]);
 						break;
 					default:
@@ -398,7 +493,7 @@ static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
 
 	strcpy(out, p);
 
-	printf("out: %s\n", out);
+	DPRINT("out: %s\n", out);
 
 	cJSON_Delete(rJson);
 	cJSON_Delete(pJson);
@@ -407,7 +502,7 @@ static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
 }
 static int subDevSetProperty(char *in, void *ctx)
 {
-	printf("[%s]in:%s\n", __FUNCTION__, in);
+	DPRINT("[%s]in:%s\n", __FUNCTION__, in);
 	DeviceStr *dev = ctx;
 	cJSON *rJson = cJSON_Parse(in);
 	if (!rJson)
@@ -430,7 +525,7 @@ static int subDevSetProperty(char *in, void *ctx)
 				default:
 					break;
 			}
-			printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
+			DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
 					dev->type_para->attr[i].name,dev->value[i]);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
@@ -440,9 +535,9 @@ static int subDevSetProperty(char *in, void *ctx)
 	linkkit_gateway_post_property_json_sync(dev->devid, in, 10000);
 	return 0;
 }
-static int subDevService(char *identifier, char *in, char *out, int out_len, void *ctx) 
+static int subDevService(char *identifier, char *in, char *out, int out_len, void *ctx)
 {
-	printf("[%s]iden:%s,in:%s\n", __FUNCTION__,identifier, in);
+	DPRINT("[%s]iden:%s,in:%s\n", __FUNCTION__,identifier, in);
 	DeviceStr *dev = ctx;
 	int i = 0;
 	// for (i=0; dev->type_para->attr[i].name != NULL; i++) {
@@ -461,13 +556,13 @@ static int subDevService(char *identifier, char *in, char *out, int out_len, voi
 				// default:
 					// break;
 			// }
-			// printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
+			// DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,
 					// dev->type_para->attr[i].name,dev->value[i]);
 			// if (dev->type_para->attr[i].attrcb)
 				// dev->type_para->attr[i].attrcb(dev,dev->value[i]);
 		// }
 	// }
-	linkkit_gateway_post_property_json_sync(dev->devid, in, 5000);	
+	linkkit_gateway_post_property_json_sync(dev->devid, in, 5000);
 }
 #endif
 int aliSdkRegisterSubDevice(DeviceStr *dev)
@@ -478,7 +573,7 @@ int aliSdkRegisterSubDevice(DeviceStr *dev)
 	char sign[17] = {0};
 	if (calc_subdev_signature(dev->type_para->secret,
 			   	rand, sign, sizeof(sign)) == NULL) {
-		printf("[%s:%s]__get_device_signature fail\n",
+		DPRINT("[%s:%s]__get_device_signature fail\n",
 				dev->id, dev->type_para->name);
 	}
 	ret = alink_subdev_register_device(
@@ -537,7 +632,7 @@ int aliSdkRegisterAttribute(GateWayPrivateAttr *attrs)
 		int ret = alink_register_attribute(attrs[i].attr,
 				attrs[i].getCb, attrs[i].setCb);
 		if (0 != ret) {
-			printf("register attribute fail, attribute:%s\n", attrs[i].attr);
+			DPRINT("register attribute fail, attribute:%s\n", attrs[i].attr);
 		}
 	}
 
@@ -551,7 +646,7 @@ int aliSdkRegisterGw(char *value)
     int ret = -1;
     ret = alink_report("postDeviceData",value);
     if (ret != 0)
-        printf("report msg fail, params: %s\n",value);
+        DPRINT("report msg fail, params: %s\n",value);
 #else
 #endif
 }
@@ -586,7 +681,7 @@ void aliSdkRegistGwAttr(char *proto_name,int proto_type,GateWayAttr *attr)
 	int	ret = alink_subdev_register_device_type(&proto_info);
 
 	if (ret != 0)
-		printf("register sub device type fail");
+		DPRINT("register sub device type fail");
 #else
 	gw_attr = attr;
 #endif
@@ -608,15 +703,15 @@ void aliSdkSubDevReportAttrs(DeviceStr *dev,
 		switch(attr_value_type[i])
 		{
 			case DEVICE_VELUE_TYPE_INT:
-				cJSON_AddNumberToObject(pJson, 
+				cJSON_AddNumberToObject(pJson,
 						attr_name[i], atoi(attr_value[i]));
 				break;
 			case DEVICE_VELUE_TYPE_DOUBLE:
-				cJSON_AddNumberToObject(pJson, 
+				cJSON_AddNumberToObject(pJson,
 						attr_name[i], atof(attr_value[i]));
 				break;
 			case DEVICE_VELUE_TYPE_STRING:
-				cJSON_AddStringToObject(pJson, 
+				cJSON_AddStringToObject(pJson,
 						attr_name[i], attr_value[i]);
 				break;
 			default:
@@ -628,8 +723,8 @@ void aliSdkSubDevReportAttrs(DeviceStr *dev,
 		cJSON_Delete(pJson);
 		return ;
 	}
-	printf("out: %s\n", p);
-	linkkit_gateway_post_property_json_sync(dev->devid, p, 5000);	
+	DPRINT("out: %s\n", p);
+	linkkit_gateway_post_property_json_sync(dev->devid, p, 5000);
 	cJSON_Delete(pJson);
 	free(p);
 #endif

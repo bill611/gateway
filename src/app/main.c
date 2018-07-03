@@ -151,8 +151,13 @@ int main(int argc, char *argv[])
     gwRegisterGateway();
 	aliSdkStart();
 
+#if (defined V1)
 	gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
 	gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
+#else
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
+	gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+#endif
 
 #if (defined V1)
 	gwDeviceInit();

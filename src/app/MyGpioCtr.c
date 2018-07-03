@@ -74,7 +74,7 @@ MyGpioPriv gpiotbl[]={
 	{GPIO_LED_WIFI,			"0",IO_INACTIVE,0},
 	{GPIO_LED_RESERVED,		"0",IO_INACTIVE,0},
 
-	{GPIO_RESET,			"0",IO_INPUT,50},
+	{GPIO_RESET,			"0",IO_INPUT,10},
 	{GPIO_MODE,				"0",IO_INPUT,1},
 };
 

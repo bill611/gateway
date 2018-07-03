@@ -40,7 +40,7 @@
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
 static void uartFromZigbee(char * buff);
-static void cmdParser(char *buf, int len);
+static void cmdParser(uint8_t *buf, int len);
 /* ---------------------------------------------------------------------------*
  *                        macro define
  *----------------------------------------------------------------------------*/
@@ -144,17 +144,16 @@ static void sendCmdProcess(void)
 static void callbackProcess(void)
 {
 	int len = 0;
-	char buff[256] = {0};
+	uint8_t buff[256] = {0};
 	if (uart) {
 		len = uart->recvBuffer(uart,buff,sizeof(buff));
 	}
 	if (len <= 0)
 		return;
-#if 1
+#if 0
 	DPRINT("[callbackProcess] rx_len:%d :", len);
 	int i = 0;
-	for (; i < len; i++)
-	{
+	for (; i < len; i++) {
 		DPRINT("%02x ", buff[i]);
 	}
 	DPRINT("\n");
@@ -165,14 +164,18 @@ static void callbackProcess(void)
 	if ((buff[len - 1] != 0xf5))
 		return;
 
-	if (buff[0] == 0xfa)	//透传数据处理
-	{
+	if (buff[0] == 0xfa) {//透传数据处理
 		if (zigbeeDataRcv)
 			zigbeeDataRcv(&buff[4], len);
-	}
-	else if (buff[0] == 0xfc)	//命令数据处理
-	{
+	} else if (buff[0] == 0xfc)	{//命令数据处理
 		cmdParser(buff, len);
+	} else if (buff[0] == 0xfb)	{ //节点命令
+		if (buff[3] == 0x09 && buff[4] == 0x52) {
+			DPRINT("short add:%02X%02X,ieee:%02X%02X%02X%02X%02X%02X%02X%02X\n",
+					buff[1],buff[2],
+					buff[5],buff[6],buff[7],buff[8],
+					buff[9],buff[10],buff[11],buff[12]);
+		}
 	} else {
 		DPRINT("zigbee cmd err\n");
 	}
@@ -209,7 +212,7 @@ static void getIEEE(void)
 ** output parameters:  -
 ** Returned value:     -
 *********************************************************************************************************/
-static void cmdParser(char *buf, int len)
+static void cmdParser(uint8_t *buf, int len)
 {
 	int i;
 	DPRINT("cmdParser buf[%d]:", len);
@@ -411,7 +414,7 @@ void getNetChannel(void)
 /* ---------------------------------------------------------------------------*/
 void zigbeeNetIn(uint8_t time)
 {
-	if (time > 0 && time < 0xff)
+	printf("[%d]\n", time);
 	setSendCmd(SET_NETIN_ENABLE, time);
 }
 /* ---------------------------------------------------------------------------*/

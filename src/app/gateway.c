@@ -138,30 +138,32 @@ static int alarmEntryDelaySetCb(char *value)
     return 0;
 }
 
-static int alarmAlarmModeGetCb(char *output_buf, unsigned int buf_sz)
+static int netInSwitchGetCb(char *output_buf, unsigned int buf_sz)
 {
     DPRINT("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_MODE].value);
     snprintf(output_buf, buf_sz - 1, "%s",gw_attrs[GW_ARM_MODE].value);
     return 0;
 }
 
-static int alarmAlarmModeSetCb(char *value)
+static int netInSwitchSetCb(char *value)
 {
     DPRINT("[%s]:%s\n", __FUNCTION__,value);
     int value_int = atoi(value);
-    if (value_int < 0 || value_int > 3) {
-        DPRINT("invalid alarm mode attr value:%s\n", value);
-        return -1;
-    }
-    sprintf(gw_attrs[GW_ARM_MODE].value,"%s",value);
-
+	if (value_int)
+		zigbeeNetIn(60);
+	else
+		zigbeeNetIn(0);
     return 0;
 }
 
 
 static GateWayPrivateAttr gw_attrs[] = {
 	{"ArmEntryDelay",alarmEntryDelayGetCb,alarmEntryDelaySetCb,DEVICE_VELUE_TYPE_INT},
-	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb,DEVICE_VELUE_TYPE_INT},
+#if (defined V1)
+	{"ArmMode",netInSwitchGetCb,netInSwitchSetCb,DEVICE_VELUE_TYPE_INT},
+#else
+	{"NetInSwich",netInSwitchGetCb,netInSwitchSetCb,DEVICE_VELUE_TYPE_INT},
+#endif
 	{NULL},
 };
 
@@ -189,6 +191,8 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 		DPRINT("unknow device type:%d\n",type );
 		return -1;
 	}
+	DPRINT("id:%s\n", id);
+	// return -1;
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
 	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0) 
@@ -301,7 +305,7 @@ void gwLoadDeviceData(void)
 {
 	int i;
 	int device_num = sqlGetDeviceStart();
-	char id[32];
+	char id[32] = {0};
 	int type;
 	uint16_t addr,channel;
 	sub_dev_list = listCreate(sizeof(DeviceStr *));
@@ -314,6 +318,8 @@ void gwLoadDeviceData(void)
 
 static DeviceStr *getSubDevice(char *id)
 {
+	if (!id)
+		return NULL;
 	DeviceStr *dev = NULL;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {

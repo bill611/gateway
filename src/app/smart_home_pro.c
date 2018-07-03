@@ -270,6 +270,7 @@ static void smarthomeGetId(SMART_HOME_PRO *cmdBuf,char *id)
 *********************************************************************************************************/
 static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 {
+	char id[32] = {0};
 	SMART_HOME_PRO *packet = (SMART_HOME_PRO *)buf;
     if (smarthomeCmdFilter(packet) == 0)
         return;
@@ -277,7 +278,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 	{
 		case NetIn_Report:
 			{
-				char id[32] = {0};
 				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
 						packet->param[0],
 						packet->param[1],
@@ -326,7 +326,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 		
 		case Device_On_Res:		//设备开
 			{
-				char id[32];
 				smarthomeGetId(packet,id);
 				DPRINT("on:%s\n",id);
 				gwReportPowerOn(id,packet->param);
@@ -334,7 +333,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			
 		case Device_Off_Res:	//设备关
 			{
-				char id[32];
 				smarthomeGetId(packet,id);
 				DPRINT("off:%s\n",id);
 				gwReportPowerOff(id);
@@ -342,7 +340,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 		
 		case Demand_Device_Alarm_Type_Res:		//查询单元的警报状态返回
 			{
-				char id[32];
 				smarthomeGetId(packet,id);
 				DPRINT("alarm_status:%s,%d\n",id,packet->param[0]);
 				gwReportAlarmStatus(id,packet->param);
@@ -354,7 +351,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			
 		case Device_Ele_Quantity:		//计量插座每隔30分钟上报用电量
 			{
-				char id[32];
 				smarthomeGetId(packet,id);
 				DPRINT("ele quantity:%s\n",id);
 				gwReportEleQuantity(id,packet->param);
@@ -369,7 +365,6 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			
 		case Device_Ele_Power:		//计量插座每隔30分钟上报用功率
 			{
-				char id[32];
 				smarthomeGetId(packet,id);
 				DPRINT("ele power:%s\n",id);
 				gwReportElePower(id,packet->param);

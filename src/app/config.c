@@ -86,10 +86,10 @@ char *encrypt_type[] = {
 TcWifiConfig tc_wifi_config = {
 	.boot_proto = "DHCP",
 	.network_type = "Infra",
-	.ssid = "aha",
+	.ssid = "alitest",
 	.auth_mode = "WPA2PSK",
 	.encrypt_type = "AES",
-	.auth_key = "12345678",
+	.auth_key = "alitest123",
 
 	.ap_addr = "192.168.100.1",
 	.ap_ssid = "AliGateWay",
@@ -389,6 +389,7 @@ void ConfigSaveTemp(void)
 void tcSetNetwork(int type)
 {
 	FILE *fp;
+	char *ret;
 	DPRINT("[%s]\n",__FUNCTION__);
 	fp = fopen("network_config","wb");	
 	if (fp == NULL) {
@@ -413,9 +414,11 @@ void tcSetNetwork(int type)
 	sync();
 
 	if (type == TC_SET_AP){
-		excuteCmd("./network.sh","SoftAP",NULL);
+		// 开启AP服务，用cmd时会在hostapd阻塞，目前还没找到原因，暂时用system替代
+		system("./network.sh SoftAP");
 	} else {
-		excuteCmd("./network.sh","Infra",NULL);
+		ret = excuteCmd("./network.sh","Infra",NULL);
+		printf("%s\n", ret);
 	}
 }
 
