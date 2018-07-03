@@ -88,7 +88,7 @@ static SubDeviceRegist device_regist[] = {
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
 {
-    printf("exec gateway factory_reset service, args:%s\n", args);
+    DPRINT("exec gateway factory_reset service, args:%s\n", args);
     int ret = 0;
     //1.firmware reset
     //reset config, ....
@@ -96,26 +96,30 @@ static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int
     //2.alink reset
     ret = aliSdkReset(1);
     if (ret != 0) {
-        printf("call function alink_factory_reset fail!\n");
+        DPRINT("call function alink_factory_reset fail!\n");
     }
 
     return 0;
 }
-int gwRegisterGatewayService(void)
+int gwRegisterGateway(void)
 {
 	int ret = aliSdkRegistGwService(GW_SERVICE_FACTORY_RESET,
 			__factory_reset_service_cb);
 	if (0 != ret) {
-		printf("register service fail, service:%s\n", GW_SERVICE_FACTORY_RESET);
+		DPRINT("register service fail, service:%s\n", GW_SERVICE_FACTORY_RESET);
 		return -1;
 	}
+	aliSdkRegisterAttribute(gw_attrs);
+#if (defined V2)
+	gwDeviceInit();
+#endif
 
     return 0;
 }
 
 static int alarmEntryDelayGetCb(char *output_buf, unsigned int buf_sz)
 {
-    printf("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_ENTRYDELAY].value);
+    DPRINT("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_ENTRYDELAY].value);
     snprintf(output_buf, buf_sz - 1, "%s",gw_attrs[GW_ARM_ENTRYDELAY].value);
 	gwGetSwichStatus();
     return 0;
@@ -123,10 +127,10 @@ static int alarmEntryDelayGetCb(char *output_buf, unsigned int buf_sz)
 
 static int alarmEntryDelaySetCb(char *value)
 {
-    printf("[%s]:%s\n", __FUNCTION__,value);
+    DPRINT("[%s]:%s\n", __FUNCTION__,value);
     int value_int = atoi(value);
     if (value_int < 0 || value_int > 600) {
-        printf("invalid entry delay attr value:%s\n", value);
+        DPRINT("invalid entry delay attr value:%s\n", value);
         return -1;
     }
     sprintf(gw_attrs[GW_ARM_ENTRYDELAY].value,"%s",value);
@@ -136,17 +140,17 @@ static int alarmEntryDelaySetCb(char *value)
 
 static int alarmAlarmModeGetCb(char *output_buf, unsigned int buf_sz)
 {
-    printf("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_MODE].value);
+    DPRINT("[%s]:%s\n", __FUNCTION__,gw_attrs[GW_ARM_MODE].value);
     snprintf(output_buf, buf_sz - 1, "%s",gw_attrs[GW_ARM_MODE].value);
     return 0;
 }
 
 static int alarmAlarmModeSetCb(char *value)
 {
-    printf("[%s]:%s\n", __FUNCTION__,value);
+    DPRINT("[%s]:%s\n", __FUNCTION__,value);
     int value_int = atoi(value);
     if (value_int < 0 || value_int > 3) {
-        printf("invalid alarm mode attr value:%s\n", value);
+        DPRINT("invalid alarm mode attr value:%s\n", value);
         return -1;
     }
     sprintf(gw_attrs[GW_ARM_MODE].value,"%s",value);
@@ -160,15 +164,6 @@ static GateWayPrivateAttr gw_attrs[] = {
 	{"ArmMode",alarmAlarmModeGetCb,alarmAlarmModeSetCb,DEVICE_VELUE_TYPE_INT},
 	{NULL},
 };
-
-int gwRegisterGatewayAttribute(void)
-{
-	aliSdkRegisterAttribute(gw_attrs);
-#if (defined V2)
-	gwDeviceInit();
-#endif
-    return 0;
-}
 
 /* ---------------------------------------------------------------------------*/
 /**
@@ -191,15 +186,16 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 			break;
 	}
 	if (i == NELEMENTS(device_regist)) {
-		printf("unknow device type:%d\n",type );
+		DPRINT("unknow device type:%d\n",type );
 		return -1;
 	}
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
-	sub_dev_list->append(sub_dev_list,&dev);
 	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0) 
-		printf("[%s]register sub device fail,id:%s\n",
+		DPRINT("[%s]register sub device fail,id:%s\n",
 				dev->type_para->name, dev->id);
+	else
+		sub_dev_list->append(sub_dev_list,&dev);
     return ret;
 }
 
@@ -226,12 +222,12 @@ static int getAttrCb(const char *devid, const char *attr_set[])
 
 static int setAttrCb(const char *devid, const char *attr_name, const char *attr_value)
 {
-	printf("gate way id:%s,%s:%s\n", devid,attr_name,attr_value);
+	DPRINT("gate way id:%s,%s:%s\n", devid,attr_name,attr_value);
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
 		DeviceStr *dev;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
-		printf("dev:%s\n", dev->id);
+		DPRINT("dev:%s\n", dev->id);
 		if (strcmp(dev->id,devid) == 0) {
 			dev->type_para->setAttr(dev,attr_name,attr_value);
 			break;
@@ -285,7 +281,7 @@ static int removeDeviceCb(const char *devid)
 
 static int permitSubDeviceJoinCb(uint8_t duration)
 {
-    printf("permitSubDeviceJoinCb, duration:%d\n",duration);
+    DPRINT("permitSubDeviceJoinCb, duration:%d\n",duration);
 	zigbeeNetIn(duration);
 	return 0;
 }
@@ -341,12 +337,12 @@ static DeviceStr *getSubDevice(char *id)
 /* ---------------------------------------------------------------------------*/
 void gwReportPowerOn(char *id,char *param)
 {
-	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
 	if (dev->type_para->reportPowerOn) {
-		printf("[%s]---->", dev->type_para->name);
+		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportPowerOn(dev,param);
 	}
 }
@@ -364,7 +360,7 @@ void gwReportPowerOff(char *id)
 	if (!dev)
 		return;
 	if (dev->type_para->reportPowerOff) {
-		printf("[%s]---->", dev->type_para->name);
+		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportPowerOff(dev);
 	}
 }
@@ -379,12 +375,12 @@ void gwReportPowerOff(char *id)
 /* ---------------------------------------------------------------------------*/
 void gwReportAlarmStatus(char *id,char *param)
 {
-	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
 	if (dev->type_para->reportAlarmStatus) {
-		printf("[%s]---->", dev->type_para->name);
+		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportAlarmStatus(dev,param);
 	}
 }
@@ -404,7 +400,7 @@ void gwGetSwichStatus(void)
 		DeviceStr *dev;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
 		if (dev->type_para->getSwichStatus) {
-			// printf("[%s]---->", dev->type_para->name);
+			// DPRINT("[%s]---->", dev->type_para->name);
 			dev->type_para->getSwichStatus(dev);
 		}
 		sub_dev_list->foreachNext(sub_dev_list);
@@ -422,12 +418,12 @@ void gwGetSwichStatus(void)
 /* ---------------------------------------------------------------------------*/
 void gwReportEleQuantity(char *id,char *param)
 {
-	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
 	if (dev->type_para->reportEleQuantity) {
-		printf("[%s]---->", dev->type_para->name);
+		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportEleQuantity(dev,param);
 	}
 }
@@ -442,12 +438,12 @@ void gwReportEleQuantity(char *id,char *param)
 /* ---------------------------------------------------------------------------*/
 void gwReportElePower(char *id,char *param)
 {
-	printf("[%s]id:%s\n", __FUNCTION__,id);
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
 	if (dev->type_para->reportElePower) {
-		printf("[%s]---->", dev->type_para->name);
+		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportElePower(dev,param);
 	}
 }

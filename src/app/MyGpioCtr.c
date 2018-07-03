@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "debug.h"
 #include "MyGpioCtr.h"
 
 
@@ -73,7 +74,7 @@ MyGpioPriv gpiotbl[]={
 	{GPIO_LED_WIFI,			"0",IO_INACTIVE,0},
 	{GPIO_LED_RESERVED,		"0",IO_INACTIVE,0},
 
-	{GPIO_RESET,			"0",IO_INPUT,80},
+	{GPIO_RESET,			"0",IO_INPUT,50},
 	{GPIO_MODE,				"0",IO_INPUT,1},
 };
 
@@ -92,7 +93,7 @@ static void myGpioSetValue(MyGpio *This,int port,int  Value)
 	Priv = This->Priv+port;
 	if (	(Priv->default_value == IO_INPUT)
 		||  (Priv->default_value == IO_NO_EXIST) ) {   //输出
-		printf("[%d]set value fail,it is input or not exist!\n",port);
+		DPRINT("[%d]set value fail,it is input or not exist!\n",port);
 		return;
 	}
 
@@ -121,7 +122,7 @@ static void myGpioSetValueNow(MyGpio *This,int port,int  Value)
 	Priv = This->Priv+port;
 	if (	(Priv->default_value == IO_INPUT)
 		||  (Priv->default_value == IO_NO_EXIST) ) {   //输出
-		printf("[%d]set value fail,it is input!\n",port);
+		DPRINT("[%d]set value fail,it is input!\n",port);
 		GPIO_MUTEX_UNLOCK();
 		return;
 	}
@@ -132,10 +133,10 @@ static void myGpioSetValueNow(MyGpio *This,int port,int  Value)
 		Priv->current_value = !(*(Priv->active) - '0');
 	}
 
-	// printf("port:%d,value:%d\n",Priv->portnum,Priv->current_value);
+	// DPRINT("port:%d,value:%d\n",Priv->portnum,Priv->current_value);
 	sprintf(string_buf,"/sys/class/gpio/gpio%d/value",Priv->portnum);
 	if ((fp = fopen(string_buf, "rb+")) == NULL) {
-		printf("SetValueNow[%d][%c%d]Cannot open value file.\n",
+		DPRINT("SetValueNow[%d][%c%d]Cannot open value file.\n",
 				port,Priv->portid,Priv->portmask);
 		// exit(1);
 	} else {
@@ -168,7 +169,7 @@ static int myGpioRead(MyGpio *This,int port)
 	}
 	sprintf(string_buf,"/sys/class/gpio/gpio%d/value",Priv->portnum);
 	if ((fp = fopen(string_buf, "rb")) == NULL) {
-		printf("Read[%d][%c%d]Cannot open value file.\n",
+		DPRINT("Read[%d][%c%d]Cannot open value file.\n",
 				port,Priv->portid,Priv->portmask);
 		// exit(1);
 	} else {
@@ -370,7 +371,7 @@ static int myGpioInputHandle(struct _MyGpio *This,int port)
 	MyGpioPriv *Priv;
 	Priv = This->Priv+port;
 	int ret = myGpioIsActive(This,port);
-	// printf("port:%d,ret:%d,delay_time:%d\n",
+	// DPRINT("port:%d,ret:%d,delay_time:%d\n",
 		 // port,ret,(This->Priv+port)->delay_time );
 	if (ret != IO_ACTIVE) {
 		return 0;
@@ -415,12 +416,12 @@ static void myGpioInit(MyGpio *This)
 			continue;
 		}
 		if ((fp = fopen("/sys/class/gpio/export", "w")) == NULL) {
-			printf("Init:/sys/class/gpio/export fopen failed.\n");
+			DPRINT("Init:/sys/class/gpio/export fopen failed.\n");
 			Priv++;
 			continue;
 			// exit(1);
 		}
-		// printf("[%s](%d,df_value:%d)\n",__FUNCTION__,i,Priv->default_value);
+		// DPRINT("[%s](%d,df_value:%d)\n",__FUNCTION__,i,Priv->default_value);
 		Priv->portnum = Priv->portmask;
 		switch (Priv->portid)
 		{
@@ -431,7 +432,7 @@ static void myGpioInit(MyGpio *This)
 			case GPIO_GROUP_E : Priv->portnum += 32*4; break;
 			case GPIO_GROUP_G : Priv->portnum += 32*5; break;
 			case GPIO_GROUP_H : Priv->portnum += 32*6; break;
-			default : printf("GPIO should be:a-h\n");break;
+			default : DPRINT("GPIO should be:a-h\n");break;
 		}
 		fprintf(fp,"%d",Priv->portnum);
 		fclose(fp);
@@ -439,7 +440,7 @@ static void myGpioInit(MyGpio *This)
 		sprintf(string_buf,"/sys/class/gpio/gpio%d/direction",Priv->portnum);
 
 		if ((fp = fopen(string_buf, "rb+")) == NULL) {
-			printf("Init:%s,fopen failed.\n",string_buf);
+			DPRINT("Init:%s,fopen failed.\n",string_buf);
 			Priv++;
 			continue;
 			// exit(1);
@@ -503,7 +504,7 @@ static void myGpioHandle(MyGpio *This)
 
 		sprintf(string_buf,"/sys/class/gpio/gpio%d/value",Priv->portnum);
 		if ((fp = fopen(string_buf, "rb+")) == NULL) {
-			printf("Handle GPIO[%d][%c%d]Cannot open value file.\n",
+			DPRINT("Handle GPIO[%d][%c%d]Cannot open value file.\n",
 					i,Priv->portid,Priv->portmask);
 			// exit(1);
 		} else {
@@ -549,7 +550,7 @@ static void myGpioHandleThreadCreate(MyGpio *This)
 	//创建线程，无传递参数
 	result = pthread_create(&m_pthread,&threadAttr1,myGpioThread,This);
 	if(result) {
-		printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
+		DPRINT("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
 	}
 	pthread_attr_destroy(&threadAttr1);		//释放附加参数
 }
@@ -570,7 +571,7 @@ static void myGpioInputThreadCreate(MyGpio *This,
     pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
     result = pthread_create(&m_pthread,&threadAttr1,checkInputHandle,This);
     if(result) {
-        printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
+        DPRINT("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
     }
     pthread_attr_destroy(&threadAttr1);
 }
@@ -592,7 +593,7 @@ MyGpio* myGpioPrivCreate(MyGpioPriv *gpio_table)
 	memset(This,0,sizeof(MyGpio));
     if (gpio_table == gpiotbl) {
 		This->io_num = sizeof(gpiotbl) / sizeof(MyGpioPriv);
-		// printf("gpio_tbl:%d\n",This->io_num);
+		// DPRINT("gpio_tbl:%d\n",This->io_num);
 	}
 	This->Priv = (MyGpioPriv *)malloc(sizeof(MyGpioPriv) * This->io_num);
 	memset(This->Priv,0,sizeof(MyGpioPriv) * This->io_num);
@@ -622,7 +623,7 @@ MyGpio* myGpioPrivCreate(MyGpioPriv *gpio_table)
 
 void gpioInit(void)
 {
-	printf("gpio init\n");
+	DPRINT("gpio init\n");
 	gpio = myGpioPrivCreate(gpiotbl);	
 	gpio->creatOutputThread(gpio);
 }

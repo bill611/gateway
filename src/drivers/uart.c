@@ -37,6 +37,7 @@
 
 #include "uart.h"
 #include "queue.h"
+#include "debug.h"
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
  *----------------------------------------------------------------------------*/
@@ -224,11 +225,11 @@ static void printfbuf(void *pbuf,int size)
 {
 	int i;
 	unsigned char *pData = (unsigned char *)pbuf;
-	printf("SendData[%d]  ",size);
+	DPRINT("SendData[%d]  ",size);
 	for(i=0;i<size;i++) {
-		printf("%02X ",pData[i]);
+		DPRINT("%02X ",pData[i]);
 	}
-	printf("\n");
+	DPRINT("\n");
 }
 #else
 #define printfbuf(pbuf,size)
@@ -340,7 +341,7 @@ static void uartReceiveCreate(UartServer * This)
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
 	ret = pthread_create(&id,&attr,(void *)uartReceiveThead,This);
 	if(ret)
-		printf("[%s pthread failt,Error code:%d\n",__FUNCTION__,ret);
+		DPRINT("[%s pthread failt,Error code:%d\n",__FUNCTION__,ret);
 
 	pthread_attr_destroy(&attr);
 }
@@ -354,7 +355,7 @@ static void uartSendCreate(UartServer * This)
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
 	ret = pthread_create(&id,&attr,(void *)uartSendThead,This);
 	if(ret)
-		printf("[%s pthread failt,Error code:%d\n",__FUNCTION__,ret);
+		DPRINT("[%s pthread failt,Error code:%d\n",__FUNCTION__,ret);
 
 	pthread_attr_destroy(&attr);
 }

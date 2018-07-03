@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include "sqlite3.h"
 #include "sqlite.h"
+#include "debug.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -162,7 +163,7 @@ static BOOL SQLite_Open(struct _TSqlite *This)
 			&This->Private->pErrMsg)==SQLITE_OK) {
 		This->Fields = (PSQLiteField)malloc(sizeof(TSQLiteField)*This->Private->FieldCount);
 		if(This->Fields==NULL) {
-			// printf("Memory not enough\n");
+			// DPRINT("Memory not enough\n");
 			sqlite3_free_table(This->Private->pData);
 			This->Private->pData = NULL;
 			return TRUE;
@@ -302,7 +303,7 @@ static PSQLiteField SQLite_FieldByName(struct _TSqlite *This,char *Name)
 		if(strcmp(FieldName,This->Fields[i].Name)==0)
 			return &This->Fields[i];
 	}
-	printf("SQL '%s' [%s] is not found\n",This->Private->SqlText,Name);
+	DPRINT("SQL '%s' [%s] is not found\n",This->Private->SqlText,Name);
 	return NULL;
 }
 //----------------------------------------------------------------------------
@@ -371,7 +372,7 @@ TSqlite * CreateLocalQuery(const char *FileName)
 
 	ret = sqlite3_open(FileName, &This->Private->db);
 	if(ret!=SQLITE_OK) {
-		printf("open db err:%s\n",sqlite3_errmsg(This->Private->db));
+		DPRINT("open db err:%s\n",sqlite3_errmsg(This->Private->db));
 		sqlite3_close(This->Private->db);
 		free(This->Private);
 		free(This);
@@ -473,9 +474,9 @@ void LocalQueryLoad(TSqliteData *sql)
 {
 	sql->sql = CreateLocalQuery(sql->file_name);
 	if (sql->sql) {
-		printf("Open %s successfully\n",sql->file_name);
+		DPRINT("Open %s successfully\n",sql->file_name);
 	} else {
-		printf("Err:%s open failed\n",sql->file_name);
+		DPRINT("Err:%s open failed\n",sql->file_name);
 		char file_bak[32];
 		sprintf(file_bak,"%s_bak",sql->file_name);
 		// if (fileexists(file_bak) == 1) {

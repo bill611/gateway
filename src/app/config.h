@@ -231,8 +231,8 @@ extern "C" {
 	int isConfigMaster(void);
 
 	void tcSetNetwork(int type);
-	char *auth_mode[];
-	char *encrypt_type[];
+	extern char *auth_mode[];
+	extern char *encrypt_type[];
 #ifdef __cplusplus
 }
 #endif

@@ -48,10 +48,10 @@ enum {
  *----------------------------------------------------------------------------*/
 static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 {
-    printf("get attr, devid:%s, attribute name:\n", dev->id);
+    DPRINT("get attr, devid:%s, attribute name:\n", dev->id);
     unsigned int i = 0;
     while (attr_set[i++]) {
-        printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
+        DPRINT("attr_%d: %s\n", i - 1, attr_set[i - 1]);
     }
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
@@ -61,7 +61,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			attr_value_type[0] = dev->type_para->attr[i].value_type;
-			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
+			// DPRINT("[%s]--->%s\n", attr_name[0],attr_value[0]);
 			aliSdkSubDevReportAttrs(dev, attr_name,attr_value,attr_value_type);
 		}
 	}
@@ -77,7 +77,7 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_name,dev->type_para->attr[i].name) == 0) {
 			sprintf(dev->value[i],"%s",attr_value);
-			printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
+			DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
 			break;
@@ -89,7 +89,7 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 
 static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
-	printf("[%s]%d\n",__FUNCTION__,param[0] );
+	DPRINT("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
 	if (alarm_type == TC_ALARM_ACTION)
 		sprintf(dev->value[ATTR_ALARM],"1");
@@ -155,7 +155,7 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 	This->type_para = &motion_cuntain;
 	This->addr = addr;
 	This->channel = channel;
-	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
+	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);

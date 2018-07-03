@@ -49,10 +49,10 @@ enum {
  *----------------------------------------------------------------------------*/
 static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 {
-    printf("get attr, devid:%s, attribute name:\n", dev->id);
+    DPRINT("get attr, devid:%s, attribute name:\n", dev->id);
     unsigned int i = 0;
     while (attr_set[i++]) {
-        printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
+        DPRINT("attr_%d: %s\n", i - 1, attr_set[i - 1]);
     }
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
@@ -62,7 +62,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
 			attr_value_type[0] = dev->type_para->attr[i].value_type;
-			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
+			// DPRINT("[%s]--->%s\n", attr_name[0],attr_value[0]);
 			aliSdkSubDevReportAttrs(dev, attr_name,attr_value,attr_value_type);
 		}
 	}
@@ -78,7 +78,7 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_name,dev->type_para->attr[i].name) == 0) {
 			sprintf(dev->value[i],"%s",attr_value);
-			printf("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
+			DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
 			break;
@@ -92,7 +92,7 @@ static void cmdSwich(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	sprintf(dev->value[ATTR_SWICH],"%s",value);
-	printf("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
+	DPRINT("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
 			__FUNCTION__,
 			value,
 			value_int,
@@ -102,7 +102,7 @@ static void cmdSwich(DeviceStr *dev,char *value)
 		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
 		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
 			speed -= 1;
-		printf("%s:%d\n", __FUNCTION__,speed);
+		DPRINT("%s:%d\n", __FUNCTION__,speed);
 		smarthomeFreshAirCmdCtrOpen(dev,speed);
 	} else
 		smarthomeFreshAirCmdCtrClose(dev);
@@ -209,12 +209,12 @@ DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
 	memset(This->value,0,sizeof(This->value));
 	fresh_air.product_key = theConfig.fresh_air.product_key;
 	fresh_air.device_secret = theConfig.fresh_air.device_secret;
-	printf("[%s]key:%s,sec:%s\n",__FUNCTION__,fresh_air.product_key,
+	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,fresh_air.product_key,
 		fresh_air.device_secret  );
 	This->type_para = &fresh_air;
 	This->addr = addr;
 	This->channel = channel;
-	printf("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
+	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);

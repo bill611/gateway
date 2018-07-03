@@ -29,6 +29,7 @@
 
 #include "uart.h"
 #include "zigbee.h"
+#include "debug.h"
 // #include "smart_home_pro.h"
 
 
@@ -149,14 +150,14 @@ static void callbackProcess(void)
 	}
 	if (len <= 0)
 		return;
-#if 0
-	printf("[callbackProcess] rx_len:%d :", len);
+#if 1
+	DPRINT("[callbackProcess] rx_len:%d :", len);
 	int i = 0;
 	for (; i < len; i++)
 	{
-		printf("%02x ", buff[i]);
+		DPRINT("%02x ", buff[i]);
 	}
-	printf("\n");
+	DPRINT("\n");
 #endif
 	if (len < 4)
 		return;
@@ -173,7 +174,7 @@ static void callbackProcess(void)
 	{
 		cmdParser(buff, len);
 	} else {
-		printf("zigbee cmd err\n");
+		DPRINT("zigbee cmd err\n");
 	}
 
 }
@@ -211,11 +212,11 @@ static void getIEEE(void)
 static void cmdParser(char *buf, int len)
 {
 	int i;
-	printf("cmdParser buf[%d]:", len);
+	DPRINT("cmdParser buf[%d]:", len);
 	for (i=0; i<len; i++) {
-		printf("%02x ", buf[i]);
+		DPRINT("%02x ", buf[i]);
 	}
-	printf("\n");
+	DPRINT("\n");
 	switch (buf[1])
 	{
 		case 0x12://设备类型返回
@@ -467,7 +468,7 @@ int zigbeeInit(void)
 {
 	int ret = -1;
 	if(uartInit(callbackProcess) == 0) {
-		printf("Err:uart init fail!\n");
+		DPRINT("Err:uart init fail!\n");
 		goto end;
 	}
 

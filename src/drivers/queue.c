@@ -36,6 +36,7 @@
 #include <sys/msg.h>
 
 #include "queue.h"
+#include "debug.h"
 
 
 /* ---------------------------------------------------------------------------*
@@ -48,7 +49,7 @@
 #define QUEUE_LOCK()   pthread_mutex_lock(&This->priv->mutex)
 #define QUEUE_UNLOCK() pthread_mutex_unlock(&This->priv->mutex)
 
-#define saveLog( ... ) printf( __VA_ARGS__ )
+#define saveLog( ... ) DPRINT( __VA_ARGS__ )
 typedef struct _QueuePriv {
 	QueueType type;
 	unsigned int size;

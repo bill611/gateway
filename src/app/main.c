@@ -96,14 +96,20 @@ static void gpioResetHandle(void *arg,int port)
 	int activ_time = This->getActiveTime(This,port);
 	if (This->inputHandle(This,port)) {
 		if (cnt == activ_time) {
+#if (defined V1)
 			gpio->FlashStart(gpio,ENUM_GPIO_LED_RESET,FLASH_SLOW,FLASH_FOREVER);
-			// aliSdkresetWifi();
+			aliSdkresetWifi();
 			gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
 			gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
-			printf("[%s]:%d\n", __FUNCTION__,activ_time);
 			exit(0);
+#else
+			gpio->FlashStart(gpio,ENUM_GPIO_LED_WIFI,FLASH_SLOW,FLASH_FOREVER);
+			aliSdkresetWifi();
+			aliSdkReset(0);// 清除所有设备
+			sqlClearDevice();
+#endif
 		} 
 		cnt++;
 	} else {
@@ -126,7 +132,7 @@ static void gpioRegistHandle(void *arg,int port)
 	if (This->inputHandle(This,port)) {
 		if (cnt == activ_time) {
 			gwDeviceReportRegist();
-			printf("[%s]:%d\n", __FUNCTION__,activ_time);
+			DPRINT("[%s]:%d\n", __FUNCTION__,activ_time);
 		} 
 		cnt++;
 	} else {
@@ -137,22 +143,20 @@ static void gpioRegistHandle(void *arg,int port)
 int main(int argc, char *argv[])
 {
 	configLoad();
+	smarthomeInit();
 	gpioInit();
 	gpio->creatInputThread(gpio,gpioInputTread);
+
 	aliSdkInit(argc, argv);
-
-    gwRegisterGatewayService();
-    gwRegisterGatewayAttribute();
-
+    gwRegisterGateway();
 	aliSdkStart();
+
 	gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
 	gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
 
 #if (defined V1)
 	gwDeviceInit();
 #endif
-	zigbeeInit();
-	smarthomeInit();
 	gwLoadDeviceData();
 	WatchDogOpen();
 

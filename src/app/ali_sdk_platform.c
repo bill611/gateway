@@ -62,22 +62,7 @@ enum SERVER_ENV {
     PREPUB
 };
 
-#if (defined V1)
-#define DPRINT(...)                                      \
-do {                                                     \
-    printf("\033[1;35;40m%s.%d: ", __func__, __LINE__);  \
-    printf(__VA_ARGS__);                                 \
-    printf("\033[0m");                                   \
-} while (0)
-#else
-#define DPRINT(...)                                      \
-do {                                                     \
-    printf("\033[1;33;40m%s.%d: ", __func__, __LINE__);  \
-    printf(__VA_ARGS__);                                 \
-    printf("\033[0m");                                   \
-} while (0)
-#endif
-
+#define LOG_LEVER_V2 3
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -288,7 +273,7 @@ void aliSdkInit(int argc, char *argv[])
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_SIZE, &maxMsgSize, sizeof(int));
     int maxMsgQueueSize = 8;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_QUEUE_SIZE, &maxMsgQueueSize, sizeof(int));
-    int loglevel = 5;
+    int loglevel = LOG_LEVER_V2;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_LOG_LEVEL, &loglevel, sizeof(int));
 
 
@@ -651,5 +636,9 @@ void aliSdkSubDevReportAttrs(DeviceStr *dev,
 }
 void aliSdkresetWifi(void)
 {
+#if (defined V1)
 	resetWifi();
+#else
+	activeAp();
+#endif
 }

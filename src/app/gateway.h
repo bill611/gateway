@@ -31,7 +31,7 @@ extern "C" {
 	extern void gwGetSwichStatus(void);
 	extern void gwLoadDeviceData(void);
 	extern void gwDeviceInit(void);
-	extern int gwRegisterGatewayService(void);
+	extern int gwRegisterGateway(void);
 	extern int gwRegisterGatewayAttribute(void);
 	extern int gwDeviceReportRegist(void);
 

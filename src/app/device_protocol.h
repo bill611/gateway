@@ -22,6 +22,7 @@ extern "C" {
 #endif  /* __cplusplus */
 
 #include <stdint.h>
+#include "debug.h"
 #include "ali_sdk_platform.h"
 #include "cJSON.h"
 

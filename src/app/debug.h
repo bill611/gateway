@@ -25,10 +25,16 @@ extern "C" {
 #define NELEMENTS(array)		/* number of elements in an array */ \
 		(sizeof (array) / sizeof ((array) [0]))
 
-#define DBG_FLAG(x) printf("flag------->[%ld]\n",x)
-#define DBG_STR(x)  printf("flag------->[%s]\n",x)
-
+#define DPRINT(...)                                      \
+do {                                                     \
+    printf("\033[1;34;40m");  \
+    printf(__VA_ARGS__);                                 \
+    printf("\033[0m");                                   \
+} while (0)
 		
+#define DBG_FLAG(x) DPRINT("flag------->[%ld]\n",x)
+#define DBG_STR(x)  DPRINT("flag------->[%s]\n",x)
+
 
 #ifdef __cplusplus
 }

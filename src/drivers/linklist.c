@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "linklist.h"
+#include "debug.h"
 
 
 /* ----------------------------------------------------------------*
@@ -67,7 +68,7 @@ static ChainNode * newChainNode(void * data)
 	pChain = ( ChainNode * )calloc(1, sizeof(ChainNode) );
 
 	if( !pChain ) {
-		printf("Err: [%s] malloc fail\n", __FUNCTION__);
+		DPRINT("Err: [%s] malloc fail\n", __FUNCTION__);
 		return 0;
 	}
 
@@ -132,7 +133,7 @@ static ChainNode * listGetAddr(List * This,int n)
 	int a = 0;
 
 	if( n < 0) {
-		printf("Err: [%s] need n > 0\n", __FUNCTION__);
+		DPRINT("Err: [%s] need n > 0\n", __FUNCTION__);
 		return NULL;
 	}
 
@@ -234,7 +235,7 @@ static int listGetElem(List * This,int n,void * data)
 static int listGetElemTail(List *This,void *data)
 {
     if (!data) {
-        printf("data is null\n");
+        DPRINT("data is null\n");
         return LISTLINK_FAIL;
     }
 	memcpy(data, This->priv->tail->data ,This->priv->nodesize);
@@ -278,7 +279,7 @@ static int listTraverseList(List* This,int (*func)(void * ))
 static int listForeachStart(List* This,int n)
 {
     if (n < 0) {
-        printf("Err: [%s] need n > 0\n",__FUNCTION__ );
+        DPRINT("Err: [%s] need n > 0\n",__FUNCTION__ );
         This->priv->temp = NULL;
         return LISTLINK_FAIL;
     }
@@ -321,7 +322,7 @@ static int listDelete( List * This,  int n )
 	ChainNode * pf=0;
 
 	if (!This->priv->head) {
-		printf("Err: [%s] empty list \n",__FUNCTION__);
+		DPRINT("Err: [%s] empty list \n",__FUNCTION__);
 		return LISTLINK_FAIL;
 	}
 
@@ -452,15 +453,15 @@ int main(int argc, char *argv[])
 
     char *b;
 	if (plist->getElemTail(plist,&b) == LISTLINK_OK)
-		printf("[get tail]%s\n", b);
+		DPRINT("[get tail]%s\n", b);
     if (plist->getElem(plist,0,&b) == LISTLINK_OK)
-        printf("[get elem]%s\n", b);
+        DPRINT("[get elem]%s\n", b);
 
 	plist->foreachStart(plist,0);
 	while(plist->foreachEnd(plist)) {
 		char *c;
 		plist->foreachGetElem(plist,&c);
-		printf("[foreach]%s\n", c);
+		DPRINT("[foreach]%s\n", c);
 		plist->foreachNext(plist);
 	}
 

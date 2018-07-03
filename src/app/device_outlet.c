@@ -50,10 +50,10 @@ enum {
  *----------------------------------------------------------------------------*/
 static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 {
-    printf("get attr, devid:%s, attribute name:\n", dev->id);
+    DPRINT("get attr, devid:%s, attribute name:\n", dev->id);
     unsigned int i = 0;
     while (attr_set[i++]) {
-        printf("attr_%d: %s\n", i - 1, attr_set[i - 1]);
+        DPRINT("attr_%d: %s\n", i - 1, attr_set[i - 1]);
     }
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_set[0],dev->type_para->attr[i].name) == 0) {
@@ -62,7 +62,7 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 			int attr_value_type[2];
 			attr_name[0] = dev->type_para->attr[i].name;
 			attr_value[0] = dev->value[i];
-			// printf("[%s]--->%s\n", attr_name[0],attr_value[0]);
+			// DPRINT("[%s]--->%s\n", attr_name[0],attr_value[0]);
 			attr_value_type[0] = dev->type_para->attr[i].value_type;
 			aliSdkSubDevReportAttrs(dev, attr_name,attr_value,attr_value_type);
 		}

@@ -23,6 +23,7 @@
 #include "sqlite3.h"
 #include "sqlite.h"
 #include "sql_handle.h"
+#include "debug.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -67,9 +68,9 @@ static int sqlCheck(TSqlite *sql)
 	}
 
 sqlCheck_fail:
-    printf("sql locoal err\n");
+    DPRINT("sql locoal err\n");
 	if (recoverData(sql_local.file_name) == 0) {
-		printf("creat new db\n");
+		DPRINT("creat new db\n");
 		LocalQueryExec(sql_local.sql,string);
 	} else {
 		sql_local.sql->Destroy(sql_local.sql);
@@ -121,7 +122,7 @@ void sqlDeleteDevice(char *id)
 {
 	char buf[128];
 	sprintf(buf, "Delete From DeviceList Where ID=\"%s\"", id);
-	printf("%s\n",buf);
+	DPRINT("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -131,7 +132,7 @@ void sqlClearDevice(void)
 {
 	char buf[128];
 	sprintf(buf, "Delete From DeviceList");
-	printf("%s\n",buf);
+	DPRINT("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -144,7 +145,7 @@ int sqlGetDeviceId(uint16_t addr,char *id)
 	int ret = sql_local.sql->RecordCount(sql_local.sql);
 	if (ret)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
-	// printf("ret:%d,id:%s\n", ret,id);
+	// DPRINT("ret:%d,id:%s\n", ret,id);
 	sql_local.sql->Close(sql_local.sql);
 	return ret;
 }
@@ -173,5 +174,5 @@ void sqlInit(void)
 	LocalQueryLoad(&sql_local);
 	sql_local.checkFunc(sql_local.sql);
 	if (!sql_local.sql)
-		printf("sql err\n");
+		DPRINT("sql err\n");
 }

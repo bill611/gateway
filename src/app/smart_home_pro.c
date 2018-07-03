@@ -218,7 +218,7 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 *********************************************************************************************************/
 static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf,char *id)
 {
-	printf("[%s]id:%s,type:%d,addr:%x\n", 
+	DPRINT("[%s]id:%s,type:%d,addr:%x\n", 
 			__FUNCTION__,id,cmdBuf->device_type,cmdBuf->addr);
 	sqlInsertDevice(id,
 			cmdBuf->device_type,
@@ -309,11 +309,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			}
 			break;
 		case NetOut_Report_Res:	//有设备要退网
-			printf("out\n");
+			DPRINT("out\n");
 			break;	
 			
 		case Demand_Sw_Status_Res:	//开关状态返回
-			printf("status\n");
+			DPRINT("status\n");
 			// for (i=0; i<idCnt; i++)
 			// {
 				// if(packet->param[i*2] > 100)
@@ -328,7 +328,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
-				printf("on:%s\n",id);
+				DPRINT("on:%s\n",id);
 				gwReportPowerOn(id,packet->param);
 			} break;
 			
@@ -336,7 +336,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
-				printf("off:%s\n",id);
+				DPRINT("off:%s\n",id);
 				gwReportPowerOff(id);
 			} break;
 		
@@ -344,7 +344,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
-				printf("alarm_status:%s,%d\n",id,packet->param[0]);
+				DPRINT("alarm_status:%s,%d\n",id,packet->param[0]);
 				gwReportAlarmStatus(id,packet->param);
 			} break;
 			
@@ -356,7 +356,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
-				printf("ele quantity:%s\n",id);
+				DPRINT("ele quantity:%s\n",id);
 				gwReportEleQuantity(id,packet->param);
 				smarthomeSendDataPacket(
 						packet->addr,
@@ -371,7 +371,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				char id[32];
 				smarthomeGetId(packet,id);
-				printf("ele power:%s\n",id);
+				DPRINT("ele power:%s\n",id);
 				gwReportElePower(id,packet->param);
 				smarthomeSendDataPacket(
 						packet->addr,
@@ -402,6 +402,7 @@ static void *smarthomeThread(void *arg)
 void smarthomeInit(void)                                        
 {                                                               
 	sqlInit();
+	zigbeeInit();
     zigbeeSetDataRecvFunc(smarthomeRecieve);                    
                                                                 
     pthread_t task;                                             
@@ -425,7 +426,7 @@ void smarthomeAllDeviceCmdGetSwichStatus(DeviceStr *dev,uint16_t channel)
 void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel)
 {
 	uint8_t param[2] = {0xff,0};
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_On,
@@ -436,7 +437,7 @@ void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel)
 
 void smarthomeLightCmdCtrClose(DeviceStr *dev,uint16_t channel)
 {
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Off,
@@ -449,7 +450,7 @@ void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value)
 {
 	uint8_t param[2] = {0};
 	param[0] = value;
-	printf("[%s]type:%d,value:%d\n",
+	DPRINT("[%s]type:%d,value:%d\n",
 			__FUNCTION__, 
 			dev->type_para->device_type,
 			param[0]);
@@ -463,7 +464,7 @@ void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value)
 
 void smarthomeFreshAirCmdCtrClose(DeviceStr *dev)
 {
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Off,
@@ -476,7 +477,7 @@ void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
 {
 	uint8_t param[2] = {0};
 	param[0] = 6; // 默认为６分钟
-	printf("[%s]type:%d,value:%d\n",
+	DPRINT("[%s]type:%d,value:%d\n",
 			__FUNCTION__, 
 			dev->type_para->device_type,
 			param[0]);
@@ -490,7 +491,7 @@ void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
 
 void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev)
 {
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Off,
@@ -503,7 +504,7 @@ void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t value)
 {
 	uint8_t param[2] = {0xff,0};
 	param[0] = value;
-	printf("[%s]type:%d,value:%d\n",__FUNCTION__, dev->type_para->device_type,value);
+	DPRINT("[%s]type:%d,value:%d\n",__FUNCTION__, dev->type_para->device_type,value);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_On,
@@ -514,7 +515,7 @@ void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t value)
 
 void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
 {
-	printf("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Off,
@@ -550,7 +551,7 @@ void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 	char speed_change[] = {0,0,3,2,1}; // 速度转换
 	char mode_change[] = {2,0,1,4,3}; // 模式转换
 	uint8_t param[2] = {0};
-	printf("[%s]type:%d,temp:%d:,mode:%d,speed:%d\n",
+	DPRINT("[%s]type:%d,temp:%d:,mode:%d,speed:%d\n",
 			__FUNCTION__, 
 			dev->type_para->device_type,
 			temp,

@@ -2,9 +2,12 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "iniparser/iniparser.h"
+#include "externfunc.h"
 #include "config.h"
+#include "debug.h"
 
 #define CFG_PUBLIC_DRIVE "/mnt/nand1-2/"
 #define CFG_PRIVATE_DRIVE "/mnt/nand1-2/"
@@ -90,8 +93,8 @@ TcWifiConfig tc_wifi_config = {
 
 	.ap_addr = "192.168.100.1",
 	.ap_ssid = "AliGateWay",
-	.ap_auth_mode = "OPEN",
-	.ap_encrypt_type = "NONE",
+	.ap_auth_mode = "WPA2PSK",
+	.ap_encrypt_type = "AES",
 	.ap_auth_key = "12345678",
 	.ap_channel = 11,
 };
@@ -118,7 +121,7 @@ static void configLoadEtcInt(dictionary *cfg_ini, EtcValueInt *etc_file,
 	for (i=0; i<length; i++) {
 		sprintf(buf,"%s:%s",etc_file->section,etc_file->key);
 		*etc_file->value = iniparser_getint(cfg_ini, buf, etc_file->default_int);
-        printf("[%s]%s,%d\n", __FUNCTION__,buf,*etc_file->value);
+        DPRINT("[%s]%s,%d\n", __FUNCTION__,buf,*etc_file->value);
 		etc_file++;
 	}
 }
@@ -141,7 +144,7 @@ static void configLoadEtcChar(dictionary *cfg_ini, EtcValueChar *etc_file,
 		strncpy(etc_file->value,
 			   	iniparser_getstring(cfg_ini, buf, etc_file->default_char),
 			   	etc_file->leng);
-        printf("[%s]%s,%s\n", __FUNCTION__,buf,etc_file->value);
+        DPRINT("[%s]%s,%s\n", __FUNCTION__,buf,etc_file->value);
 		etc_file++;
 	}
 }
@@ -242,14 +245,14 @@ static void SavePublic(void)
     // save to file
     f = fopen(CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME, "wb");
 	if (!f) {
-	    printf("cannot open ini file: %s\n", CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
+	    DPRINT("cannot open ini file: %s\n", CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
         return;
     }
 
     iniparser_dump_ini(cfg_public_ini, f);
 	fflush(f);
     fclose(f);
-	printf("[%s]end\n", __FUNCTION__);
+	DPRINT("[%s]end\n", __FUNCTION__);
 }
 
 static void SavePrivate(void)
@@ -263,14 +266,14 @@ static void SavePrivate(void)
     // save to file
     f = fopen(CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME, "wb");
 	if (!f) {
-	    printf("cannot open ini file: %s\n", CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
+	    DPRINT("cannot open ini file: %s\n", CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
         return;
     }
 
     iniparser_dump_ini(cfg_private_ini, f);
 	fflush(f);
     fclose(f);
-	printf("[%s]end\n", __FUNCTION__);
+	DPRINT("[%s]end\n", __FUNCTION__);
 }
 
 static void SaveTemp(void)
@@ -288,7 +291,7 @@ static void SaveTemp(void)
     // f = fopen(CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME, "wb");
 	// if (!f)
     // {
-		// printf("cannot open ini file: %s\n", CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME);
+		// DPRINT("cannot open ini file: %s\n", CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME);
         // return;
     // }
 
@@ -386,10 +389,10 @@ void ConfigSaveTemp(void)
 void tcSetNetwork(int type)
 {
 	FILE *fp;
-	printf("[%s]\n",__FUNCTION__);
+	DPRINT("[%s]\n",__FUNCTION__);
 	fp = fopen("network_config","wb");	
 	if (fp == NULL) {
-		printf("Can't open network_config\n");
+		DPRINT("Can't open network_config\n");
 		return;
 	}
 	fprintf(fp,"BOOTPROTO %s\n",	tc_wifi_config.boot_proto);
@@ -435,6 +438,11 @@ void resetWifi(void)
 		return;
 	// sys_net_is_ready = 1;
 	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
-	ret = (char *)system(buf);
-	printf("[%s]system:%s,%s\n",__FUNCTION__,buf,ret);
+	int ret_sys = system(buf);
+	DPRINT("[%s]system:%s,%d\n",__FUNCTION__,buf,ret_sys);
+}
+
+void activeAp(void)
+{
+	tcSetNetwork(TC_SET_AP);
 }

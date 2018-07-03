@@ -45,6 +45,7 @@
 #include <sys/statfs.h>
 #include <sys/mman.h>
 
+#include "debug.h"
 #include "externfunc.h"
 
 /* ----------------------------------------------------------------*
@@ -84,7 +85,7 @@ void WatchDogOpen(void)
 	if (watchdog_fd == -1) {
 		perror("watchdog");
 	} else {
-		printf("Init WatchDog!!!!!!!!!!!!!!!!!!\n");
+		DPRINT("Init WatchDog!!!!!!!!!!!!!!!!!!\n");
 	}
 #endif
 }
@@ -322,12 +323,12 @@ int adjustdate(int year,int mon,int mday,int hour,int min,int sec)
 	if(rtc<0) {
 		rtc = open("/dev/misc/rtc",O_WRONLY);
 		if(rtc<0) {
-			printf("can't open /dev/misc/rtc\n");
+			DPRINT("can't open /dev/misc/rtc\n");
 			return -1;
 		}
 	}
 	if (ioctl( rtc, RTC_SET_TIME, &nowtime) < 0 ) {
-		printf("Could not set the RTC time\n");
+		DPRINT("Could not set the RTC time\n");
 		close(rtc);
 		return -1;
 	}
@@ -404,16 +405,16 @@ char * excuteCmd(char *Cmd,...)
 		strcat(commond,argv);
 	}
 	va_end(argp);
-	printf("cmd :%s\n",commond);
+	DPRINT("cmd :%s\n",commond);
 	if ((fp = popen(commond, "r") ) == 0) {
 		perror("popen");
 		return NULL;
 	}
 	memset(cmd_buf,0,sizeof(cmd_buf));
 	ret = fread( cmd_buf, sizeof(cmd_buf), sizeof(char), fp ); //将刚刚FILE* stream的数据流读取到cmd_buf
-	printf("r:%d\n",ret );
+	// DPRINT("r:%d\n",ret );
 	if ( (ret = pclose(fp)) == -1 ) {
-		printf("close popen file pointer fp error!\n");
+		DPRINT("close popen file pointer fp error!\n");
 	}
 	return cmd_buf;
 
@@ -558,7 +559,7 @@ void SetNetwork(int flag,const char *cIp,const char *cMask,const char *cGateWay,
 		sync();
 	}
 	else
-		printf("Can't open %s\n", shfile);
+		DPRINT("Can't open %s\n", shfile);
 	if(fp)
 		fclose(fp);
 }
@@ -610,14 +611,14 @@ void print_data(char *data,int len)
 	int i;
 	for (i = 0; i < len; ++i) {
 		if (i) {
-			printf("[%02d]0x%02x ",i,data[i] );
+			DPRINT("[%02d]0x%02x ",i,data[i] );
 			if ((i%5) == 0)
-				printf("\n");
+				DPRINT("\n");
 		} else {
-			printf("\n");
+			DPRINT("\n");
 		}
 	}
-	printf("\n");
+	DPRINT("\n");
 }
 
 /* ----------------------------------------------------------------*/
@@ -637,7 +638,7 @@ int GetFilesNum(char *pPathDir,void (*func)(void *))
     // struct dirent *dirp = NULL;
 	// struct _st_dir temp_file; // 保存文件名结构体
 	// if((dir=opendir(pPathDir)) == NULL) {
-		// printf("Open File %s Error %s\n",pPathDir,strerror(errno));
+		// DPRINT("Open File %s Error %s\n",pPathDir,strerror(errno));
 		// return 0;
     // }
 
@@ -650,7 +651,7 @@ int GetFilesNum(char *pPathDir,void (*func)(void *))
 		// if (func) {
 			// func(&temp_file);
 		// }
-		// // printf("i:%d,name:%s\n",i,dirp->d_name);
+		// // DPRINT("i:%d,name:%s\n",i,dirp->d_name);
 	// }
 	// closedir(dir);
 	// return i;

@@ -1,16 +1,20 @@
 #!/bin/bash
 set -e
 
-echo 'CC = arm-linux-gcc
-STRIP = arm-linux-strip $(BIN_TARGET)
-LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/sdk/lib
+if [ "$#" -lt 1 ]; then
+	echo 'please input version like "./mk 1 or 2"'
+	exit
+elif [ "$1" -eq 1 ]; then
+	echo '
 COMPILE = $(CC) -muclibc -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
-CFLAGS = -muclibc -c -O2' > evn.mk
+CFLAGS += -muclibc -c -O2
+CP_TARGET = cp -u ${BIN_TARGET} ../nand/v1.0/nand1-2/' > evn.mk
+make VERSION=1
 
-if [ "$1" == "g"  ]; then
-	echo 'CP_TARGET = cp -u ${BIN_TARGET} ../nand/nand1-2/' >> evn.mk
-else
-	echo 'CP_TARGET = ' >> evn.mk
+elif [ "$1" -eq 2 ]; then
+	echo '
+COMPILE = $(CC) -muclibc -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
+CFLAGS += -muclibc -c -O2
+CP_TARGET = cp -u ${BIN_TARGET} ../nand/v2.0/nand1-2/' > evn.mk
+make VERSION=2
 fi
-
-make
