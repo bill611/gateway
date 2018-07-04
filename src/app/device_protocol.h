@@ -54,15 +54,18 @@ extern "C" {
 		uint8_t proto_type; // 设备协议类型
 		uint8_t device_type; // 设备类型(智能家居协议)
 		struct {
-			char *name;  // 不同设备自身的参数
+			char *name;  // 不同设备自身的属性参数
 			void (*attrcb)(struct _DeviceStr *dev,char *value);
 			int value_type;
 		}attr[MAX_DEVICE_PARA];
+
+		char *event[MAX_DEVICE_PARA];
 
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]); // 通用获取属性
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value); // 通用设置属性
 
 		void (*getSwichStatus)(struct _DeviceStr *dev);
+		void (*getAirPara)(struct _DeviceStr *dev);
 		void (*reportPowerOn)(struct _DeviceStr *dev, char *param); // 上报电源打开
 		void (*reportPowerOff)(struct _DeviceStr *dev); // 上报电源关闭
 
@@ -70,6 +73,8 @@ extern "C" {
 
 		void (*reportEleQuantity)(struct _DeviceStr *dev,char *param); // 上报电量
 		void (*reportElePower)(struct _DeviceStr *dev,char *param);  // 上报功率
+
+		void (*reportAirPara)(struct _DeviceStr *dev,char *param);  // 上报空气质量
 	}DeviceTypePara;
 
 	typedef struct _DeviceStr {

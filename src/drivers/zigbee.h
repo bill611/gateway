@@ -80,6 +80,7 @@ extern uint8_t *zigbeeGetIEEEAddr(void);
 extern unsigned char zigbeeSendData(uint16_t dst_addr, uint8_t* data, uint16_t len);
 extern void zigbeeSetDataRecvFunc(void (*func)(uint8_t*,uint8_t));
 extern void zigbeeNetIn(uint8_t time);
+extern int zigbeeGetNetInStatus();
 
 #ifdef __cplusplus
 }

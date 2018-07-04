@@ -35,6 +35,7 @@
 #include "device_curtain.h"
 #include "device_door_contact.h"
 #include "device_outlet.h"
+#include "device_air_box.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -84,6 +85,7 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_MC,registDeviceDoorContact},
 	{DEVICE_TYPE_JLCZ10,registDeviceOutlet10},
 	{DEVICE_TYPE_JLCZ16,registDeviceOutlet16},
+	{DEVICE_TYPE_KQJCY,registDeviceAirBox},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
@@ -194,6 +196,9 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 	DPRINT("id:%s\n", id);
 	// return -1;
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
+	// test------------------
+	sprintf(dev->id,"%s",dev->type_para->name);
+	// 
 	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0) 
 		DPRINT("[%s]register sub device fail,id:%s\n",
@@ -319,6 +324,8 @@ void gwLoadDeviceData(void)
 static DeviceStr *getSubDevice(char *id)
 {
 	if (!id)
+		return NULL;
+	if (!sub_dev_list)
 		return NULL;
 	DeviceStr *dev = NULL;
 	sub_dev_list->foreachStart(sub_dev_list,0);
@@ -454,3 +461,42 @@ void gwReportElePower(char *id,char *param)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportAirPara 上报空气参数
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
+void gwReportAirPara(char *id,char *param)
+{
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
+	if (!sub_dev_list)
+		return;
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	int i = 1;
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (dev->type_para->reportAirPara) {
+			// DPRINT("[%s]---->", dev->type_para->name);
+			dev->type_para->reportAirPara(dev,param);
+		}
+		sub_dev_list->foreachNext(sub_dev_list);
+		i++;
+	}
+}
+
+void gwGetAirPara(char *id,char *param)
+{
+	// DPRINT("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev) {
+		return;
+	}
+	if (dev->type_para->getAirPara) {
+		DPRINT("[%s]---->", dev->type_para->name);
+		dev->type_para->getAirPara(dev);
+	}
+}

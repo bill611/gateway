@@ -28,6 +28,7 @@ extern "C" {
 	extern void gwReportAlarmStatus(char *id,char *param);
 	extern void gwReportEleQuantity(char *id,char *param);
 	extern void gwReportElePower(char *id,char *param);
+	extern void gwReportAirPara(char *id,char *param);
 	extern void gwGetSwichStatus(void);
 	extern void gwLoadDeviceData(void);
 	extern void gwDeviceInit(void);

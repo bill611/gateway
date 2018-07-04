@@ -44,6 +44,8 @@ static EtcValueInt etc_private_int[]={
 };
 
 static EtcValueChar etc_private_char[]={
+{"GateWay",			"product_key",		SIZE_CONFIG(theConfig.outlet.product_key),			"0"},
+{"GateWay",			"device_secret",	SIZE_CONFIG(theConfig.outlet.device_secret),		"0"},
 {"AirCondition",	"product_key",		SIZE_CONFIG(theConfig.air_condition.product_key),	"0"},
 {"AirCondition",	"device_secret",	SIZE_CONFIG(theConfig.air_condition.device_secret),	"0"},
 {"AlarmWhistle",	"product_key",		SIZE_CONFIG(theConfig.alarm_whistle.product_key),	"0"},
@@ -60,6 +62,8 @@ static EtcValueChar etc_private_char[]={
 {"MotionCurtain",	"device_secret",	SIZE_CONFIG(theConfig.motion_curtain.device_secret),"0"},
 {"Outlet",			"product_key",		SIZE_CONFIG(theConfig.outlet.product_key),			"0"},
 {"Outlet",			"device_secret",	SIZE_CONFIG(theConfig.outlet.device_secret),		"0"},
+{"AirBox",			"product_key",		SIZE_CONFIG(theConfig.air_box.product_key),			"0"},
+{"AirBox",			"device_secret",	SIZE_CONFIG(theConfig.air_box.device_secret),		"0"},
 };
 
 char *auth_mode[] = {

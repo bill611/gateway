@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include "device_motion_curtain.h"
+#include "config.h"
 #include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
@@ -117,8 +118,8 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 }
 
 
-static DeviceTypePara motion_cuntain = {
-	.name = "motion_curtain",
+static DeviceTypePara motion_curtain = {
+	.name = "motion_curtain1",
 
 	.short_model = 0x005c2503,
 	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
@@ -152,7 +153,11 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	This->type_para = &motion_cuntain;
+	motion_curtain.product_key = theConfig.motion_curtain.product_key;
+	motion_curtain.device_secret = theConfig.motion_curtain.device_secret;
+	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,motion_curtain.product_key,
+		motion_curtain.device_secret  );
+	This->type_para = &motion_curtain;
 	This->addr = addr;
 	This->channel = channel;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

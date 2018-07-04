@@ -47,6 +47,7 @@ extern "C" {
 	 * Configuration definition.
 	 */
 	typedef struct _Config {
+		struct DevConfig gate_way;		//网关
 		struct DevConfig air_condition;	//空调
 		struct DevConfig alarm_whistle;	//声光报警
 		struct DevConfig curtain;		//窗帘
@@ -55,6 +56,7 @@ extern "C" {
 		struct DevConfig light;			//灯控
 		struct DevConfig motion_curtain;//红外幕帘
 		struct DevConfig outlet;		//插座
+		struct DevConfig air_box;		//新风系统
 		int  ele_quantity;				//电量x1000
 	} Config;
 

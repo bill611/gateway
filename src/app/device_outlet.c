@@ -173,7 +173,6 @@ static void reportElePowerCb(DeviceStr *dev,char *param)
 	int power = ((int)param[0] << 16) + (int)param[1];
 	sprintf(dev->value[ATTR_POWER],"%d",power);
 	const char *attr_name[] = {
-	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
 		dev->type_para->attr[ATTR_POWER].name,
 		NULL};
 	const char *attr_value[] = {

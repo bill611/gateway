@@ -43,6 +43,10 @@ enum {
 	ATTR_BATTERYPERCENTAGE,
 	ATTR_TAMPERALARM,
 };
+enum {
+	EVENT_TAMPERALARM,
+};
+
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -103,25 +107,28 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 	}
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_ALARM].name,
-		dev->type_para->attr[TC_ALARM_LOWPOWER].name,
+		dev->type_para->attr[ATTR_BATTERYPERCENTAGE].name,
 		dev->type_para->attr[ATTR_TAMPERALARM].name,
 		NULL};
 	const char *attr_value[] = {
 		dev->value[ATTR_ALARM],
-		dev->value[TC_ALARM_LOWPOWER],
+		dev->value[ATTR_BATTERYPERCENTAGE],
 		dev->value[ATTR_TAMPERALARM],
 		NULL};
 	int attr_value_type[] = {
 		dev->type_para->attr[ATTR_ALARM].value_type,
-		dev->type_para->attr[TC_ALARM_LOWPOWER].value_type,
+		dev->type_para->attr[ATTR_BATTERYPERCENTAGE].value_type,
 		dev->type_para->attr[ATTR_TAMPERALARM].value_type,
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
+	aliSdkSubDevReportEvent(dev,
+			dev->type_para->event[EVENT_TAMPERALARM],
+			attr_name,attr_value,attr_value_type);
 }
 
 
-static DeviceTypePara motion_curtain = {
+static DeviceTypePara door_contact = {
 	.name = "door_contact",
 	.short_model = 0x00332560,
 	.secret = "i7ctpLwEHLYoOys5IjCnEiUGxyAIlwcMUEQus385",
@@ -140,6 +147,11 @@ static DeviceTypePara motion_curtain = {
 #endif
 		{NULL,NULL},
 	},
+#if (defined V2)
+	.event = {
+		"TamperAlarm",
+	},
+#endif
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.reportAlarmStatus = reportAlarmStatus,
@@ -152,9 +164,9 @@ DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	motion_curtain.product_key = theConfig.motion_curtain.product_key;
-	motion_curtain.device_secret = theConfig.motion_curtain.device_secret;
-	This->type_para = &motion_curtain;
+	door_contact.product_key = theConfig.door_contact.product_key;
+	door_contact.device_secret = theConfig.door_contact.device_secret;
+	This->type_para = &door_contact;
 	This->addr = addr;
 	This->channel = channel;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

@@ -58,6 +58,7 @@ static short int zigbee_net_id = 0;		//PAN ID
 static uint16_t zigbee_net_addr = 0xffff;	//短地址
 static uint8_t zigbee_net_channel = 0xff;		//信道
 static uint8_t zigbee_ieee_addr[8] = { 0 };	//IEEE地址
+static uint8_t allow_net_in = 0;
 
 static void (*zigbeeDataRcv)(uint8_t* buf, uint8_t len) = NULL;
 /*********************************************************************************************************
@@ -415,6 +416,7 @@ void getNetChannel(void)
 void zigbeeNetIn(uint8_t time)
 {
 	printf("[%d]\n", time);
+	allow_net_in = time;
 	setSendCmd(SET_NETIN_ENABLE, time);
 }
 /* ---------------------------------------------------------------------------*/
@@ -433,6 +435,17 @@ void zigbeeSetDataRecvFunc(void (*func)(uint8_t*,uint8_t))
 	zigbeeDataRcv = func;
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief zigbeeGetNetInStatus 返回是否允许入网
+ *
+ * @returns 0不允许 非0允许
+ */
+/* ---------------------------------------------------------------------------*/
+int zigbeeGetNetInStatus()
+{
+	return allow_net_in;	
+}
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief zigbeeModuleTask zigbee定时查询
@@ -454,6 +467,8 @@ static void *zigbeeModuleTask(void *arg)
 			getIEEE();		//获取IEEE
 		}
 		sendCmdProcess();
+		if (allow_net_in)
+			allow_net_in--;
 		sleep(1);
 	}
 	pthread_exit(NULL);

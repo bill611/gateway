@@ -143,7 +143,7 @@ static void reportPowerOffCb(DeviceStr *dev)
 }
 
 static DeviceTypePara alarm_whistle = {
-	.name = "alarm_whistle",
+	.name = "alarm_whistle1",
 	.short_model = 0x005b255f,
 	.secret = "bQ0N06R7q5bRb50fwn4NluMrVPPutr0EjKWaIAFh",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,

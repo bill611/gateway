@@ -278,6 +278,10 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 	{
 		case NetIn_Report:
 			{
+				if (zigbeeGetNetInStatus() == 0) {
+					DPRINT("is not net in status\n");
+					break;
+				}
 				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
 						packet->param[0],
 						packet->param[1],
@@ -309,7 +313,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			}
 			break;
 		case NetOut_Report_Res:	//有设备要退网
-			DPRINT("out\n");
+			DPRINT("out,addr:%x\n",packet->addr);
 			break;	
 			
 		case Demand_Sw_Status_Res:	//开关状态返回
@@ -324,6 +328,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			// }
 			break;
 		
+		case Demand_Air_Para:	//查询室内环境参数
+			{
+				smarthomeGetId(packet,id);
+				gwGetAirPara(id,packet->param);
+			}break;
 		case Device_On_Res:		//设备开
 			{
 				smarthomeGetId(packet,id);
@@ -377,8 +386,22 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						NULL,0);
 			} break;
 			
-	default:
-		break;
+		case Device_Air_Para:		// 空气盒子每隔段时间上报空气参数
+			{
+				smarthomeGetId(packet,id);
+				DPRINT("air para:%s\n",id);
+				gwReportAirPara(id,packet->param);
+				smarthomeSendDataPacket(
+						packet->addr,
+						Device_Air_Para_Res,
+						packet->device_type,
+						packet->channel_num,
+						packet->current_channel,
+						NULL,0);
+			} break;
+
+		default:
+			break;
 	}
 }
 
@@ -468,6 +491,25 @@ void smarthomeFreshAirCmdCtrClose(DeviceStr *dev)
 			0,NULL,0);
 }
 
+void smarthomeFreshAirCmdGetPara(DeviceStr *dev,
+		uint8_t temp,
+		uint8_t hum,
+		uint8_t tvoc,
+		uint16_t pm25)
+{
+	uint8_t param[5] = {0};
+	param[0] = temp;
+	param[1] = hum;
+	param[2] = tvoc;
+	param[3] = (pm25 & 0xff00) >> 8;
+	param[4] = (uint8_t)(pm25 & 0xff) ;
+	smarthomeSendDataPacket(
+			dev->addr,
+			Demand_Air_Para_Res,
+			dev->type_para->device_type,
+			dev->channel,
+			1,param,sizeof(param));
+}
 void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
 {
 	uint8_t param[2] = {0};
@@ -561,4 +603,5 @@ void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 			dev->channel,
 			1,param,sizeof(param));
 }
+
 

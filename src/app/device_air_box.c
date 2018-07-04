@@ -1,7 +1,7 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_fresh_air.c
+ *       Filename:  device_air_box.c
  *
  *    Description:  新风设备
  *
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_fresh_air.h"
+#include "device_air_box.h"
 #include "config.h"
 #include "sql_handle.h"
 
@@ -40,11 +40,8 @@
 #define MAX_VALUE_LENG 32
 enum {
 	ATTR_ERROR,
-	ATTR_SWICH,
-	ATTR_SPEED,
 	ATTR_TEMP,
 	ATTR_HUM,
-	ATTR_TVOC,
 	ATTR_PM25,
 };
 
@@ -92,90 +89,6 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void cmdSwich(DeviceStr *dev,char *value)
-{
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SWICH],"%s",value);
-	DPRINT("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
-			__FUNCTION__,
-			value,
-			value_int,
-			dev->value[ATTR_SWICH],
-			dev->value[ATTR_SPEED] );
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -= 1;
-		DPRINT("%s:%d\n", __FUNCTION__,speed);
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	} else
-		smarthomeFreshAirCmdCtrClose(dev);
-}
-
-static void cmdWindSpeed(DeviceStr *dev,char *value)
-{
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SPEED],"%s",value);
-	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -=1;
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
-	}
-}
-
-static void cmdGetSwichStatus(DeviceStr *dev)
-{
-	// smarthomeAllDeviceCmdGetSwichStatus(dev,1);
-}
-
-static void cmdGetAirPara(DeviceStr *dev)
-{
-	smarthomeFreshAirCmdGetPara(dev,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_HUM]),
-			atoi(dev->value[ATTR_TVOC]),
-			atoi(dev->value[ATTR_PM25]));
-}
-
-static void reportPowerOnCb(DeviceStr *dev,char *param)
-{
-	// 固定为开
-	sprintf(dev->value[ATTR_SWICH],"1");
-	// app调节范围为2-4,实际新风调节范围为1-3,所以要+1
-	sprintf(dev->value[ATTR_SPEED],"%d",param[0] + 1);
-	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_SWICH].name,
-		dev->type_para->attr[ATTR_SPEED].name,
-		NULL};
-	const char *attr_value[] = {
-		dev->value[ATTR_SWICH],
-		dev->value[ATTR_SPEED],
-		NULL};
-	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_SWICH].value_type,
-		dev->type_para->attr[ATTR_SPEED].value_type,
-	};
-	aliSdkSubDevReportAttrs(dev,
-			attr_name,attr_value,attr_value_type);
-}
-
-static void reportPowerOffCb(DeviceStr *dev)
-{
-	sprintf(dev->value[ATTR_SWICH],"0");
-	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_SWICH].name,
-		NULL};
-	const char *attr_value[] = {
-		dev->value[ATTR_SWICH],
-		NULL};
-	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_SWICH].value_type,
-		dev->type_para->attr[ATTR_SPEED].value_type,
-	};
-	aliSdkSubDevReportAttrs(dev,
-			attr_name,attr_value,attr_value_type);
-}
 
 static void reportAirParaCb(DeviceStr *dev,char *param)
 {
@@ -202,61 +115,45 @@ static void reportAirParaCb(DeviceStr *dev,char *param)
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
-	smarthomeFreshAirCmdGetPara(dev,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_HUM]),
-			atoi(dev->value[ATTR_TVOC]),
-			atoi(dev->value[ATTR_PM25]));
 }
 
+static DeviceTypePara air_box = {
+	.name = "air_box",
 
-static DeviceTypePara fresh_air = {
-	.name = "fresh_air",
-
-	.short_model = 0x002824cd,
+	.short_model = 0,
 	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_XFXT,
+	.device_type = DEVICE_TYPE_KQJCY,
 	.attr = {
 #if (defined V1)
 		{"ErrorCode",NULL,DEVICE_VELUE_TYPE_INT},
-		{"Switch",cmdSwich,DEVICE_VELUE_TYPE_INT},
-		{"WindSpeed",cmdWindSpeed,DEVICE_VELUE_TYPE_INT},
 		{"CurrentTemperature",NULL,DEVICE_VELUE_TYPE_INT},
 		{"CurrentHumidity",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TVOC",NULL,DEVICE_VELUE_TYPE_DOUBLE},
 		{"PM25",NULL,DEVICE_VELUE_TYPE_INT},
 #else
 		{"Error",NULL,DEVICE_VELUE_TYPE_INT},
-		{"PowerSwitch",cmdSwich,DEVICE_VELUE_TYPE_INT},
-		{"WindSpeed",cmdWindSpeed,DEVICE_VELUE_TYPE_INT},
 		{"CurrentTemperature",NULL,DEVICE_VELUE_TYPE_DOUBLE},
 		{"CurrentHumidity",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TVOC",NULL,DEVICE_VELUE_TYPE_DOUBLE},
 		{"PM25",NULL,DEVICE_VELUE_TYPE_INT},
 #endif
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
-	.getSwichStatus = cmdGetSwichStatus,
-	.getAirPara = cmdGetAirPara,
-	.reportPowerOn = reportPowerOnCb,
-	.reportPowerOff = reportPowerOffCb,
 	.reportAirPara = reportAirParaCb,
 };
 
 
-DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAirBox(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	fresh_air.product_key = theConfig.fresh_air.product_key;
-	fresh_air.device_secret = theConfig.fresh_air.device_secret;
-	This->type_para = &fresh_air;
+	air_box.product_key = theConfig.air_box.product_key;
+	air_box.device_secret = theConfig.air_box.device_secret;
+	This->type_para = &air_box;
 	This->addr = addr;
 	This->channel = channel;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

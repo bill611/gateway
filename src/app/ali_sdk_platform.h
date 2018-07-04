@@ -55,6 +55,11 @@ struct _GateWayAttr;
 		const char *attr_name[],
 		const char *attr_value[],
 		int attr_value_type[]);
+	extern void aliSdkSubDevReportEvent(struct _DeviceStr *dev,
+		const char *event_name,
+		const char *attr_name[],
+		const char *attr_value[],
+		int attr_value_type[]);
 
 	extern void aliSdkresetWifi(void);
 #ifdef __cplusplus

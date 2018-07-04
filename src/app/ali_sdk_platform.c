@@ -62,7 +62,7 @@ enum SERVER_ENV {
     PREPUB
 };
 
-#define LOG_LEVER_V2 5
+#define LOG_LEVER_V2 3
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -723,8 +723,51 @@ void aliSdkSubDevReportAttrs(DeviceStr *dev,
 		cJSON_Delete(pJson);
 		return ;
 	}
-	DPRINT("out: %s\n", p);
+	DPRINT("report attrs: %s\n", p);
 	linkkit_gateway_post_property_json_sync(dev->devid, p, 5000);
+	cJSON_Delete(pJson);
+	free(p);
+#endif
+}
+
+void aliSdkSubDevReportEvent(DeviceStr *dev,
+		const char *event_name,
+		const char *attr_name[],
+		const char *attr_value[],
+		int attr_value_type[])
+{
+#if (defined V2)
+	cJSON *pJson = cJSON_CreateObject();
+	if (!pJson) {
+		return ;
+	}
+	int i;
+	for (i = 0; attr_name[i] != NULL; i++) {
+		switch(attr_value_type[i])
+		{
+			case DEVICE_VELUE_TYPE_INT:
+				cJSON_AddNumberToObject(pJson,
+						attr_name[i], atoi(attr_value[i]));
+				break;
+			case DEVICE_VELUE_TYPE_DOUBLE:
+				cJSON_AddNumberToObject(pJson,
+						attr_name[i], atof(attr_value[i]));
+				break;
+			case DEVICE_VELUE_TYPE_STRING:
+				cJSON_AddStringToObject(pJson,
+						attr_name[i], attr_value[i]);
+				break;
+			default:
+				break;
+		}
+	}
+	char *p = cJSON_PrintUnformatted(pJson);
+	if (!p) {
+		cJSON_Delete(pJson);
+		return ;
+	}
+	DPRINT("report event: %s\n", p);
+	linkkit_gateway_trigger_event_json_sync(dev->devid,event_name, p, 5000);
 	cJSON_Delete(pJson);
 	free(p);
 #endif
