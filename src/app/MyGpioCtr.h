@@ -22,6 +22,8 @@ extern "C" {
 #endif  /* __cplusplus */
 
 #define FLASH_FOREVER	0x7FFFFFFF
+#define FLASH_TIME_SLOW_1S 1  // 1次1s
+#define FLASH_TIME_FAST_1S 10 // 1次100ms,10次1秒
 
 	typedef enum {
 		ENUM_GPIO_ZIGBEE_POWER,	// zigbee 电源
@@ -29,12 +31,13 @@ extern "C" {
 		ENUM_GPIO_LED_POWER,	// 电源灯
 		ENUM_GPIO_LED_RESET,	// 复位灯
 		ENUM_GPIO_LED_WIFI,		// wifi灯
-		ENUM_GPIO_LED_RESERVED,	// 预留灯
+		ENUM_GPIO_LED_NET_IN,	// 入网指示灯
+
 		ENUM_GPIO_RESET,	// 复位按键
 		ENUM_GPIO_MODE,	// 激活按键
 	}GPIO_TBL;
 
-	typedef enum {//80ms为周期
+	typedef enum {//10ms为周期
 		FLASH_STOP = 0,
 		FLASH_FAST = 1,	//80ms
 		FLASH_SLOW = 10,	//1s

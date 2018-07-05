@@ -270,11 +270,11 @@ static int removeDeviceCb(const char *devid)
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
 		if (strcmp(dev->id,devid) == 0) {
 			aliSdkUnRegisterSubDevice(dev);
-			int i;
-			for (i=0; dev->type_para->attr[i].name != NULL; i++) {
-				if (dev->value[i])
-					free(dev->value[i]);
-				dev->value[i] = NULL;
+			int j;
+			for (j=0; dev->type_para->attr[j].name != NULL; j++) {
+				if (dev->value[j])
+					free(dev->value[j]);
+				dev->value[j] = NULL;
 			}
 			sqlDeleteDevice(dev->id);
 			free(dev);

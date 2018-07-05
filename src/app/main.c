@@ -97,10 +97,10 @@ static void gpioResetHandle(void *arg,int port)
 	if (This->inputHandle(This,port)) {
 		if (cnt == activ_time) {
 #if (defined V1)
-			gpio->FlashStart(gpio,ENUM_GPIO_LED_RESET,FLASH_SLOW,FLASH_FOREVER);
+			gpio->FlashStart(gpio,ENUM_GPIO_LED_WIFI,FLASH_SLOW,FLASH_FOREVER);
 			aliSdkresetWifi();
-			gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
-			gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
+			gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
+			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
 			exit(0);
@@ -152,14 +152,6 @@ int main(int argc, char *argv[])
 	aliSdkStart();
 
 #if (defined V1)
-	gpio->FlashStop(gpio,ENUM_GPIO_LED_RESET);
-	gpio->SetValue(gpio,ENUM_GPIO_LED_RESET,IO_INACTIVE);
-#else
-	gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
-	gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
-#endif
-
-#if (defined V1)
 	gwDeviceInit();
 #endif
 	gwLoadDeviceData();
@@ -173,3 +165,34 @@ int main(int argc, char *argv[])
 	aliSdkEnd();
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gpioEnableWifiLed 设置wifi灯亮与灭
+ *
+ * @param type 0灭 1亮
+ */
+/* ---------------------------------------------------------------------------*/
+void gpioEnableWifiLed(int type)
+{
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
+	if (type)
+		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+	else
+		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gpioEnableNetInLed 入网指示灯
+ *
+ * @param time 0 灭， 非0 闪烁
+ */
+/* ---------------------------------------------------------------------------*/
+void gpioEnableNetInLed(int time)
+{
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_NET_IN);
+	if (time)
+		gpio->FlashStart(gpio,ENUM_GPIO_LED_NET_IN,FLASH_SLOW,FLASH_FOREVER);
+	else
+		gpio->SetValue(gpio,ENUM_GPIO_LED_NET_IN,IO_ACTIVE);
+}

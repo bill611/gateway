@@ -48,6 +48,7 @@
 extern char *optarg;
 #endif
 
+extern void gpioEnableWifiLed(int type);
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
@@ -209,10 +210,12 @@ void cloud_connected(void)
     DPRINT("alink cloud connected!\n");
     const char *arrt_set[1] = {NULL};
     alink_report_attrs(arrt_set);
+	gpioEnableWifiLed(1);
 }
 
 void cloud_disconnected(void)
 {
+	gpioEnableWifiLed(0);
     DPRINT("alink cloud disconnected!\n");
 }
 
@@ -314,12 +317,13 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
     switch (ev->event_type) {
     case LINKKIT_EVENT_CLOUD_CONNECTED:
         DPRINT("cloud connected\n");
-
+		gpioEnableWifiLed(1);
         // post_all_properties(gw);    [> sync to cloud <]
         // gw->connected = 1;
 
         break;
     case LINKKIT_EVENT_CLOUD_DISCONNECTED:
+		gpioEnableWifiLed(0);
         // gw->connected = 0;
         DPRINT("cloud disconnected\n");
         break;
