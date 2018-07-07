@@ -28,9 +28,9 @@ extern "C" {
 	typedef enum {
 		ENUM_GPIO_ZIGBEE_POWER,	// zigbee 电源
 		ENUM_GPIO_WIFI_POWER,	// wifi 电源
-		ENUM_GPIO_LED_POWER,	// 电源灯
+		ENUM_GPIO_LED_WIFI,		// 电源灯(指示wifi)
 		ENUM_GPIO_LED_RESET,	// 复位灯
-		ENUM_GPIO_LED_WIFI,		// wifi灯
+		ENUM_GPIO_LED_ONLINE,		// wifi灯(指示是否连上平台)
 		ENUM_GPIO_LED_NET_IN,	// 入网指示灯
 
 		ENUM_GPIO_RESET,	// 复位按键

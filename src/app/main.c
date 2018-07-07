@@ -97,15 +97,15 @@ static void gpioResetHandle(void *arg,int port)
 	if (This->inputHandle(This,port)) {
 		if (cnt == activ_time) {
 #if (defined V1)
-			gpio->FlashStart(gpio,ENUM_GPIO_LED_WIFI,FLASH_SLOW,FLASH_FOREVER);
+			gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
 			aliSdkresetWifi();
-			gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
-			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+			gpio->FlashStop(gpio,ENUM_GPIO_LED_ONLINE);
+			gpio->SetValue(gpio,ENUM_GPIO_LED_ONLINE,IO_INACTIVE);
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
 			exit(0);
 #else
-			gpio->FlashStart(gpio,ENUM_GPIO_LED_WIFI,FLASH_SLOW,FLASH_FOREVER);
+			gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
 			aliSdkresetWifi();
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
@@ -140,13 +140,35 @@ static void gpioRegistHandle(void *arg,int port)
 	}
 }
 
+static void * timer1sThread(void *arg)
+{
+	while(1) {
+		if (net_detect() < 0) {
+			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+		} else {
+			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+		}
+		sleep(1);
+	}	
+	return NULL;
+}
+static void createTimer1sThread(void)
+{
+    pthread_t m_pthread;
+    pthread_attr_t threadAttr1;
+
+    pthread_attr_init(&threadAttr1);
+    pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
+    pthread_create(&m_pthread,&threadAttr1,timer1sThread,NULL);
+    pthread_attr_destroy(&threadAttr1);
+}
 int main(int argc, char *argv[])
 {
 	configLoad();
 	smarthomeInit();
 	gpioInit();
 	gpio->creatInputThread(gpio,gpioInputTread);
-
+	createTimer1sThread();
 	aliSdkInit(argc, argv);
     gwRegisterGateway();
 	aliSdkStart();
@@ -174,11 +196,11 @@ int main(int argc, char *argv[])
 /* ---------------------------------------------------------------------------*/
 void gpioEnableWifiLed(int type)
 {
-	gpio->FlashStop(gpio,ENUM_GPIO_LED_WIFI);
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_ONLINE);
 	if (type)
-		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+		gpio->SetValue(gpio,ENUM_GPIO_LED_ONLINE,IO_ACTIVE);
 	else
-		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+		gpio->SetValue(gpio,ENUM_GPIO_LED_ONLINE,IO_INACTIVE);
 }
 
 /* ---------------------------------------------------------------------------*/

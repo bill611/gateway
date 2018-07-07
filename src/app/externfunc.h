@@ -37,7 +37,7 @@ unsigned long long GetFlashFreeSpace(void);
 unsigned long long GetFlashFreeSpaceKB(void);
 unsigned long long GetFlashFreeSpaceMB(void);
 
-int net_detect(char* net_name);
+int net_detect(void);
 void print_data(char *data,int len);
 int GetFilesNum(char *pPathDir,void (*func)(void *));
 

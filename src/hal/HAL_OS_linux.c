@@ -39,10 +39,11 @@
 #include "iot_import.h"
 
 #include "kv.h"
+#include "config.h"
 
-static char DEMO_CASE_PRODUCT_KEY[PRODUCT_KEY_MAXLEN] = {"a1xWFmuD674"};
-static char DEMO_CASE_DEVICE_NAME[DEVICE_NAME_MAXLEN] = {"taichuan_gw_test"};
-static char DEMO_CASE_DEVICE_SECRET[DEVICE_SECRET_MAXLEN] = {"WSzsZYSxMeFV6eHanuXCikyz2pWGWyCr"};
+static char DEMO_CASE_PRODUCT_KEY[PRODUCT_KEY_MAXLEN] = {};
+static char DEMO_CASE_DEVICE_NAME[DEVICE_NAME_MAXLEN] = {};
+static char DEMO_CASE_DEVICE_SECRET[DEVICE_SECRET_MAXLEN] = {};
 static char DEMO_CASE_PRODUCT_SECRET[PRODUCT_SECRET_MAXLEN] = {0};
 
 void *HAL_MutexCreate(void)
@@ -185,21 +186,21 @@ char *HAL_GetChipID(_OU_ char cid_str[HAL_CID_LEN])
 int HAL_GetDeviceID(_OU_ char device_id[DEVICE_ID_MAXLEN])
 {
     memset(device_id, 0x0, DEVICE_ID_MAXLEN);
-    HAL_Snprintf(device_id, DEVICE_ID_MAXLEN, "%s.%s", DEMO_CASE_PRODUCT_KEY, DEMO_CASE_DEVICE_NAME);
+    HAL_Snprintf(device_id, DEVICE_ID_MAXLEN, "%s.%s", theConfig.gate_way.product_key, theConfig.gate_way_id);
     return strlen(device_id);
 }
 
 int HAL_GetDeviceName(_OU_ char device_name[DEVICE_NAME_MAXLEN])
 {
     memset(device_name, 0x0, DEVICE_NAME_MAXLEN);
-    HAL_Snprintf(device_name, DEVICE_NAME_MAXLEN, "%s", DEMO_CASE_DEVICE_NAME);
+    HAL_Snprintf(device_name, DEVICE_NAME_MAXLEN, "%s", theConfig.gate_way_id);
     return strlen(device_name);
 }
 
 int HAL_GetDeviceSecret(_OU_ char device_secret[DEVICE_SECRET_MAXLEN])
 {
     memset(device_secret, 0x0, DEVICE_SECRET_MAXLEN);
-    HAL_Snprintf(device_secret, DEVICE_SECRET_MAXLEN, "%s", DEMO_CASE_DEVICE_SECRET);
+    HAL_Snprintf(device_secret, DEVICE_SECRET_MAXLEN, "%s", theConfig.gate_way.device_secret);
     return strlen(device_secret);
 }
 
@@ -214,7 +215,7 @@ int HAL_GetFirmwareVesion(_OU_ char version[FIRMWARE_VERSION_MAXLEN])
 int HAL_GetProductKey(_OU_ char product_key[PRODUCT_KEY_MAXLEN])
 {
     memset(product_key, 0x0, PRODUCT_KEY_MAXLEN);
-    HAL_Snprintf(product_key, PRODUCT_KEY_MAXLEN, "%s", DEMO_CASE_PRODUCT_KEY);
+    HAL_Snprintf(product_key, PRODUCT_KEY_MAXLEN, "%s", theConfig.gate_way.product_key);
     return strlen(product_key);
 }
 

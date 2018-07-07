@@ -47,6 +47,7 @@ extern "C" {
 	 * Configuration definition.
 	 */
 	typedef struct _Config {
+		char  gate_way_id[32];		//网关
 		struct DevConfig gate_way;		//网关
 		struct DevConfig air_condition;	//空调
 		struct DevConfig alarm_whistle;	//声光报警

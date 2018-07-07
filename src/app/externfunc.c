@@ -477,7 +477,7 @@ int jugdeRecIP(const char *pSrcIP,const char *pDestIP,const char *pMask)
 	SrcIP = inet_addr(pSrcIP);
 	DestIP = inet_addr(pDestIP);
 	Mask = inet_addr(pMask);
-	if((SrcIP & Mask)!=(DestIP & Mask)) 
+	if((SrcIP & Mask)!=(DestIP & Mask))
 		return 0;
 
 	return 1;
@@ -600,8 +600,13 @@ time_t MyGetTickCount(void)
  * @returns 0正常 -1不正常
  */
 /* ---------------------------------------------------------------------------*/
-int net_detect(char* net_name)
+int net_detect(void)
 {
+	int ret = access("ip_ok",0);
+	if (ret == 0)
+		return 0;
+	else
+		return -1;
 }
 
 /* ----------------------------------------------------------------*/

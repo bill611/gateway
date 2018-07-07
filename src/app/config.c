@@ -44,8 +44,9 @@ static EtcValueInt etc_private_int[]={
 };
 
 static EtcValueChar etc_private_char[]={
-{"GateWay",			"product_key",		SIZE_CONFIG(theConfig.outlet.product_key),			"0"},
-{"GateWay",			"device_secret",	SIZE_CONFIG(theConfig.outlet.device_secret),		"0"},
+{"GateWay",			"id",				SIZE_CONFIG(theConfig.gate_way_id),		"0"},
+{"GateWay",			"product_key",		SIZE_CONFIG(theConfig.gate_way.product_key),		"0"},
+{"GateWay",			"device_secret",	SIZE_CONFIG(theConfig.gate_way.device_secret),		"0"},
 {"AirCondition",	"product_key",		SIZE_CONFIG(theConfig.air_condition.product_key),	"0"},
 {"AirCondition",	"device_secret",	SIZE_CONFIG(theConfig.air_condition.device_secret),	"0"},
 {"AlarmWhistle",	"product_key",		SIZE_CONFIG(theConfig.alarm_whistle.product_key),	"0"},
