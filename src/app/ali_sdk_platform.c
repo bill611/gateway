@@ -49,6 +49,7 @@ extern char *optarg;
 #endif
 
 extern void gpioEnableWifiLed(int type);
+extern void gpioDisableWifiPower(void);
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
@@ -63,12 +64,16 @@ enum SERVER_ENV {
     PREPUB
 };
 
-#define LOG_LEVER_V2 3
+#define ALI_SDK_ONLINE_TIME 180  // 检查3分钟在线状态，若连续3分钟不在线，
+								//关掉WIFI电源，重启设备
+#define LOG_LEVER_V2 5
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
 static int (*service_func)(char *args, char *output_buf, unsigned int buf_sz);
 static char *service_name;
+static int online_status = 0; // 在线状态
+static int online_status_count = ALI_SDK_ONLINE_TIME; // 在线状态计时
 #if (defined V1)
 const char *env_str[] = {"daily", "sandbox", "online"};
 static unsigned char env = ONLINE;
@@ -211,12 +216,16 @@ void cloud_connected(void)
     const char *arrt_set[1] = {NULL};
     alink_report_attrs(arrt_set);
 	gpioEnableWifiLed(1);
+	online_status = 1;
+	online_status_count = 0;
 }
 
 void cloud_disconnected(void)
 {
 	gpioEnableWifiLed(0);
     DPRINT("alink cloud disconnected!\n");
+	online_status = 0;
+	online_status_count = ALI_SDK_ONLINE_TIME;
 }
 
 void cloud_get_device_status(void)
@@ -224,27 +233,32 @@ void cloud_get_device_status(void)
     DPRINT("cloud_get_device_status!\n");
 }
 
-static void * testUartSendThead(void *arg)
+#endif
+
+static void * aliSdkThreadTimer1s(void *arg)
 {
-	int ret;
 	while (1) {
-		ret = aws_notify_app_nonblock();
-		DPRINT("ret :%d\n", ret);
+		if (online_status_count) {
+			if (--online_status_count == 0) {
+				gpioDisableWifiPower();
+				sleep(1);
+				exit(0);
+			}
+		}
 		sleep(1);
 	}
+	return NULL;
 }
 
-static void testUartSend(void)
+static void aliSdkCreatThreadTimer1s(void)
 {
 	pthread_t id;
 	pthread_attr_t  attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
-	pthread_create(&id,&attr,(void *)testUartSendThead,NULL);
+	pthread_create(&id,&attr,(void *)aliSdkThreadTimer1s,NULL);
 	pthread_attr_destroy(&attr);
 }
-#endif
-
 
 void usage(void)
 {
@@ -319,12 +333,14 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
         DPRINT("cloud connected\n");
 		gpioEnableWifiLed(1);
         // post_all_properties(gw);    [> sync to cloud <]
-        // gw->connected = 1;
+		online_status = 1;
+		online_status_count = 0;
 
         break;
     case LINKKIT_EVENT_CLOUD_DISCONNECTED:
 		gpioEnableWifiLed(0);
-        // gw->connected = 0;
+		online_status = 0;
+		online_status_count = ALI_SDK_ONLINE_TIME;
         DPRINT("cloud disconnected\n");
         break;
     case LINKKIT_EVENT_SUBDEV_DELETED:
@@ -380,6 +396,7 @@ void aliSdkInit(int argc, char *argv[])
 }
 void aliSdkStart(void)
 {
+	aliSdkCreatThreadTimer1s();
 #if (defined V1)
     //设置设备认证模式:DEFAULT(阿里智能),SDS+DEVICEID,SDS_WHITELIST
     alink_set_auth_mode(ALINK_AUTH_MODE_DEFAULT);
@@ -783,4 +800,8 @@ void aliSdkresetWifi(void)
 #else
 	activeAp();
 #endif
+}
+int aliSdkGetOnlineStatus(void)
+{
+	return online_status;
 }

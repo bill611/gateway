@@ -43,7 +43,7 @@ typedef enum
 	DEVICE_TYPE_SGBJQ,		 	// 27	Éù¹â±¨¾¯Æ÷
 	DEVICE_TYPE_JLCZ10 = 47,			// 47	10A¼ÆÁ¿²å×ù	
 	DEVICE_TYPE_JLCZ16 = 48,			// 48	16A¼ÆÁ¿²å×ù	
-	DEVICE_TYPE_KQJCY = 50,			// 50 ¿ÕÆø¼ì²âÒÇ
+	DEVICE_TYPE_KQJCY = 51,			// 51 ¿ÕÆø¼ì²âÒÇ
 	DEVICE_TYPE_JD = 102,		// 102	¾¯µÑ±¨¾¯Æ÷
 }TC_Device_Type;
 

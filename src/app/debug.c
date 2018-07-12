@@ -804,7 +804,7 @@ void saveLog(char *fmt, ...)
 	FILE *log_fd;
 	struct stat stat_buf;   
 	stat("log.txt", &stat_buf) ; 
-	printf("log.txt size:%ld\n", stat_buf.st_size);
+	// printf("log.txt size:%ld\n", stat_buf.st_size);
 
 	va_list args;
 	va_start(args, fmt);

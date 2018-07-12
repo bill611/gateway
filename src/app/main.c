@@ -164,6 +164,7 @@ static void createTimer1sThread(void)
 }
 int main(int argc, char *argv[])
 {
+	saveLog("start ------------------------>\n");
 	configLoad();
 	smarthomeInit();
 	gpioInit();
@@ -176,6 +177,9 @@ int main(int argc, char *argv[])
 #if (defined V1)
 	gwDeviceInit();
 #endif
+	while (aliSdkGetOnlineStatus() == 0) {
+		sleep(1);
+	}
 	gwLoadDeviceData();
 	WatchDogOpen();
 
@@ -217,4 +221,15 @@ void gpioEnableNetInLed(int time)
 		gpio->FlashStart(gpio,ENUM_GPIO_LED_NET_IN,FLASH_SLOW,FLASH_FOREVER);
 	else
 		gpio->SetValue(gpio,ENUM_GPIO_LED_NET_IN,IO_ACTIVE);
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gpioDisableWifiPower 因网络不通时重启前先关掉wifi电源
+ */
+/* ---------------------------------------------------------------------------*/
+void gpioDisableWifiPower(void)
+{
+	saveLog("reset wifi power\n");
+	gpio->SetValue(gpio,ENUM_GPIO_WIFI_POWER,IO_INACTIVE);
 }

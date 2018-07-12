@@ -68,9 +68,9 @@ static int sqlCheck(TSqlite *sql)
 	}
 
 sqlCheck_fail:
-    DPRINT("sql locoal err\n");
+    saveLog("sql locoal err\n");
 	if (recoverData(sql_local.file_name) == 0) {
-		DPRINT("creat new db\n");
+		saveLog("creat new db\n");
 		LocalQueryExec(sql_local.sql,string);
 	} else {
 		sql_local.sql->Destroy(sql_local.sql);
@@ -113,6 +113,7 @@ void sqlInsertDevice(char *id,
 	char buf[128];
 	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr,Channel) VALUES('%s','%d','%d','%d')",
 			id, dev_type,addr,channel);
+	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -123,6 +124,7 @@ void sqlDeleteDevice(char *id)
 	char buf[128];
 	sprintf(buf, "Delete From DeviceList Where ID=\"%s\"", id);
 	DPRINT("%s\n",buf);
+	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -133,6 +135,7 @@ void sqlClearDevice(void)
 	char buf[128];
 	sprintf(buf, "Delete From DeviceList");
 	DPRINT("%s\n",buf);
+	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
@@ -173,6 +176,8 @@ void sqlInit(void)
 {
 	LocalQueryLoad(&sql_local);
 	sql_local.checkFunc(sql_local.sql);
-	if (!sql_local.sql)
+	if (!sql_local.sql) {
 		DPRINT("sql err\n");
+		saveLog("sql err\n");
+	}
 }

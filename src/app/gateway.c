@@ -197,7 +197,7 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 	// return -1;
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
 	// test------------------
-	sprintf(dev->id,"%s",dev->type_para->name);
+	// sprintf(dev->id,"%s",dev->type_para->name);
 	// 
 	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0) 
@@ -215,6 +215,8 @@ int gwDeviceReportRegist(void)
 
 static int getAttrCb(const char *devid, const char *attr_set[])
 {
+	if (!sub_dev_list)
+		return 0;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
 		DeviceStr *dev;
@@ -232,6 +234,8 @@ static int getAttrCb(const char *devid, const char *attr_set[])
 static int setAttrCb(const char *devid, const char *attr_name, const char *attr_value)
 {
 	DPRINT("gate way id:%s,%s:%s\n", devid,attr_name,attr_value);
+	if (!sub_dev_list)
+		return 0;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
 		DeviceStr *dev;
@@ -248,6 +252,8 @@ static int setAttrCb(const char *devid, const char *attr_name, const char *attr_
 
 static int execCmdCb(const char *devid, const char *cmd_name, const char *cmd_args)
 {
+	if (!sub_dev_list)
+		return 0;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
 		DeviceStr *dev;
@@ -263,6 +269,8 @@ static int execCmdCb(const char *devid, const char *cmd_name, const char *cmd_ar
 
 static int removeDeviceCb(const char *devid)
 {
+	if (!sub_dev_list)
+		return 0;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	int i = 0;
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {

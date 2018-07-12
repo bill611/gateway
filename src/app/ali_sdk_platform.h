@@ -62,6 +62,7 @@ struct _GateWayAttr;
 		int attr_value_type[]);
 
 	extern void aliSdkresetWifi(void);
+	extern int aliSdkGetOnlineStatus(void);
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
