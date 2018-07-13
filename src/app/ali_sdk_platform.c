@@ -496,6 +496,7 @@ void aliSdkEnd(void)
 }
 int aliSdkReset(int is_reboot)
 {
+	zigbeeFactorySet();
 #if (defined V1)
 	if (is_reboot)
 		return	alink_factory_reset(ALINK_REBOOT);

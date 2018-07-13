@@ -164,7 +164,7 @@ static void createTimer1sThread(void)
 }
 int main(int argc, char *argv[])
 {
-	saveLog("start ------------------------>\n");
+	saveLog("start %s------------------------>\n",GW_VERSION);
 	configLoad();
 	smarthomeInit();
 	gpioInit();

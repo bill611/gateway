@@ -18,10 +18,7 @@ extern "C" {
 #define WPA_PATH                 	"/tmp/wpa_supplicant/"
 
 
-#define Ver_Major	1
-#define Ver_Minor	0
-#define Ver_Release 0
-#define Ver_Reserve	0
+#define GW_VERSION	"v1.0.1.0"
 
 
 	typedef struct _EtcValueChar {

@@ -708,8 +708,7 @@ static void cmdClear(SocketHandle *ABinding,SocketPacket *AData)
 static void cmdVersion(SocketHandle *ABinding,SocketPacket *AData)
 {
 	char send_data[2048] = {0};
-	sprintf(send_data,"Version :V%d.%d.%d.%d\n",
-			Ver_Major,Ver_Minor,Ver_Release,Ver_Reserve);
+	sprintf(send_data,"Version :%s\n",GW_VERSION);
 	UDP_PRINT(send_data);
 }
 static void cmdReboot(SocketHandle *ABinding,SocketPacket *AData)
