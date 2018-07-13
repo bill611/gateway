@@ -14,6 +14,7 @@ enum {
     LINKKIT_EVENT_SUBDEV_DELETED     = 2,   /* subdev deleted     */
     LINKKIT_EVENT_SUBDEV_PERMITED    = 3,   /* subdev permit join */
     LINKKIT_EVENT_SUBDEV_SETUP       = 4,   /* subdev install     */
+    LINKKIT_EVENT_RESET_SUCCESS      = 5,   /* reset success      */
 };
 
 /*
@@ -72,6 +73,11 @@ typedef struct {
         struct {
             char *subdevList;   /* json format:[{"productKey":"","deviceName":""},...] */
         } subdev_setup;
+
+        struct {
+            char *productKey;
+            char *deviceName;
+        } reset_success;
     } event_data;
 } linkkit_event_t;
 
@@ -329,29 +335,6 @@ int linkkit_gateway_post_property_json(int devid, char *property, int timeout_ms
  */
 int linkkit_gateway_post_rawdata(int devid, void *data, int len);
 
-typedef enum {
-    LINKKIT_OTA_EVENT_NEW_VERSION_DETECTED = 1,
-} linkkit_ota_event_t;
-
-/**
- * @brief init fota service and install callback funstion.
- *
- * @param cb, callback function to be installed.
- * @param ctx, user data passed to callback function.
- *
- * @return int, 0 when success, -1 when fail.
- */
-int linkkit_gateway_ota_init(void (*cb)(int event, const char *version, void *ctx), void *ctx);
-
-/**
- * @brief perform system upgrade when "new version detected" event reported.
- *
- * @param recvbuf_length, receive buffer length that used to receive upgrade package.
- *
- * @return 0 when success, -1 when fail.
- */
-int linkkit_gateway_ota_update(int recvbuf_length);
-
 typedef struct {
     char *attrKey;    /* the key of extend info. */
     char *attrValue;  /* the value of extend info. */
@@ -403,9 +386,94 @@ int linkkit_gateway_get_devinfos(linkkit_devinfo_t *devinfos, int nb_devinfos);
  *
  * @param devid, device id return from linkkit_gateway_start() or linkkit_gateway_subdev_create().
  *
- * @return 0 when success, < 0 when fail.
+ * @return 0 when success, < 0 when fail, 1 will try again later automatically .
  */
-int linkkit_reset(int devid);
+int linkkit_gateway_reset(int devid);
+
+typedef enum {
+    OTA_UPGRADE_ERROR_NONE,         /* no error */
+    OTA_UPGRADE_ERROR_CONNECT,      /* connect to server failed */
+    OTA_UPGRADE_ERROR_DOWNLOAD,     /* download failed */
+    OTA_UPGRADE_ERROR_WRITE,        /* write data failed */
+    OTA_UPGRADE_ERROR_CHECKSUM,     /* checksum is invalid */
+    OTA_UPGRADE_ERROR_CANCEL,       /* upgrade is canceled by something else */
+    OTA_UPGRADE_ERROR_MAX
+} linkkit_ota_error;
+
+typedef struct {
+    /**
+     * @brief get the firmware version of a specified device, gateway or subdev
+     *
+     * @param productKey: product key of the specified device
+     * @param deviceName: device name of the specified device
+     * @param versoin:    the buffer for version
+     * @param buff_len:   the length of the buff
+     *
+     * @return 0 when success, -1 when fail.
+     */
+    int (*get_firmware_version)(const char *productKey, const char *deviceName, char *version, int buff_len);
+
+    /**
+     * @brief ready to write data
+     *
+     * @param productKey:  product key of the specified device
+     * @param deviceName:  device name  of the specified device
+     * @param new_version: the new version
+     * @param file_size:   the size of new firmware to be downloaded
+     *
+     * @return handle used for writing and NULL means failure
+     */
+    void *(*start)(const char *productKey, const char *deviceName, const char *new_version, int file_size);
+
+    /**
+     * @brief write data
+     *
+     * @param handle:   the handle for writing, returned by start
+     * @param data:     the data to be written
+     * @param data_len: length of the data
+     *
+     * @return bytes that write successfully, -1 when fail.
+     */
+    int (*write)(void *handle, unsigned char *data, int data_len);
+
+    /**
+     * @brief finish writing data, it's ok to flash firmware or something goes wrong
+     *
+     * @param handle: the handle for writing, returned by start
+     * @param err:    indicate the result: 0 means everything is ok while nonzero number means error occurs,
+     *                see linkkit_ota_error for more detail
+     *
+     * @return 0 when success, -1 when fail.
+     */
+    int (*stop)(void *handle, int err);
+} linkkit_ota_params;
+
+/**
+ * @brief initialize ota service
+ *
+ * @param ota_params: the params used to initialize ota service
+ *
+ * @return 0 when success, -1 when fail
+ */
+int linkkit_ota_service_init(const linkkit_ota_params *ota_params);
+
+/**
+ * @brief destroy ota service
+ *
+ * @return 0 when success, -1 when fail
+ */
+int linkkit_ota_service_deinit(void);
+
+/**
+ * @brief report firmware version of a specified device
+ *
+ * @param productKey: the productKey of the specified device
+ * @param deviceName: the deviceName of the specified device
+ * @param verison:    the firmware version of the specified device
+ *
+ * @return 0 when success, -1 when fail
+ */
+int linkkit_ota_report_version(const char *productKey, const char *deviceName, const char *version);
 
 #ifdef __cplusplus
 }

@@ -132,26 +132,26 @@ static int gateway_get_property(char *in, char *out, int out_len, void *ctx)
 	}
 
 	char *p = cJSON_PrintUnformatted(pJson);
-	if (!p) {                               
-		cJSON_Delete(rJson);                
-		cJSON_Delete(pJson);                
-		return -1;                          
-	}                                       
+	if (!p) {
+		cJSON_Delete(rJson);
+		cJSON_Delete(pJson);
+		return -1;
+	}
 
-	if (strlen(p) >= out_len) {             
-		cJSON_Delete(rJson);                
-		cJSON_Delete(pJson);                
-		free(p);                            
-		return -1;                          
-	}                                       
+	if (strlen(p) >= out_len) {
+		cJSON_Delete(rJson);
+		cJSON_Delete(pJson);
+		free(p);
+		return -1;
+	}
 
-	strcpy(out, p);                         
+	strcpy(out, p);
 
-	DPRINT("out: %s\n", out);               
+	DPRINT("out: %s\n", out);
 
-	cJSON_Delete(rJson);                    
-	cJSON_Delete(pJson);                    
-	free(p);                               
+	cJSON_Delete(rJson);
+	cJSON_Delete(pJson);
+	free(p);
 }
 static int gateway_set_property(char *in, void *ctx)
 {
@@ -163,7 +163,7 @@ static int gateway_set_property(char *in, void *ctx)
 		return -1;
 	int i;
 	for (i=0; gw->attr != NULL; i++) {
-		cJSON *gw_json = cJSON_GetObjectItem(rJson, gw->attr);	
+		cJSON *gw_json = cJSON_GetObjectItem(rJson, gw->attr);
 		if (gw_json) {
 			switch(gw->value_type)
 			{
@@ -185,7 +185,7 @@ static int gateway_set_property(char *in, void *ctx)
 		gw++;
 	}
 	linkkit_gateway_post_property_json_sync(link_fd, in, 5000);
-	cJSON_Delete(rJson);                                          
+	cJSON_Delete(rJson);
 }
 static int gateway_call_service(char *identifier, char *in, char *out, int out_len, void *ctx)
 {
@@ -200,13 +200,68 @@ static linkkit_cbs_t alink_cbs = {
     .set_property = gateway_set_property,
 };
 
-static void ota_callback(int event, const char *version, void *ctx)
+static int ota_get_firmware_version(const char *productKey, const char *deviceName, char *version, int buff_len)
 {
-    DPRINT("event: %d\n", event);
-    DPRINT("version: %s\n", version);
-
-    linkkit_gateway_ota_update(512);
+    snprintf(version, buff_len, "v1.0.0.0");
+    return 0;
 }
+
+typedef struct {
+    char productKey[32];
+    char deviceName[64];
+    char new_version[64];
+    int file_size;
+} ota_ctx_t;
+
+static void *ota_start(const char *productKey, const char *deviceName, const char *new_version, int file_size)
+{
+    ota_ctx_t *octx = malloc(sizeof(ota_ctx_t));
+    if (!octx)
+        return NULL;
+    memset(octx, 0, sizeof(ota_ctx_t));
+
+    strncpy(octx->productKey,  productKey,  sizeof(octx->productKey)  - 1);
+    strncpy(octx->deviceName,  deviceName,  sizeof(octx->deviceName)  - 1);
+    strncpy(octx->new_version, new_version, sizeof(octx->new_version) - 1);
+
+    octx->file_size = file_size;
+
+    DPRINT("start upgrade, %s<%s> version %s file size %d\n", deviceName, productKey, new_version, file_size);
+
+    return octx;
+}
+
+static int ota_write(void *handle, unsigned char *data, int data_len)
+{
+    ota_ctx_t *octx = (ota_ctx_t *)handle;
+
+    DPRINT("recv %d bytes for %s<%s>\n", data_len, octx->deviceName, octx->productKey);
+
+    return 0;
+}
+
+static int ota_stop(void *handle, int err)
+{
+    ota_ctx_t *octx = (ota_ctx_t *)handle;
+
+    if (err == OTA_UPGRADE_ERROR_NONE)
+        DPRINT("download upgrade package success\n");
+    else
+        DPRINT("download upgrade package failed\n");
+
+    free(octx);
+
+    return 0;
+}
+
+static linkkit_ota_params ota_params = {
+    .get_firmware_version = ota_get_firmware_version,
+
+    .start = ota_start,
+    .write = ota_write,
+    .stop  = ota_stop,
+};
+
 #endif
 
 #if (defined V1)
@@ -358,9 +413,19 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
 
 			gw->permitSubDeviceJoinCb(timeoutSec);
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
-        }
-        break;
-    }
+		}
+		break;
+	case LINKKIT_EVENT_RESET_SUCCESS:
+		{
+			char *productKey = ev->event_data.reset_success.productKey;
+			char *deviceName = ev->event_data.reset_success.deviceName;
+			DPRINT("device %s<%s> reset success\n", deviceName, productKey);
+
+		}
+		break;
+	default:
+		DPRINT("unknown event type %d\n", ev->event_type);
+	}
 
     return 0;
 }
@@ -391,6 +456,9 @@ void aliSdkInit(int argc, char *argv[])
     int loglevel = LOG_LEVER_V2;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_LOG_LEVEL, &loglevel, sizeof(int));
 
+	int threadPoolSize = 4;
+	linkkit_gateway_set_option(initParams, LINKKIT_OPT_THREAD_POOL_SIZE, &threadPoolSize, sizeof(int));
+
 
 #endif
 }
@@ -410,10 +478,11 @@ void aliSdkStart(void)
     }
     link_fd = linkkit_gateway_start(&alink_cbs, gw_priv_attrs);
     if (link_fd < 0) {
+		linkkit_gateway_exit();
         DPRINT("linkkit_gateway_start failed\n");
         return ;
     }
-    linkkit_gateway_ota_init(ota_callback, NULL);
+	linkkit_ota_service_init(&ota_params);
 #endif
 }
 void aliSdkEnd(void)

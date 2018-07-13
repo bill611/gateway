@@ -188,15 +188,17 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
 
     switch (ev->event_type) {
     case LINKKIT_EVENT_CLOUD_CONNECTED:
-        DPRINT("cloud connected\n");
-
-        post_all_properties(gw);    /* sync to cloud */
-        gw->connected = 1;
-
+        {
+            DPRINT("cloud connected\n");
+            post_all_properties(gw);    /* sync to cloud */
+            gw->connected = 1;
+        }
         break;
     case LINKKIT_EVENT_CLOUD_DISCONNECTED:
-        gw->connected = 0;
-        DPRINT("cloud disconnected\n");
+        {
+            gw->connected = 0;
+            DPRINT("cloud disconnected\n");
+        }
         break;
     case LINKKIT_EVENT_SUBDEV_DELETED:
         {
@@ -212,6 +214,15 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
         }
         break;
+    case LINKKIT_EVENT_RESET_SUCCESS:
+        {
+            char *productKey = ev->event_data.reset_success.productKey;
+            char *deviceName = ev->event_data.reset_success.deviceName;
+            DPRINT("device %s<%s> reset success\n", deviceName, productKey);
+        }
+        break;
+    default:
+        DPRINT("unknown event type %d\n", ev->event_type);
     }
 
     return 0;
@@ -220,17 +231,70 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
 static linkkit_cbs_t alink_cbs = {
     .get_property = gateway_get_property,
     .set_property = gateway_set_property,
-
     .call_service = gateway_call_service,
 };
 
-static void ota_callback(int event, const char *version, void *ctx)
+static int ota_get_firmware_version(const char *productKey, const char *deviceName, char *version, int buff_len)
 {
-    DPRINT("event: %d\n", event);
-    DPRINT("version: %s\n", version);
-
-    linkkit_gateway_ota_update(512);
+    snprintf(version, buff_len, "v1.0.0.0");
+    return 0;
 }
+
+typedef struct {
+    char productKey[32];
+    char deviceName[64];
+    char new_version[64];
+    int file_size;
+} ota_ctx_t;
+
+static void *ota_start(const char *productKey, const char *deviceName, const char *new_version, int file_size)
+{
+    ota_ctx_t *octx = malloc(sizeof(ota_ctx_t));
+    if (!octx)
+        return NULL;
+    memset(octx, 0, sizeof(ota_ctx_t));
+
+    strncpy(octx->productKey,  productKey,  sizeof(octx->productKey)  - 1);
+    strncpy(octx->deviceName,  deviceName,  sizeof(octx->deviceName)  - 1);
+    strncpy(octx->new_version, new_version, sizeof(octx->new_version) - 1);
+
+    octx->file_size = file_size;
+
+    DPRINT("start upgrade, %s<%s> version %s file size %d\n", deviceName, productKey, new_version, file_size);
+
+    return octx;
+}
+
+static int ota_write(void *handle, unsigned char *data, int data_len)
+{
+    ota_ctx_t *octx = (ota_ctx_t *)handle;
+
+    DPRINT("recv %d bytes for %s<%s>\n", data_len, octx->deviceName, octx->productKey);
+
+    return 0;
+}
+
+static int ota_stop(void *handle, int err)
+{
+    ota_ctx_t *octx = (ota_ctx_t *)handle;
+
+    if (err == OTA_UPGRADE_ERROR_NONE)
+        DPRINT("download upgrade package success\n");
+    else
+        DPRINT("download upgrade package failed\n");
+
+    free(octx);
+
+    return 0;
+}
+
+static linkkit_ota_params ota_params = {
+    .get_firmware_version = ota_get_firmware_version,
+
+    .start = ota_start,
+    .write = ota_write,
+    .stop  = ota_stop,
+};
 
 int main(void)
 {
@@ -250,14 +314,19 @@ int main(void)
     if (!initParams)
         return -1;
 
+    /* set maximum message size as 20KB */
     int maxMsgSize = 20 * 1024;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_SIZE, &maxMsgSize, sizeof(int));
 
+    /* set maximum message queue size as 8 */
     int maxMsgQueueSize = 8;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_QUEUE_SIZE, &maxMsgQueueSize, sizeof(int));
 
     int loglevel = 5;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_LOG_LEVEL, &loglevel, sizeof(int));
+
+    int threadPoolSize = 4;
+    linkkit_gateway_set_option(initParams, LINKKIT_OPT_THREAD_POOL_SIZE, &threadPoolSize, sizeof(int));
 
     linkkit_gateway_set_event_callback(initParams, event_handler, &gateway);
 
@@ -268,16 +337,12 @@ int main(void)
 
     gateway.lk_dev = linkkit_gateway_start(&alink_cbs, &gateway);
     if (gateway.lk_dev < 0) {
+        linkkit_gateway_exit();
         DPRINT("linkkit_gateway_start failed\n");
         return -1;
     }
 
-#if 0
-    while (gateway.connected == 0)
-        sleep(1);
-#endif
-
-    linkkit_gateway_ota_init(ota_callback, NULL);
+    linkkit_ota_service_init(&ota_params);
 
     light_init();
 

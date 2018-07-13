@@ -3,8 +3,9 @@
 
 #include "iot_import.h"
 
-#define PID_STR_MAXLEN              (64)
-#define MID_STR_MAXLEN              (64)
+
+#define PID_STRLEN_MAX              (64 + 1)
+#define MID_STRLEN_MAX              (64 + 1)
 #define PRODUCT_KEY_MAXLEN          (20 + 1)
 #define DEVICE_NAME_MAXLEN          (32 + 1)
 #define DEVICE_ID_MAXLEN            (64 + 1)
@@ -18,7 +19,7 @@
  * @param   pid_str : 用来存放Partner ID字符串的数组
  * @return  写到pid_str[]数组中的字符长度, 单位是字节(Byte)
  */
-int HAL_GetPartnerID(_OU_ char pid_str[PID_STR_MAXLEN]);
+int HAL_GetPartnerID(_OU_ char pid_str[PID_STRLEN_MAX]);
 
 /**
  * @brief   获取设备的`Module ID`, 仅用于紧密合作伙伴
@@ -26,7 +27,7 @@ int HAL_GetPartnerID(_OU_ char pid_str[PID_STR_MAXLEN]);
  * @param   mid_str : 用来存放Module ID字符串的数组
  * @return  写到mid_str[]数组中的字符长度, 单位是字节(Byte)
  */
-int HAL_GetModuleID(_OU_ char mid_str[MID_STR_MAXLEN]);
+int HAL_GetModuleID(_OU_ char mid_str[MID_STRLEN_MAX]);
 
 /**
  * @brief   获取设备的`ProductKey`, 用于标识设备的品类, 三元组之一

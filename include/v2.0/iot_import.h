@@ -47,8 +47,6 @@ typedef unsigned long long      uint64_t;
 #define IOT_FALSE   (0)     /* 逻辑假 */
 
 
-#define PID_STRLEN_MAX           (64)
-#define MID_STRLEN_MAX           (64)
 #define IOTX_URI_MAX_LEN         (135)  /* IoTx CoAP/HTTP URI & MQTT topic maximal length */
 
 #define PLATFORM_WAIT_INFINITE (~0)

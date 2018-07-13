@@ -159,18 +159,16 @@ void HAL_Printf(_IN_ const char *fmt, ...)
     fflush(stdout);
 }
 
-// todo
-int HAL_GetPartnerID(char pid_str[PID_STR_MAXLEN])
+int HAL_GetPartnerID(char pid_str[PID_STRLEN_MAX])
 {
-    memset(pid_str, 0x0, PID_STR_MAXLEN);
+    memset(pid_str, 0x0, PID_STRLEN_MAX);
     strcpy(pid_str, "example.demo.partner-id");
     return strlen(pid_str);
 }
 
-// todo
-int HAL_GetModuleID(char mid_str[MID_STR_MAXLEN])
+int HAL_GetModuleID(char mid_str[MID_STRLEN_MAX])
 {
-    memset(mid_str, 0x0, MID_STR_MAXLEN);
+    memset(mid_str, 0x0, MID_STRLEN_MAX);
     strcpy(mid_str, "example.demo.module-id");
     return strlen(mid_str);
 }
@@ -309,38 +307,6 @@ void HAL_ThreadDelete(_IN_ void *thread_handle)
         /*main thread delete child thread*/
         pthread_cancel((pthread_t)thread_handle);
     }
-}
-
-static FILE *fp;
-
-#define otafilename "/mnt/nand1-2/alinkota.bin"
-void HAL_Firmware_Persistence_Start(void)
-{
-    fp = fopen(otafilename, "w");
-    assert(fp);
-    return;
-}
-
-int HAL_Firmware_Persistence_Write(_IN_ char *buffer, _IN_ uint32_t length)
-{
-    unsigned int written_len = 0;
-    written_len = fwrite(buffer, 1, length, fp);
-
-    if (written_len != length) {
-        return -1;
-    }
-    return 0;
-}
-
-int HAL_Firmware_Persistence_Stop(void)
-{
-    if (fp != NULL) {
-        fclose(fp);
-    }
-
-    /* check file md5, and burning it to flash ... finally reboot system */
-
-    return 0;
 }
 
 int HAL_Config_Write(const char *buffer, int length)

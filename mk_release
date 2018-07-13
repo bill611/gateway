@@ -14,7 +14,7 @@ make VERSION=1
 elif [ "$1" -eq 2 ]; then
 	echo '
 COMPILE = $(CC) -muclibc -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
-CFLAGS += -muclibc -c -O2
+CFLAGS += -muclibc -c -O2 -D_PLATFORM_IS_LINUX_
 CP_TARGET = cp -u ${BIN_TARGET} ../nand/v2.0/nand1-2/' > evn.mk
 make VERSION=2
 fi

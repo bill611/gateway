@@ -14,7 +14,7 @@ make VERSION=1
 elif [ "$1" -eq 2 ]; then
 	echo '
 COMPILE = $(CC) -muclibc -g -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
-CFLAGS += -muclibc -g -c -DWATCHDOG_DEBUG -O0
+CFLAGS += -muclibc -g -c -DWATCHDOG_DEBUG -O0 -D_PLATFORM_IS_LINUX_  -D_GNU_SOURCE
 CP_TARGET = cp -u ${BIN_TARGET} ~/arm_share/' > evn.mk
 make VERSION=2
 fi

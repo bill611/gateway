@@ -423,10 +423,10 @@ void zigbeeNetIn(uint8_t time)
 }
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief zigbeeOutNet 设备退网(路由器)
+ * @brief zigbeeFactorySet 设备退网恢复出厂设置(路由器)
  */
 /* ---------------------------------------------------------------------------*/
-void zigbeeOutNet(void)
+void zigbeeFactorySet(void)
 {
 	setSendCmd(RESUME_FACTORY_SETTINGS, 0);
 	zigbeeClearNetAddr();//收数据不在处理，直到再次入网

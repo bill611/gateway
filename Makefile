@@ -1,5 +1,6 @@
 MAKEROOT = $(shell pwd)
 VERSION =
+SDK_PATH =sdk/2.0/ilop-sdk-6aad4ee
 
 # 主程序Makefile
 
@@ -49,7 +50,7 @@ ifeq ($(VERSION), 2)
 	INC_DIR += $(MAKEROOT)/include/v2.0 \
 			   $(MAKEROOT)/src/hal
 
-	LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/sdk/2.0/ilop-sdk-20180608/lib
+	LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/$(SDK_PATH)/lib
 
 	SRC += $(wildcard ${SRC_DIR}/hal/*.c)
 	XLINKER = -Xlinker "-(" -lsqlite3 -liniparser -lm -lilop-tls -lilop-sdk -lpthread -ldl -lrt -Xlinker "-)"

@@ -81,6 +81,7 @@ extern unsigned char zigbeeSendData(uint16_t dst_addr, uint8_t* data, uint16_t l
 extern void zigbeeSetDataRecvFunc(void (*func)(uint8_t*,uint8_t));
 extern void zigbeeNetIn(uint8_t time);
 extern int zigbeeGetNetInStatus();
+extern void zigbeeFactorySet(void);
 
 #ifdef __cplusplus
 }
