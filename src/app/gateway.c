@@ -193,7 +193,7 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 		DPRINT("unknow device type:%d\n",type );
 		return -1;
 	}
-	DPRINT("id:%s\n", id);
+	DPRINT("id:%s,type:%d,channle:%d\n", id,type,channel);
 	// return -1;
 	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
 	// test------------------

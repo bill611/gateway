@@ -19,6 +19,7 @@
  *----------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "externfunc.h"
 #include "sqlite3.h"
 #include "sqlite.h"
@@ -41,6 +42,8 @@ static int sqlCheck(TSqlite *sql);
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
+static pthread_mutex_t mutex;
+
 TSqliteData sql_local = {
 	.file_name = "device.db",
 	.sql = NULL,
@@ -81,6 +84,7 @@ sqlCheck_fail:
 
 int sqlGetDeviceStart(void)
 {
+	pthread_mutex_lock(&mutex);
 	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
 	return sql_local.sql->RecordCount(sql_local.sql);
 }
@@ -103,6 +107,7 @@ void sqlGetDevice(char *id,
 void sqlGetDeviceEnd(void)
 {
 	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
 }
 
 void sqlInsertDevice(char *id,
@@ -111,38 +116,45 @@ void sqlInsertDevice(char *id,
 		uint16_t channel)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr,Channel) VALUES('%s','%d','%d','%d')",
 			id, dev_type,addr,channel);
 	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
+	pthread_mutex_unlock(&mutex);
 }
 
 void sqlDeleteDevice(char *id)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "Delete From DeviceList Where ID=\"%s\"", id);
 	DPRINT("%s\n",buf);
 	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
+	pthread_mutex_unlock(&mutex);
 }
 
 void sqlClearDevice(void)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "Delete From DeviceList");
 	DPRINT("%s\n",buf);
 	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
+	pthread_mutex_unlock(&mutex);
 }
 int sqlGetDeviceId(uint16_t addr,char *id)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "select ID From DeviceList Where Addr=\"%d\"", addr);
 	LocalQueryOpen(sql_local.sql,buf);
 	int ret = sql_local.sql->RecordCount(sql_local.sql);
@@ -150,30 +162,40 @@ int sqlGetDeviceId(uint16_t addr,char *id)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
 	// DPRINT("ret:%d,id:%s\n", ret,id);
 	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
 	return ret;
 }
 
 void sqlSetEleQuantity(int value,char *id)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "UPDATE DeviceList SET EleQuantity ='%d' Where id = \"%s\"",
 			value,id);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
+	pthread_mutex_unlock(&mutex);
 }
 int sqlGetEleQuantity(char *id)
 {
 	char buf[128];
+	pthread_mutex_lock(&mutex);
 	sprintf(buf, "select EleQuantity From DeviceList Where ID=\"%s\"", id);
 	LocalQueryOpen(sql_local.sql,buf);
 	int ret = LocalQueryOfInt(sql_local.sql,"EleQuantity");
 	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
 	return ret;
 }
 
 void sqlInit(void)
 {
+	pthread_mutexattr_t mutexattr;
+	pthread_mutexattr_init(&mutexattr);
+    pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutex_init(&mutex, &mutexattr);
+
 	LocalQueryLoad(&sql_local);
 	sql_local.checkFunc(sql_local.sql);
 	if (!sql_local.sql) {
