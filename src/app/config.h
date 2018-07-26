@@ -19,6 +19,7 @@ extern "C" {
 
 
 #define GW_VERSION	"v1.0.1.0"
+#define UPDATE_FILE	"/mnt/nand1-2/Update.cab"
 
 
 	typedef struct _EtcValueChar {
@@ -55,6 +56,7 @@ extern "C" {
 		struct DevConfig motion_curtain;//红外幕帘
 		struct DevConfig outlet;		//插座
 		struct DevConfig air_box;		//新风系统
+		struct DevConfig air_condition_midea;	//美的空调
 		int  ele_quantity;				//电量x1000
 	} Config;
 

@@ -65,6 +65,8 @@ static EtcValueChar etc_private_char[]={
 {"Outlet",			"device_secret",	SIZE_CONFIG(theConfig.outlet.device_secret),		"0"},
 {"AirBox",			"product_key",		SIZE_CONFIG(theConfig.air_box.product_key),			"0"},
 {"AirBox",			"device_secret",	SIZE_CONFIG(theConfig.air_box.device_secret),		"0"},
+{"AirConditionMidea",	"product_key",		SIZE_CONFIG(theConfig.air_condition_midea.product_key),	"0"},
+{"AirConditionMidea",	"device_secret",	SIZE_CONFIG(theConfig.air_condition_midea.device_secret),	"0"},
 };
 
 char *auth_mode[] = {

@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_air_condition.c
+ *       Filename:  device_air_condition_midea.c
  *
- *    Description:  空调设备 
+ *    Description:  美的空调设备 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_air_condition.h"
+#include "device_air_condition_midea.h"
 #include "sql_handle.h"
 #include "config.h"
 
@@ -236,12 +236,12 @@ static void reportPowerOffCb(DeviceStr *dev)
 			attr_name,attr_value,attr_value_type);
 }
 
-static DeviceTypePara air_condition = {
-	.name = "air_condition",
+static DeviceTypePara air_condition_midea = {
+	.name = "air_condition_midea",
 	.short_model = 0x00022531,
 	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_ZYKT,
+	.device_type = DEVICE_TYPE_ZYKT_MIDEA,
 	.attr = {
 #if (defined V1)
 		{"ErrorCode",NULL,DEVICE_VELUE_TYPE_INT},
@@ -267,16 +267,26 @@ static DeviceTypePara air_condition = {
 	.reportPowerOff = reportPowerOffCb,
 };
 
-
-DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel)
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief registDeviceAirCondition 中央空调/大金空调
+ *
+ * @param id
+ * @param addr
+ * @param channel
+ *
+ * @returns 
+ */
+/* ---------------------------------------------------------------------------*/
+DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	air_condition.product_key = theConfig.air_condition.product_key;
-	air_condition.device_secret = theConfig.air_condition.device_secret;
-	This->type_para = &air_condition;
+	air_condition_midea.product_key = theConfig.air_condition_midea.product_key;
+	air_condition_midea.device_secret = theConfig.air_condition_midea.device_secret;
+	This->type_para = &air_condition_midea;
 	This->addr = addr;
 	This->channel = channel;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );

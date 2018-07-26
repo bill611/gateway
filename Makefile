@@ -84,6 +84,7 @@ make_C:
 # 在指定目录下，将所有的.c文件编译为相应的同名.o文件
 ${BIN_TARGET}:${OBJ}
 	@$(COMPILE)
+	@${STRIP} $@
 
 debug:
 	make -C src debug

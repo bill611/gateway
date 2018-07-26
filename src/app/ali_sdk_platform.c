@@ -34,6 +34,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "config.h"
 #include "debug.h"
 #include "sql_handle.h"
 #include "ali_sdk_platform.h"
@@ -66,7 +67,7 @@ enum SERVER_ENV {
 
 #define ALI_SDK_ONLINE_TIME 180  // 检查3分钟在线状态，若连续3分钟不在线，
 								//关掉WIFI电源，重启设备
-#define LOG_LEVER_V2 5
+#define LOG_LEVER_V2 0
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -202,7 +203,7 @@ static linkkit_cbs_t alink_cbs = {
 
 static int ota_get_firmware_version(const char *productKey, const char *deviceName, char *version, int buff_len)
 {
-    snprintf(version, buff_len, "v1.0.0.0");
+    snprintf(version, buff_len, GW_VERSION);
     return 0;
 }
 
@@ -211,6 +212,9 @@ typedef struct {
     char deviceName[64];
     char new_version[64];
     int file_size;
+    int file_rec;
+	int per,per_old;
+	FILE *fd;
 } ota_ctx_t;
 
 static void *ota_start(const char *productKey, const char *deviceName, const char *new_version, int file_size)
@@ -225,6 +229,13 @@ static void *ota_start(const char *productKey, const char *deviceName, const cha
     strncpy(octx->new_version, new_version, sizeof(octx->new_version) - 1);
 
     octx->file_size = file_size;
+    octx->file_rec = 0;
+    octx->per = 0;
+    octx->per_old = 0;
+
+	octx->fd = fopen(UPDATE_FILE,"wb");
+	if (octx->fd < 0)
+		DPRINT("open update file fail\n");
 
     DPRINT("start upgrade, %s<%s> version %s file size %d\n", deviceName, productKey, new_version, file_size);
 
@@ -234,20 +245,36 @@ static void *ota_start(const char *productKey, const char *deviceName, const cha
 static int ota_write(void *handle, unsigned char *data, int data_len)
 {
     ota_ctx_t *octx = (ota_ctx_t *)handle;
-
-    DPRINT("recv %d bytes for %s<%s>\n", data_len, octx->deviceName, octx->productKey);
-
+	if (octx->fd) {
+		fwrite(data,data_len,sizeof(unsigned char),octx->fd);
+	}
+#if 1
+	octx->file_rec += data_len;
+	octx->per = octx->file_rec * 100 / octx->file_size;
+	if (octx->per != octx->per_old) {
+		if (octx->per % 10 == 0)
+			DPRINT("%d%%->",octx->file_rec * 100 / octx->file_size );
+		octx->per_old = octx->per; 
+	}
+#endif
     return 0;
 }
 
 static int ota_stop(void *handle, int err)
 {
     ota_ctx_t *octx = (ota_ctx_t *)handle;
-
-    if (err == OTA_UPGRADE_ERROR_NONE)
-        DPRINT("download upgrade package success\n");
-    else
-        DPRINT("download upgrade package failed\n");
+	if (err == OTA_UPGRADE_ERROR_NONE) {
+        DPRINT("\ndownload upgrade package success\n");
+		if (octx->fd) {
+			fflush(octx->fd);
+			fclose(octx->fd);
+			sync();
+			gpioDisableWifiPower();
+			WatchDogClose();
+			exit(0);
+		}
+	} else
+        DPRINT("\ndownload upgrade package failed\n");
 
     free(octx);
 

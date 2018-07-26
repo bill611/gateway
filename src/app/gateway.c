@@ -31,6 +31,7 @@
 #include "device_fresh_air.h"
 #include "device_motion_curtain.h"
 #include "device_air_condition.h"
+#include "device_air_condition_midea.h"
 #include "device_alarm_whistle.h"
 #include "device_curtain.h"
 #include "device_door_contact.h"
@@ -86,6 +87,7 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_JLCZ10,registDeviceOutlet10},
 	{DEVICE_TYPE_JLCZ16,registDeviceOutlet16},
 	{DEVICE_TYPE_KQJCY,registDeviceAirBox},
+	{DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirConditionMidea},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
