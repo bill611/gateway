@@ -456,3 +456,26 @@ void activeAp(void)
 {
 	tcSetNetwork(TC_SET_AP);
 }
+
+void printfWifiInfo(int cnt )
+{
+	FILE *fd = fopen("network_config","rb");	
+	char buff[32] = {0};
+	char ssid[32] = {0};
+	char pass[32] = {0};
+	if (fd) {
+		while (!feof(fd))	 {
+			memset(ssid,0,sizeof(ssid));
+			memset(pass,0,sizeof(pass));
+			fgets(buff,sizeof(buff),fd);
+			sscanf(buff,"SSID %s\n",ssid);
+			if (ssid[0])
+				printf("%d-->ssid:[%s],",cnt, ssid);
+			sscanf(buff,"AUTH_KEY %s\n",pass);
+			if (pass[0])
+				printf("password:[%s]\n", pass);
+		}
+		fclose(fd);
+	}
+	
+}

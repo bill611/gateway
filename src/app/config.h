@@ -233,6 +233,7 @@ extern "C" {
 	int isConfigMaster(void);
 
 	void tcSetNetwork(int type);
+	void printfWifiInfo(int cnt );
 	extern char *auth_mode[];
 	extern char *encrypt_type[];
 #ifdef __cplusplus

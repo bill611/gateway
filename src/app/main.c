@@ -142,11 +142,16 @@ static void gpioRegistHandle(void *arg,int port)
 
 static void * timer1sThread(void *arg)
 {
+	int cnt = 600;
 	while(1) {
 		if (net_detect() < 0) {
 			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
 		} else {
 			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+		}
+		if (cnt) {
+			printfWifiInfo(cnt);
+			cnt--;
 		}
 		sleep(1);
 	}	
