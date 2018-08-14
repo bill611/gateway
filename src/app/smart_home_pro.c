@@ -585,7 +585,7 @@ void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t mode,
 		uint8_t speed)
 {
-	char speed_change[] = {0,0,3,2,1}; // 速度转换
+	char speed_change[] = {0,3,3,2,1,1}; // 速度转换
 	char mode_change[] = {2,0,1,4,3}; // 模式转换
 	uint8_t param[2] = {0};
 	DPRINT("[%s]type:%d,temp:%d:,mode:%d,speed:%d\n",
@@ -599,6 +599,28 @@ void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_On,
+			dev->type_para->device_type,
+			dev->channel,
+			1,param,sizeof(param));
+}
+
+
+void smarthomeAirCondtionMideaCmdSlaveAddr(DeviceStr *dev,
+		uint8_t slave_addr,
+		uint8_t room_addr)
+{
+	uint8_t param[3] = {0};
+	DPRINT("[%s]type:%d,slave:%d:room:%d\n",
+			__FUNCTION__, 
+			dev->type_para->device_type,
+			slave_addr,
+			room_addr);
+	param[0] = slave_addr;
+	param[1] = 0;
+	param[2] = room_addr;
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Midea_Slave_addr,
 			dev->type_para->device_type,
 			dev->channel,
 			1,param,sizeof(param));

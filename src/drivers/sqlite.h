@@ -8,11 +8,11 @@
 #endif
 //----------------------------------------------------------------------------
 struct SqlitePrivate;        //私有数据
-
+#define SQL_NAME_MAX 32 
 typedef struct _TSQLiteField
 {
 	struct SqlitePrivate *Private;
-	char Name[16];														//字段名
+	char Name[SQL_NAME_MAX];											//字段名
 	int offset;															//第几个字段
     char * (*AsChar)(struct _TSQLiteField *This,char *Buf,int Size);    //作为字段型读取
     int (*AsInt)(struct _TSQLiteField *This);                           //作为整型读取

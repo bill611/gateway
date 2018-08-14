@@ -54,11 +54,16 @@ static int sqlCheck(TSqlite *sql)
 {
     int ret;
 	char *string = "CREATE TABLE  DeviceList(\
-		ID char(32) PRIMARY KEY,\
-		DevType INTEGER,\
-		Addr INTEGER,\
-		Channel INTEGER\
-		EleQuantity INTEGER\
+ID char(32) PRIMARY KEY,\
+DevType INTEGER,\
+Addr INTEGER,\
+Channel INTEGER,\
+EleQuantity INTEGER,\
+AirConditionSpeed INTEGER,\
+AirConditionMode INTEGER,\
+AirConditionTemp INTEGER,\
+MideaSlaveAddr INTEGER,\
+MideaRoomAddr INTEGER\
 	   	)";
     if (sql == NULL)
         goto sqlCheck_fail;
@@ -187,6 +192,60 @@ int sqlGetEleQuantity(char *id)
 	sql_local.sql->Close(sql_local.sql);
 	pthread_mutex_unlock(&mutex);
 	return ret;
+}
+void sqlSetMideaAddr(char *id,int slave_addr,int room_addr)
+{
+	char buf[128];
+	pthread_mutex_lock(&mutex);
+	sprintf(buf, "UPDATE DeviceList SET MideaSlaveAddr ='%d',\
+		   MideaRoomAddr ='%d'	Where id = \"%s\"",
+			slave_addr,room_addr,id);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+	pthread_mutex_unlock(&mutex);
+}
+
+void sqlGetMideaAddr(char *id,int *slave_addr,int *room_addr)
+{
+	char buf[128];
+	pthread_mutex_lock(&mutex);
+	sprintf(buf, "select MideaSlaveAddr,MideaRoomAddr From DeviceList Where ID=\"%s\"", id);
+	LocalQueryOpen(sql_local.sql,buf);
+	if (slave_addr)
+		*slave_addr = LocalQueryOfInt(sql_local.sql,"MideaSlaveAddr");
+	if (room_addr)
+		*room_addr = LocalQueryOfInt(sql_local.sql,"MideaRoomAddr");
+	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
+}
+
+void sqlSetAirConditionPara(char *id,int temp,int mode,int speed)
+{
+	char buf[128];
+	pthread_mutex_lock(&mutex);
+	sprintf(buf, "UPDATE DeviceList SET AirConditionSpeed ='%d',\
+		   	AirConditionMode ='%d',AirConditionTemp ='%d' Where id = \"%s\"",
+			speed,mode,temp,id);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+	pthread_mutex_unlock(&mutex);
+}
+void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed)
+{
+	char buf[128];
+	pthread_mutex_lock(&mutex);
+	sprintf(buf, "select AirConditionTemp,AirConditionMode,AirConditionSpeed From DeviceList Where ID=\"%s\"", id);
+	LocalQueryOpen(sql_local.sql,buf);
+	if (temp)
+		*temp = LocalQueryOfInt(sql_local.sql,"AirConditionTemp");
+	if (mode)
+		*mode = LocalQueryOfInt(sql_local.sql,"AirConditionMode");
+	if (speed)
+		*speed = LocalQueryOfInt(sql_local.sql,"AirConditionSpeed");
+	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
 }
 
 void sqlInit(void)

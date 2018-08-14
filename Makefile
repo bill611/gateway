@@ -1,4 +1,5 @@
 MAKEROOT = $(shell pwd)
+PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
 VERSION =
 SDK_PATH =sdk/2.0/ilop-sdk-6aad4ee
 
@@ -15,8 +16,8 @@ OBJ_DIR = $(MAKEROOT)/obj
 BIN_DIR = $(MAKEROOT)
 include path.mk
 
-CC = arm-linux-gcc
-STRIP = arm-linux-strip $(BIN_TARGET)
+CC =$(PREFIX)gcc
+STRIP = $(PREFIX)strip $(BIN_TARGET)
 
 # INC_DIR 目录下为相应库的头文件
 INC_DIR = \

@@ -38,6 +38,10 @@ extern "C" {
 	extern void sqlClearDevice(void);
 	extern void sqlSetEleQuantity(int value,char *id);
 	extern int sqlGetEleQuantity(char *id);
+	extern void sqlSetMideaAddr(char *id,int slave_addr,int room_addr);
+	extern void sqlGetMideaAddr(char *id,int *slave_addr,int *room_addr);
+	extern void sqlSetAirConditionPara(char *id,int temp,int mode,int speed);
+	extern void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed);
 
 
 #ifdef __cplusplus

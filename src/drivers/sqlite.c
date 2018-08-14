@@ -171,7 +171,7 @@ static BOOL SQLite_Open(struct _TSqlite *This)
 		memset(This->Fields,0,sizeof(TSQLiteField)*This->Private->FieldCount);
 		This->Private->Active = TRUE;
 		for(i=0;i<This->Private->FieldCount;i++) {
-			strupper(This->Fields[i].Name,This->Private->pData[i],15);
+			strupper(This->Fields[i].Name,This->Private->pData[i],SQL_NAME_MAX);
 			This->Fields[i].offset = i;
 			This->Fields[i].Private = This->Private;
 			This->Fields[i].AsChar = TField_AsChar;
@@ -295,10 +295,10 @@ static int SQLite_RecNo(struct _TSqlite *This)
 static PSQLiteField SQLite_FieldByName(struct _TSqlite *This,char *Name)
 {
 	int i;
-	char FieldName[50];
+	char FieldName[SQL_NAME_MAX];
 	if(!This->Private->Active)
 		return NULL;
-	strupper(FieldName,Name,50);
+	strupper(FieldName,Name,SQL_NAME_MAX);
 	for(i=0;i<This->Private->FieldCount;i++) {
 		if(strcmp(FieldName,This->Fields[i].Name)==0)
 			return &This->Fields[i];

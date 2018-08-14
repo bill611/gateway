@@ -84,6 +84,8 @@ typedef enum
 	
 	Device_Scene		 			= 0xb0,
 	Device_Scene_Res 				= 0xb1,
+	Device_Midea_Slave_addr 		= 0xbc, 		//配置美的空调从地址
+	Device_Midea_Slave_addr_Res 	= 0xbd,
 	Cmd_Null						= 0xff,			//空命令
 }TC_CMD;
 

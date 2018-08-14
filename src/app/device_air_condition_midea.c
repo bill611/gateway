@@ -45,6 +45,8 @@ enum {
 	ATTR_SPEED,
 	ATTR_CURRENT_TEMP,
 	ATTR_TEMP,
+	ATTR_SLAVE_ADDR,
+	ATTR_ROOM_ADDR,
 };
 
 /* ---------------------------------------------------------------------------*
@@ -102,11 +104,10 @@ static void cmdSwich(DeviceStr *dev,char *value)
 			dev->value[ATTR_SWICH],
 			dev->value[ATTR_SPEED] );
 	if (value_int) {
-		uint8_t speed = atoi(dev->value[ATTR_SPEED]);
-		if (speed)// app调节范围为2-4,实际新风调节范围为1-3,所以要-1
-			speed -= 1;
-		DPRINT("%s:%d\n", __FUNCTION__,speed);
-		smarthomeFreshAirCmdCtrOpen(dev,speed);
+		smarthomeAirCondtionCmdCtrOpen(dev,
+				atoi(dev->value[ATTR_TEMP]),
+				atoi(dev->value[ATTR_MODE]),
+				atoi(dev->value[ATTR_SPEED]));
 	} else
 		smarthomeFreshAirCmdCtrClose(dev);
 }
@@ -134,6 +135,10 @@ static void cmdWorkMode(DeviceStr *dev,char *value)
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
 			atoi(dev->value[ATTR_SPEED]));
+	sqlSetAirConditionPara(dev->id,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
 }
 /* ---------------------------------------------------------------------------*/
 /**
@@ -156,6 +161,10 @@ static void cmdWindSpeed(DeviceStr *dev,char *value)
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
 			atoi(dev->value[ATTR_SPEED]));
+	sqlSetAirConditionPara(dev->id,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
 }
 
 static void cmdTemperature(DeviceStr *dev,char *value)
@@ -165,11 +174,34 @@ static void cmdTemperature(DeviceStr *dev,char *value)
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
 			atoi(dev->value[ATTR_SPEED]));
+	sqlSetAirConditionPara(dev->id,
+			atoi(dev->value[ATTR_TEMP]),
+			atoi(dev->value[ATTR_MODE]),
+			atoi(dev->value[ATTR_SPEED]));
 }
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
 	smarthomeAllDeviceCmdGetSwichStatus(dev,1);
+}
+static void cmdModbusSlaveAddress(DeviceStr *dev,char *value)
+{
+	sprintf(dev->value[ATTR_SLAVE_ADDR],"%s",value);
+	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
+			atoi(dev->value[ATTR_SLAVE_ADDR]),
+			atoi(dev->value[ATTR_ROOM_ADDR]));
+	sqlSetMideaAddr(dev->id,atoi(dev->value[ATTR_SLAVE_ADDR]),
+				atoi(dev->value[ATTR_ROOM_ADDR]));
+}
+
+static void cmdRoomAdress(DeviceStr *dev,char *value)
+{
+	sprintf(dev->value[ATTR_ROOM_ADDR],"%s",value);
+	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
+			atoi(dev->value[ATTR_SLAVE_ADDR]),
+			atoi(dev->value[ATTR_ROOM_ADDR]));
+	sqlSetMideaAddr(dev->id,atoi(dev->value[ATTR_SLAVE_ADDR]),
+				atoi(dev->value[ATTR_ROOM_ADDR]));
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -257,6 +289,8 @@ static DeviceTypePara air_condition_midea = {
 		{"WindSpeed",cmdWindSpeed,DEVICE_VELUE_TYPE_INT},
 		{"CurrentTemperature",NULL,DEVICE_VELUE_TYPE_INT},
 		{"TargetTemperature",cmdTemperature,DEVICE_VELUE_TYPE_INT},
+		{"ModbusSlaveAddress",cmdModbusSlaveAddress,DEVICE_VELUE_TYPE_INT},
+		{"RoomAdress",cmdRoomAdress,DEVICE_VELUE_TYPE_INT},
 #endif
 		{NULL,NULL},
 	},
@@ -282,6 +316,7 @@ DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channe
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
+	int slave_addr = 0,room_addr = 0,temp = 0,mode = 0,speed = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
 	air_condition_midea.product_key = theConfig.air_condition_midea.product_key;
@@ -294,6 +329,18 @@ DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channe
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
+	}	
+	sqlGetMideaAddr(id,&slave_addr,&room_addr);
+	sqlGetAirConditionPara(id,&temp,&mode,&speed);
+	if (temp < 16)
+		temp = 16;
+	sprintf(This->value[ATTR_TEMP],"%d",temp);
+	sprintf(This->value[ATTR_SPEED],"%d",speed);
+	sprintf(This->value[ATTR_MODE],"%d",mode);
+	sprintf(This->value[ATTR_SLAVE_ADDR],"%d",slave_addr);
+	sprintf(This->value[ATTR_ROOM_ADDR],"%d",room_addr);
+	for (i=0; This->type_para->attr[i].name != NULL; i++) {
+		printf("[%s]name:%s,value:%s\n",__FUNCTION__,This->type_para->attr[i].name,This->value[i]);
 	}	
 
 	return This;
