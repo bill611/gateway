@@ -102,7 +102,7 @@ static void cmdGetSwichStatus(DeviceStr *dev)
 	}
 }
 
-static void reportPowerOnCb(DeviceStr *dev,char *param)
+static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"%d",param[0]);
@@ -120,7 +120,7 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 			attr_name,attr_value,attr_value_type);
 }
 
-static void reportPowerOffCb(DeviceStr *dev)
+static void reportPowerOffCb(DeviceStr *dev,int channel)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
 	const char *attr_name[] = {

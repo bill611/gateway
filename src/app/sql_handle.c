@@ -62,8 +62,9 @@ EleQuantity INTEGER,\
 AirConditionSpeed INTEGER,\
 AirConditionMode INTEGER,\
 AirConditionTemp INTEGER,\
-MideaSlaveAddr INTEGER,\
-MideaRoomAddr INTEGER\
+MideaSlaveData BLOB,\
+MotionCurtainArm INTEGER,\
+DoorContactArm INTEGER\
 	   	)";
     if (sql == NULL)
         goto sqlCheck_fail;
@@ -87,9 +88,8 @@ sqlCheck_fail:
 	return FALSE;
 }
 
-int sqlGetDeviceStart(void)
+int sqlGetDeviceCnt(void)
 {
-	pthread_mutex_lock(&mutex);
 	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
 	return sql_local.sql->RecordCount(sql_local.sql);
 }
@@ -97,8 +97,13 @@ int sqlGetDeviceStart(void)
 void sqlGetDevice(char *id,
 		int *dev_type,
 		uint16_t *addr,
-		uint16_t *channel)
+		uint16_t *channel,int index)
 {
+	int i;
+	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
+	for (i=0; i<index; i++) {
+		sql_local.sql->Next(sql_local.sql);
+	}
 	if (id)
 		LocalQueryOfChar(sql_local.sql,"ID",id,32);
 	if (dev_type)
@@ -107,12 +112,10 @@ void sqlGetDevice(char *id,
 		*addr = LocalQueryOfInt(sql_local.sql,"Addr");
 	if (channel)
 		*channel = LocalQueryOfInt(sql_local.sql,"Channel");
-	sql_local.sql->Next(sql_local.sql);
 }
 void sqlGetDeviceEnd(void)
 {
 	sql_local.sql->Close(sql_local.sql);
-	pthread_mutex_unlock(&mutex);
 }
 
 void sqlInsertDevice(char *id,
@@ -193,29 +196,33 @@ int sqlGetEleQuantity(char *id)
 	pthread_mutex_unlock(&mutex);
 	return ret;
 }
-void sqlSetMideaAddr(char *id,int slave_addr,int room_addr)
+void sqlSetMideaAddr(char *id,void *data,int size)
 {
 	char buf[128];
 	pthread_mutex_lock(&mutex);
-	sprintf(buf, "UPDATE DeviceList SET MideaSlaveAddr ='%d',\
-		   MideaRoomAddr ='%d'	Where id = \"%s\"",
-			slave_addr,room_addr,id);
-	LocalQueryExec(sql_local.sql,buf);
+	sprintf(buf, "UPDATE DeviceList SET MideaSlaveData=?,Channel=4 \
+		   	Where id = \"%s\"", id);
+	sql_local.sql->prepare(sql_local.sql,buf);
+	sql_local.sql->reset(sql_local.sql);
+	sql_local.sql->bind_blob(sql_local.sql,data,size);
+	sql_local.sql->step(sql_local.sql);
+	sql_local.sql->finalize(sql_local.sql);
+	sql_local.sql->Close(sql_local.sql);
 	sql_local.checkFunc(sql_local.sql);
 	sync();
 	pthread_mutex_unlock(&mutex);
 }
 
-void sqlGetMideaAddr(char *id,int *slave_addr,int *room_addr)
+void sqlGetMideaAddr(char *id,void *data)
 {
 	char buf[128];
 	pthread_mutex_lock(&mutex);
-	sprintf(buf, "select MideaSlaveAddr,MideaRoomAddr From DeviceList Where ID=\"%s\"", id);
-	LocalQueryOpen(sql_local.sql,buf);
-	if (slave_addr)
-		*slave_addr = LocalQueryOfInt(sql_local.sql,"MideaSlaveAddr");
-	if (room_addr)
-		*room_addr = LocalQueryOfInt(sql_local.sql,"MideaRoomAddr");
+	sprintf(buf, "select MideaSlaveData From DeviceList Where ID=\"%s\"", id);
+	sql_local.sql->prepare(sql_local.sql,buf);
+	sql_local.sql->reset(sql_local.sql);
+	sql_local.sql->step(sql_local.sql);
+	sql_local.sql->getBlobData(sql_local.sql,data);
+	sql_local.sql->finalize(sql_local.sql);
 	sql_local.sql->Close(sql_local.sql);
 	pthread_mutex_unlock(&mutex);
 }
@@ -234,8 +241,8 @@ void sqlSetAirConditionPara(char *id,int temp,int mode,int speed)
 }
 void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed)
 {
-	char buf[128];
 	pthread_mutex_lock(&mutex);
+	char buf[128];
 	sprintf(buf, "select AirConditionTemp,AirConditionMode,AirConditionSpeed From DeviceList Where ID=\"%s\"", id);
 	LocalQueryOpen(sql_local.sql,buf);
 	if (temp)
@@ -244,6 +251,53 @@ void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed)
 		*mode = LocalQueryOfInt(sql_local.sql,"AirConditionMode");
 	if (speed)
 		*speed = LocalQueryOfInt(sql_local.sql,"AirConditionSpeed");
+	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
+}
+
+void sqlSetMotionCurtainArmStatus(char *id,int arm_status)
+{
+	pthread_mutex_lock(&mutex);
+	char buf[128];
+	sprintf(buf, "UPDATE DeviceList SET MotionCurtainArm ='%d',\
+		   	 Where id = \"%s\"",
+			arm_status,id);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+	pthread_mutex_unlock(&mutex);
+}
+void sqlGetMotionCurtainArmStatus(char *id,int *arm_status)
+{
+	pthread_mutex_lock(&mutex);
+	char buf[128];
+	sprintf(buf, "select MotionCurtainArm From DeviceList Where ID=\"%s\"", id);
+	LocalQueryOpen(sql_local.sql,buf);
+	if (arm_status)
+		*arm_status = LocalQueryOfInt(sql_local.sql,"MotionCurtainArm");
+	sql_local.sql->Close(sql_local.sql);
+	pthread_mutex_unlock(&mutex);
+}
+void sqlSetDoorContactArmStatus(char *id,int arm_status)
+{
+	pthread_mutex_lock(&mutex);
+	char buf[128];
+	sprintf(buf, "UPDATE DeviceList SET DoorContactArm ='%d',\
+		   	 Where id = \"%s\"",
+			arm_status,id);
+	LocalQueryExec(sql_local.sql,buf);
+	sql_local.checkFunc(sql_local.sql);
+	sync();
+	pthread_mutex_unlock(&mutex);
+}
+void sqlGetDoorContactArmStatus(char *id,int *arm_status)
+{
+	pthread_mutex_lock(&mutex);
+	char buf[128];
+	sprintf(buf, "select DoorContactArm From DeviceList Where ID=\"%s\"", id);
+	LocalQueryOpen(sql_local.sql,buf);
+	if (arm_status)
+		*arm_status = LocalQueryOfInt(sql_local.sql,"DoorContactArm");
 	sql_local.sql->Close(sql_local.sql);
 	pthread_mutex_unlock(&mutex);
 }

@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_door_contact.c
+ *       Filename:  device_lock.c
  *
- *    Description:  门磁设备
+ *    Description:  西勒奇门锁/安朗杰门锁
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -20,10 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
-#include "device_door_contact.h"
 #include "sql_handle.h"
+#include "device_lock.h"
 #include "config.h"
 
 /* ---------------------------------------------------------------------------*
@@ -39,16 +38,9 @@
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
 enum {
-	ATTR_ALARM, // 开关门状态
-	ATTR_ARM_DISARM,  // 布防撤防
+	ATTR_LOCKSTATE,
+	ATTR_ARM_DISARM,
 };
-enum {
-	EVENT_ERROR,
-	EVENT_LOWELECTRICITYALARM,// 低电报警
-	EVENT_TAMPERALARM,// 防撬报警
-	EVENT_ACTIVEALARM,// 感应报警,布防状态时才上报报警
-};
-
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -73,7 +65,6 @@ static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 		}
 	}
 
-
     return 0;
 }
 
@@ -84,7 +75,6 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 	for (i=0; dev->type_para->attr[i].name != NULL; i++) {
 		if (strcmp(attr_name,dev->type_para->attr[i].name) == 0) {
 			sprintf(dev->value[i],"%s",attr_value);
-			DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
 			break;
@@ -94,114 +84,97 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void cmdTemplateEnableSwitch(DeviceStr *dev,char *value)
-{
-	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_ARM_DISARM],"%d",value_int);
-	sqlSetMotionCurtainArmStatus(dev->id,value_int);
-}
 
-static void reportAlarmStatus(DeviceStr *dev,char *param)
+static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
-	DPRINT("[%s]%d\n",__FUNCTION__,param[0] );
-	int alarm_type = param[0];
-	if (alarm_type == TC_ALARM_OPEN_WINDOW) {
-		sprintf(dev->value[ATTR_ALARM],"1");
-	} else if (alarm_type == TC_ALARM_CLOSE_WINDOW){
-		sprintf(dev->value[ATTR_ALARM],"0");
-	}
+	// 固定为开
+	sprintf(dev->value[ATTR_LOCKSTATE],"1");
+	sprintf(dev->value[ATTR_ARM_DISARM],"0");
 	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_ALARM].name,
+		dev->type_para->attr[ATTR_LOCKSTATE].name,
 		dev->type_para->attr[ATTR_ARM_DISARM].name,
 		NULL};
 	const char *attr_value[] = {
-		dev->value[ATTR_ALARM],
+		dev->value[ATTR_LOCKSTATE],
 		dev->value[ATTR_ARM_DISARM],
 		NULL};
 	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_ALARM].value_type,
+		dev->type_para->attr[ATTR_LOCKSTATE].value_type,
 		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
 	};
-	// 属性上报
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
-	// 报警事件上报
-	const char *event_name[] = { NULL};
-	const char *event_value[] = {NULL};
-	int event_value_type[] = {};
-	if (alarm_type == TC_ALARM_LOWPOWER) {
-		aliSdkSubDevReportEvent(dev,
-				dev->type_para->event[EVENT_LOWELECTRICITYALARM],
-				event_name,event_value,event_value_type);
-	} else if (alarm_type == TC_ALARM_TAMPER) {
-		aliSdkSubDevReportEvent(dev,
-				dev->type_para->event[EVENT_TAMPERALARM],
-				event_name,event_value,event_value_type);
-	}
-	int arm_status = atoi(dev->value[ATTR_ARM_DISARM]);
-	if (arm_status && alarm_type == TC_ALARM_OPEN_WINDOW) {
-		aliSdkSubDevReportEvent(dev,
-				dev->type_para->event[EVENT_ACTIVEALARM],
-				event_name,event_value,event_value_type);
-	}
 }
 
+static void reportPowerOffCb(DeviceStr *dev,int channel)
+{
+	sprintf(dev->value[ATTR_LOCKSTATE],"0");
+	const char *attr_name[] = {
+		dev->type_para->attr[ATTR_LOCKSTATE].name,
+		NULL};
+	const char *attr_value[] = {
+		dev->value[ATTR_LOCKSTATE],
+		NULL};
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_LOCKSTATE].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
+}
 
-static DeviceTypePara door_contact = {
-	.name = "door_contact",
-	.short_model = 0x00332560,
-	.secret = "i7ctpLwEHLYoOys5IjCnEiUGxyAIlwcMUEQus385",
+static void reportArmStatus(DeviceStr *dev,char *param)
+{
+	sprintf(dev->value[ATTR_ARM_DISARM],"1");
+	const char *attr_name[] = {
+		dev->type_para->attr[ATTR_ARM_DISARM].name,
+		NULL};
+	const char *attr_value[] = {
+		dev->value[ATTR_ARM_DISARM],
+		NULL};
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
+}
 
+static DeviceTypePara lock = {
+	.name = "lock",
+	.short_model = 0x00092316,
+	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_MC,
+	.device_type = 	DEVICE_TYPE_LOCK_XLQ,
 	.attr = {
-#if (defined V1)
-		{"ContactAlarm",NULL},
-		{"BatteryPercentage",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TamperAlarm",NULL,DEVICE_VELUE_TYPE_INT},
-#else
-		{"ContactState",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TemplateEnableSwitch",cmdTemplateEnableSwitch,DEVICE_VELUE_TYPE_INT},
-#endif
+		{"LockState",NULL,DEVICE_VELUE_TYPE_INT},
+		{"ArmStatus",NULL,DEVICE_VELUE_TYPE_INT},
 		{NULL,NULL},
 	},
-#if (defined V2)
-	.event = {
-		"Error",
-		"LowElectricityAlarm",
-		"TamperAlarm",
-		"ActiveAlarm",
-	},
-#endif
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
-	.reportAlarmStatus = reportAlarmStatus,
+	.reportPowerOn = reportPowerOnCb,
+	.reportPowerOff = reportPowerOffCb,
+	.reportArmStatus = reportArmStatus,
 };
 
 
-DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDevicelock(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
-	int arm_status = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	door_contact.product_key = theConfig.door_contact.product_key;
-	door_contact.device_secret = theConfig.door_contact.device_secret;
-	This->type_para = &door_contact;
+	lock.product_key = theConfig.lock.product_key;
+	lock.device_secret = theConfig.lock.device_secret;
+	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,lock.product_key,
+		lock.device_secret  );
+	This->type_para = &lock;
 	This->addr = addr;
 	This->channel = channel;
-	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
-	}
-	sqlGetDoorContactArmStatus(id,&arm_status);
-	sprintf(This->value[ATTR_ARM_DISARM],"%d",arm_status);
-	for (i=0; This->type_para->attr[i].name != NULL; i++) {
-		printf("[%s]name:%s,value:%s\n",__FUNCTION__,This->type_para->attr[i].name,This->value[i]);
-	}
+	}	
 
 	return This;
 }

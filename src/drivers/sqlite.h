@@ -54,6 +54,8 @@ typedef struct _TSqlite
     void (*step)(struct _TSqlite *This);
     void (*bind_int)(struct _TSqlite *This,int arg);
     void (*bind_text)(struct _TSqlite *This,char *text);
+    void (*bind_blob)(struct _TSqlite *This,void *data,int size);
+	void (*getBlobData)(struct _TSqlite *This,void *data);
 } TSqlite;
 
 typedef struct _TSqliteData {      

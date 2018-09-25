@@ -3,7 +3,7 @@
  *
  *       Filename:  device_air_condition_midea.c
  *
- *    Description:  美的空调设备 
+ *    Description:  美的空调设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -33,25 +33,53 @@
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
+static void setMideaData(DeviceStr *This);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
+#define MAX_MIDEA_AIR_CONDITION   4   // 最大美的空调数量
 enum {
-	ATTR_ERROR,
+	ATTR_CURRENT_TEMP,
+
 	ATTR_SWICH,
 	ATTR_MODE,
 	ATTR_SPEED,
-	ATTR_CURRENT_TEMP,
 	ATTR_TEMP,
-	ATTR_SLAVE_ADDR,
-	ATTR_ROOM_ADDR,
+
+	ATTR_SWICH1,
+	ATTR_MODE1,
+	ATTR_SPEED1,
+	ATTR_TEMP1,
+
+	ATTR_SWICH2,
+	ATTR_MODE2,
+	ATTR_SPEED2,
+	ATTR_TEMP2,
+
+	ATTR_SWICH3,
+	ATTR_MODE3,
+	ATTR_SPEED3,
+	ATTR_TEMP3,
 };
 
+typedef struct _MideaAirConditionSlave {                
+    int slave_addr ;                                    
+    int room_addr ;                                     
+    int temp ;                                          
+    int mode ;                                          
+    int speed ;                                         
+}MideaAirConditionSlave;                                
+                                                        
+typedef struct _MideaAirConditionData {                 
+    MideaAirConditionSlave dev[MAX_MIDEA_AIR_CONDITION];
+}MideaAirConditionData;                                 
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
+static MideaAirConditionData dev_midea;
+
 static int getAttrCb(DeviceStr *dev, const char *attr_set[])
 {
     DPRINT("get attr, devid:%s, attribute name:\n", dev->id);
@@ -84,8 +112,8 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 		if (strcmp(attr_name,dev->type_para->attr[i].name) == 0) {
 			sprintf(dev->value[i],"%s",attr_value);
 			DPRINT("[%s,%s]%s:%s\n",__FUNCTION__,__FILE__,attr_name,attr_value);
-			if (dev->type_para->attr[i].attrcb)
-				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
+			if (dev->type_para->attr[i].attrMultitermcb)
+				dev->type_para->attr[i].attrMultitermcb(dev,dev->value[i],attr_name);
 			break;
 		}
 	}
@@ -93,23 +121,46 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void cmdSwich(DeviceStr *dev,char *value)
+static int getAttrArrayNum(const char *name)
 {
+	int num = 0;	
+	while (*name != '\0') {
+		if (*name == '_') {
+			name++;
+			num = atoi(name);
+		}
+		name++;
+	}
+	return num;
+}
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief cmdSwich 空调开关
+ *
+ * @param dev
+ * @param value
+ */
+/* ---------------------------------------------------------------------------*/
+static void cmdSwich(DeviceStr *dev,char *value,const char *attr_name)
+{
+	int num = getAttrArrayNum(attr_name);
+	num--;
+	DPRINT("num = %d\n", num);
 	int value_int = atoi(value);
-	sprintf(dev->value[ATTR_SWICH],"%s",value);
+	sprintf(dev->value[ATTR_SWICH + num*MAX_MIDEA_AIR_CONDITION],"%s",value);
 	DPRINT("[%s]value:%s,int:%d,buf:%s,speed:%s\n",
 			__FUNCTION__,
 			value,
 			value_int,
-			dev->value[ATTR_SWICH],
-			dev->value[ATTR_SPEED] );
+			dev->value[ATTR_SWICH + num*MAX_MIDEA_AIR_CONDITION],
+			dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION] );
 	if (value_int) {
 		smarthomeAirCondtionCmdCtrOpen(dev,
-				atoi(dev->value[ATTR_TEMP]),
-				atoi(dev->value[ATTR_MODE]),
-				atoi(dev->value[ATTR_SPEED]));
+				atoi(dev->value[ATTR_TEMP + num*MAX_MIDEA_AIR_CONDITION]),
+				atoi(dev->value[ATTR_MODE + num*MAX_MIDEA_AIR_CONDITION]),
+				atoi(dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION]),num);
 	} else
-		smarthomeFreshAirCmdCtrClose(dev);
+		smarthomeFreshAirCmdCtrClose(dev,num);
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -123,146 +174,136 @@ static void cmdSwich(DeviceStr *dev,char *value)
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  *
  */
 /* ---------------------------------------------------------------------------*/
-static void cmdWorkMode(DeviceStr *dev,char *value)
+static void cmdWorkMode(DeviceStr *dev,char *value,const char *attr_name)
 {
-	sprintf(dev->value[ATTR_MODE],"%s",value);
+	int num = getAttrArrayNum(attr_name);
+	num--;
+	DPRINT("num = %d\n", num);
+	sprintf(dev->value[ATTR_MODE + num*MAX_MIDEA_AIR_CONDITION],"%s",value);
 	smarthomeAirCondtionCmdCtrOpen(dev,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
-	sqlSetAirConditionPara(dev->id,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_TEMP + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_MODE + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION]),num);
+	dev_midea.dev[num].mode = atoi(value);
+	setMideaData(dev);
 }
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief cmdWindSpeed APP端对应模式为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * @brief cmdWindSpeed APP端对应模式为 0（自动） 2（低档） 3（中档） 4（高档）
  * 协议对应为
  * 第1个Byte为空调温度，范围16-32℃
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  * @param dev
  * @param value
  */
 /* ---------------------------------------------------------------------------*/
-static void cmdWindSpeed(DeviceStr *dev,char *value)
+static void cmdWindSpeed(DeviceStr *dev,char *value,const char *attr_name)
 {
-	sprintf(dev->value[ATTR_SPEED],"%s",value);
+	int num = getAttrArrayNum(attr_name);
+	num--;
+	DPRINT("num = %d\n", num);
+	sprintf(dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION],"%s",value);
 	smarthomeAirCondtionCmdCtrOpen(dev,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
-	sqlSetAirConditionPara(dev->id,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_TEMP + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_MODE + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION]),num);
+	dev_midea.dev[num].speed = atoi(value);
+	setMideaData(dev);
 }
-
-static void cmdTemperature(DeviceStr *dev,char *value)
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief cmdTemperature 设置温度
+ *
+ * @param dev
+ * @param value
+ */
+/* ---------------------------------------------------------------------------*/
+static void cmdTemperature(DeviceStr *dev,char *value,const char *attr_name)
 {
-	sprintf(dev->value[ATTR_TEMP],"%s",value);
+	int num = getAttrArrayNum(attr_name);
+	num--;
+	DPRINT("num = %d\n", num);
+	sprintf(dev->value[ATTR_TEMP + num*MAX_MIDEA_AIR_CONDITION],"%s",value);
 	smarthomeAirCondtionCmdCtrOpen(dev,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
-	sqlSetAirConditionPara(dev->id,
-			atoi(dev->value[ATTR_TEMP]),
-			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_TEMP + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_MODE + num*MAX_MIDEA_AIR_CONDITION]),
+			atoi(dev->value[ATTR_SPEED + num*MAX_MIDEA_AIR_CONDITION]),num);
+	dev_midea.dev[num].temp = atoi(value);
+	setMideaData(dev);
 }
 
 static void cmdGetSwichStatus(DeviceStr *dev)
 {
 	smarthomeAllDeviceCmdGetSwichStatus(dev,1);
 }
-static void cmdModbusSlaveAddress(DeviceStr *dev,char *value)
-{
-	sprintf(dev->value[ATTR_SLAVE_ADDR],"%s",value);
-	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
-			atoi(dev->value[ATTR_SLAVE_ADDR]),
-			atoi(dev->value[ATTR_ROOM_ADDR]));
-	sqlSetMideaAddr(dev->id,atoi(dev->value[ATTR_SLAVE_ADDR]),
-				atoi(dev->value[ATTR_ROOM_ADDR]));
-}
-
-static void cmdRoomAdress(DeviceStr *dev,char *value)
-{
-	sprintf(dev->value[ATTR_ROOM_ADDR],"%s",value);
-	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
-			atoi(dev->value[ATTR_SLAVE_ADDR]),
-			atoi(dev->value[ATTR_ROOM_ADDR]));
-	sqlSetMideaAddr(dev->id,atoi(dev->value[ATTR_SLAVE_ADDR]),
-				atoi(dev->value[ATTR_ROOM_ADDR]));
-}
-
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief reportPowerOnCb 
+ * @brief reportPowerOnCb
  *
- * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档）
  * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
  * 协议对应为
  * 第1个Byte为空调温度，范围16-32℃
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  * @param dev
  * @param param
  */
 /* ---------------------------------------------------------------------------*/
-static void reportPowerOnCb(DeviceStr *dev,char *param)
+static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
 	char speed_change[] = {0,4,3,2}; // 速度转换
 	char mode_change[] = {1,2,0,4,3}; // 模式转换
 	// 固定为开
-	sprintf(dev->value[ATTR_SWICH],"1");
-	sprintf(dev->value[ATTR_TEMP],"%d",param[0]); 
-	sprintf(dev->value[ATTR_SPEED],"%d",speed_change[param[1] & 0x0f]); 
-	sprintf(dev->value[ATTR_MODE],"%d",mode_change[param[1] >> 4]); 
+	sprintf(dev->value[ATTR_SWICH + (channel-1)*MAX_MIDEA_AIR_CONDITION],"1");
+	sprintf(dev->value[ATTR_TEMP + (channel-1)*MAX_MIDEA_AIR_CONDITION],"%d",param[0]);
+	sprintf(dev->value[ATTR_SPEED + (channel-1)*MAX_MIDEA_AIR_CONDITION],"%d",speed_change[param[1] & 0x0f]);
+	sprintf(dev->value[ATTR_MODE + (channel-1)*MAX_MIDEA_AIR_CONDITION],"%d",mode_change[param[1] >> 4]);
 	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_SWICH].name,
-		dev->type_para->attr[ATTR_SPEED].name,
-		dev->type_para->attr[ATTR_MODE].name,
-		dev->type_para->attr[ATTR_TEMP].name,
+		dev->type_para->attr[ATTR_SWICH + (channel-1)*MAX_MIDEA_AIR_CONDITION].name,
+		dev->type_para->attr[ATTR_SPEED + (channel-1)*MAX_MIDEA_AIR_CONDITION].name,
+		dev->type_para->attr[ATTR_MODE + (channel-1)*MAX_MIDEA_AIR_CONDITION].name,
+		dev->type_para->attr[ATTR_TEMP + (channel-1)*MAX_MIDEA_AIR_CONDITION].name,
 		NULL};
 	const char *attr_value[] = {
-		dev->value[ATTR_SWICH],
-		dev->value[ATTR_SPEED],
-		dev->value[ATTR_MODE],
-		dev->value[ATTR_TEMP],
+		dev->value[ATTR_SWICH + (channel-1)*MAX_MIDEA_AIR_CONDITION],
+		dev->value[ATTR_SPEED + (channel-1)*MAX_MIDEA_AIR_CONDITION],
+		dev->value[ATTR_MODE + (channel-1)*MAX_MIDEA_AIR_CONDITION],
+		dev->value[ATTR_TEMP + (channel-1)*MAX_MIDEA_AIR_CONDITION],
 		NULL};
 	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_SWICH].value_type,
-		dev->type_para->attr[ATTR_SPEED].value_type,
-		dev->type_para->attr[ATTR_MODE].value_type,
-		dev->type_para->attr[ATTR_TEMP].value_type,
+		dev->type_para->attr[ATTR_SWICH + (channel-1)*MAX_MIDEA_AIR_CONDITION].value_type,
+		dev->type_para->attr[ATTR_SPEED + (channel-1)*MAX_MIDEA_AIR_CONDITION].value_type,
+		dev->type_para->attr[ATTR_MODE + (channel-1)*MAX_MIDEA_AIR_CONDITION].value_type,
+		dev->type_para->attr[ATTR_TEMP + (channel-1)*MAX_MIDEA_AIR_CONDITION].value_type,
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
 }
 
-static void reportPowerOffCb(DeviceStr *dev)
+static void reportPowerOffCb(DeviceStr *dev,int channel)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
 	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_SWICH].name,
+		dev->type_para->attr[ATTR_SWICH + (channel)*MAX_MIDEA_AIR_CONDITION].name,
 		NULL};
 	const char *attr_value[] = {
-		dev->value[ATTR_SWICH],
+		dev->value[ATTR_SWICH + (channel)*MAX_MIDEA_AIR_CONDITION],
 		NULL};
 	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_SWICH].value_type,
+		dev->type_para->attr[ATTR_SWICH + (channel)*MAX_MIDEA_AIR_CONDITION].value_type,
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
@@ -283,14 +324,29 @@ static DeviceTypePara air_condition_midea = {
 		{"CurrentTemp",NULL,DEVICE_VELUE_TYPE_INT},
 		{"Temperature",cmdTemperature,DEVICE_VELUE_TYPE_INT},
 #else
-		{"Error",NULL,DEVICE_VELUE_TYPE_INT},
-		{"PowerSwitch",cmdSwich,DEVICE_VELUE_TYPE_INT},
-		{"WorkMode",cmdWorkMode,DEVICE_VELUE_TYPE_INT},
-		{"WindSpeed",cmdWindSpeed,DEVICE_VELUE_TYPE_INT},
 		{"CurrentTemperature",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TargetTemperature",cmdTemperature,DEVICE_VELUE_TYPE_INT},
-		{"ModbusSlaveAddress",cmdModbusSlaveAddress,DEVICE_VELUE_TYPE_INT},
-		{"RoomAdress",cmdRoomAdress,DEVICE_VELUE_TYPE_INT},
+
+		// 4组空调数据
+		{"PowerSwitch_1",NULL,DEVICE_VELUE_TYPE_INT,cmdSwich},
+		{"WorkMode_1",NULL,DEVICE_VELUE_TYPE_INT,cmdWorkMode},
+		{"WindSpeed_1",NULL,DEVICE_VELUE_TYPE_INT,cmdWindSpeed},
+		{"TargetTemperature_1",NULL,DEVICE_VELUE_TYPE_INT,cmdTemperature},
+
+		{"PowerSwitch_2",NULL,DEVICE_VELUE_TYPE_INT,cmdSwich},
+		{"WorkMode_2",NULL,DEVICE_VELUE_TYPE_INT,cmdWorkMode},
+		{"WindSpeed_2",NULL,DEVICE_VELUE_TYPE_INT,cmdWindSpeed},
+		{"TargetTemperature_2",NULL,DEVICE_VELUE_TYPE_INT,cmdTemperature},
+
+		{"PowerSwitch_3",NULL,DEVICE_VELUE_TYPE_INT,cmdSwich},
+		{"WorkMode_3",NULL,DEVICE_VELUE_TYPE_INT,cmdWorkMode},
+		{"WindSpeed_3",NULL,DEVICE_VELUE_TYPE_INT,cmdWindSpeed},
+		{"TargetTemperature_3",NULL,DEVICE_VELUE_TYPE_INT,cmdTemperature},
+
+		{"PowerSwitch_4",NULL,DEVICE_VELUE_TYPE_INT,cmdSwich},
+		{"WorkMode_4",NULL,DEVICE_VELUE_TYPE_INT,cmdWorkMode},
+		{"WindSpeed_4",NULL,DEVICE_VELUE_TYPE_INT,cmdWindSpeed},
+		{"TargetTemperature_4",NULL,DEVICE_VELUE_TYPE_INT,cmdTemperature},
+
 #endif
 		{NULL,NULL},
 	},
@@ -301,22 +357,59 @@ static DeviceTypePara air_condition_midea = {
 	.reportPowerOff = reportPowerOffCb,
 };
 
+static void getMideaData(DeviceStr *This,char *id)
+{
+	int i;
+	sqlGetMideaAddr(id,&dev_midea);
+	for (i=0; i<MAX_MIDEA_AIR_CONDITION; i++) {
+		if (dev_midea.dev[i].temp < 16)
+			dev_midea.dev[i].temp = 16;
+		
+	}
+	sprintf(This->value[ATTR_TEMP],"%d",dev_midea.dev[0].temp);
+	sprintf(This->value[ATTR_SPEED],"%d",dev_midea.dev[0].speed);
+	sprintf(This->value[ATTR_MODE],"%d",dev_midea.dev[0].mode);
+	smarthomeAirCondtionMideaCmdSlaveAddr(This,
+			dev_midea.dev[0].slave_addr,dev_midea.dev[0].room_addr,0);
+
+	sprintf(This->value[ATTR_TEMP1],"%d",dev_midea.dev[1].temp);
+	sprintf(This->value[ATTR_SPEED1],"%d",dev_midea.dev[1].speed);
+	sprintf(This->value[ATTR_MODE1],"%d",dev_midea.dev[1].mode);
+	smarthomeAirCondtionMideaCmdSlaveAddr(This,
+			dev_midea.dev[1].slave_addr,dev_midea.dev[1].room_addr,1);
+
+	sprintf(This->value[ATTR_TEMP2],"%d",dev_midea.dev[2].temp);
+	sprintf(This->value[ATTR_SPEED2],"%d",dev_midea.dev[2].speed);
+	sprintf(This->value[ATTR_MODE2],"%d",dev_midea.dev[2].mode);
+	smarthomeAirCondtionMideaCmdSlaveAddr(This,
+			dev_midea.dev[2].slave_addr,dev_midea.dev[2].room_addr,2);
+
+	sprintf(This->value[ATTR_TEMP3],"%d",dev_midea.dev[3].temp);
+	sprintf(This->value[ATTR_SPEED3],"%d",dev_midea.dev[3].speed);
+	sprintf(This->value[ATTR_MODE3],"%d",dev_midea.dev[3].mode);
+	smarthomeAirCondtionMideaCmdSlaveAddr(This,
+			dev_midea.dev[3].slave_addr,dev_midea.dev[3].room_addr,3);
+}
+
+static void setMideaData(DeviceStr *This)
+{
+	sqlSetMideaAddr(This->id,&dev_midea,sizeof(dev_midea));
+}
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief registDeviceAirCondition 中央空调/大金空调
+ * @brief registDeviceAirCondition 美的空调
  *
  * @param id
  * @param addr
  * @param channel
  *
- * @returns 
+ * @returns
  */
 /* ---------------------------------------------------------------------------*/
 DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
-	int slave_addr = 0,room_addr = 0,temp = 0,mode = 0,speed = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
 	air_condition_midea.product_key = theConfig.air_condition_midea.product_key;
@@ -329,19 +422,13 @@ DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channe
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
-	}	
-	sqlGetMideaAddr(id,&slave_addr,&room_addr);
-	sqlGetAirConditionPara(id,&temp,&mode,&speed);
-	if (temp < 16)
-		temp = 16;
-	sprintf(This->value[ATTR_TEMP],"%d",temp);
-	sprintf(This->value[ATTR_SPEED],"%d",speed);
-	sprintf(This->value[ATTR_MODE],"%d",mode);
-	sprintf(This->value[ATTR_SLAVE_ADDR],"%d",slave_addr);
-	sprintf(This->value[ATTR_ROOM_ADDR],"%d",room_addr);
+	}
+
+	getMideaData(This,id);
+
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		printf("[%s]name:%s,value:%s\n",__FUNCTION__,This->type_para->attr[i].name,This->value[i]);
-	}	
+	}
 
 	return This;
 }

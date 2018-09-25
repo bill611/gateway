@@ -23,8 +23,8 @@ extern "C" {
 
 
 	extern int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel);
-	extern void gwReportPowerOn(char *id,char *param);
-	extern void gwReportPowerOff(char *id);
+	extern void gwReportPowerOn(char *id,char *param,int channel);
+	extern void gwReportPowerOff(char *id,int channel);
 	extern void gwReportAlarmStatus(char *id,char *param);
 	extern void gwReportEleQuantity(char *id,char *param);
 	extern void gwReportElePower(char *id,char *param);

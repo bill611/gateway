@@ -108,7 +108,7 @@ static void cmdSwich(DeviceStr *dev,char *value)
 		DPRINT("%s:%d\n", __FUNCTION__,speed);
 		smarthomeFreshAirCmdCtrOpen(dev,speed);
 	} else
-		smarthomeFreshAirCmdCtrClose(dev);
+		smarthomeFreshAirCmdCtrClose(dev,0);
 }
 
 /* ---------------------------------------------------------------------------*/
@@ -133,7 +133,7 @@ static void cmdWorkMode(DeviceStr *dev,char *value)
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_SPEED]),1);
 }
 /* ---------------------------------------------------------------------------*/
 /**
@@ -155,7 +155,7 @@ static void cmdWindSpeed(DeviceStr *dev,char *value)
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_SPEED]),1);
 }
 
 static void cmdTemperature(DeviceStr *dev,char *value)
@@ -164,7 +164,7 @@ static void cmdTemperature(DeviceStr *dev,char *value)
 	smarthomeAirCondtionCmdCtrOpen(dev,
 			atoi(dev->value[ATTR_TEMP]),
 			atoi(dev->value[ATTR_MODE]),
-			atoi(dev->value[ATTR_SPEED]));
+			atoi(dev->value[ATTR_SPEED]),1);
 }
 
 static void cmdGetSwichStatus(DeviceStr *dev)
@@ -189,7 +189,7 @@ static void cmdGetSwichStatus(DeviceStr *dev)
  * @param param
  */
 /* ---------------------------------------------------------------------------*/
-static void reportPowerOnCb(DeviceStr *dev,char *param)
+static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
 	char speed_change[] = {0,4,3,2}; // 速度转换
 	char mode_change[] = {1,2,0,4,3}; // 模式转换
@@ -220,7 +220,7 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 			attr_name,attr_value,attr_value_type);
 }
 
-static void reportPowerOffCb(DeviceStr *dev)
+static void reportPowerOffCb(DeviceStr *dev,int channel)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
 	const char *attr_name[] = {

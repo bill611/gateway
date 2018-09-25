@@ -336,6 +336,13 @@ static void SQLite_reset(struct _TSqlite *This)
     sqlite3_reset(This->Private->ppStmt);
 	This->Private->bind_num = 1;
 }
+static void SQLite_get_blob_data(struct _TSqlite *This,void *data)
+{
+	const void *p;
+	p = sqlite3_column_blob(This->Private->ppStmt,0);
+    int size = sqlite3_column_bytes(This->Private->ppStmt,0);
+	memcpy(data,p,size);
+}
 static void SQLite_finalize(struct _TSqlite *This)
 {
     sqlite3_finalize(This->Private->ppStmt);
@@ -347,6 +354,11 @@ static void SQLite_step(struct _TSqlite *This)
 static void SQLite_bind_int(struct _TSqlite *This,int arg)
 {
     sqlite3_bind_int(This->Private->ppStmt,This->Private->bind_num,arg);
+	This->Private->bind_num++;
+}
+static void SQLite_bind_blob(struct _TSqlite *This,void *data,int size)
+{
+    sqlite3_bind_blob(This->Private->ppStmt,This->Private->bind_num,data,size,NULL);
 	This->Private->bind_num++;
 }
 static void SQLite_bind_text(struct _TSqlite *This,char *text)
@@ -404,6 +416,8 @@ TSqlite * CreateLocalQuery(const char *FileName)
     This->step = SQLite_step;
     This->bind_int = SQLite_bind_int;
     This->bind_text = SQLite_bind_text;
+    This->bind_blob = SQLite_bind_blob;
+	This->getBlobData = SQLite_get_blob_data;
     return This;
 }
 //----------------------------------------------------------------------------

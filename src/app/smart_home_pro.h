@@ -45,6 +45,7 @@ typedef enum
 	DEVICE_TYPE_JLCZ16 = 48,		// 48	16A计量插座	
 	DEVICE_TYPE_ZYKT_MIDEA = 49,	// 49	美的中央空调
 	DEVICE_TYPE_KQJCY = 51,			// 51 空气检测仪
+	DEVICE_TYPE_LOCK_XLQ = 57,		// 57 西勒奇门锁/安朗杰门锁
 	DEVICE_TYPE_JD = 102,		// 102	警笛报警器
 }TC_Device_Type;
 
@@ -70,6 +71,8 @@ typedef enum
 	Demand_Time_Res					= 0x09,			//查询时间返回
 	Demand_Air_Para					= 0x10,			//查询室内环境参数
 	Demand_Air_Para_Res				= 0x11,			//查询室内环境参数返回
+	Device_Ele_Quantity_Check		= 0x0e, 		//查询电量功率
+	Device_Ele_Quantity_Check_Res	= 0x0f, 		//查询电量功率返回
 	Device_Ele_Quantity				= 0x58,			//设备每隔30分钟上报用电量
 	Device_Ele_Quantity_Res			= 0x59,			//设备每隔30分钟上报用电量返回
 	Device_Ele_Power				= 0x5a,			//设备每隔30分钟上报当前功率，或功率异常时立即上报当前功率，功率异常范围值：
@@ -82,6 +85,8 @@ typedef enum
 	Device_Off						= 0x92,			//关闭单元
 	Device_Off_Res					= 0x93,			//关闭单元返回
 	
+	Device_Arm_Res					= 0xad,			//布防返回
+
 	Device_Scene		 			= 0xb0,
 	Device_Scene_Res 				= 0xb1,
 	Device_Midea_Slave_addr 		= 0xbc, 		//配置美的空调从地址
@@ -145,7 +150,7 @@ extern void smarthomeAllDeviceCmdGetSwichStatus(DeviceStr *dev,uint16_t channel)
 extern void smarthomeLightCmdCtrOpen(DeviceStr *dev,uint16_t channel);
 extern void smarthomeLightCmdCtrClose(DeviceStr *dev,uint16_t channel);
 extern void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value);
-extern void smarthomeFreshAirCmdCtrClose(DeviceStr *dev);
+extern void smarthomeFreshAirCmdCtrClose(DeviceStr *dev,uint8_t channel);
 extern void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev);
 extern void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev);
 extern void smarthomeCurtainCmdCtrOpen(DeviceStr *dev,uint16_t value);
@@ -153,11 +158,13 @@ extern void smarthomeCurtainCmdCtrClose(DeviceStr *dev);
 extern void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t mode,
-		uint8_t speed);
+		uint8_t speed,
+		uint8_t channel);
 extern void smarthomeFreshAirCmdGetPara(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t hum,
 		uint8_t tvoc,
 		uint16_t pm25);
+extern void smarthomeCheckOutLetElePower(DeviceStr *dev);
 extern void smarthomeInit(void);
 #endif

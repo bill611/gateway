@@ -22,11 +22,11 @@ extern "C" {
 #endif  /* __cplusplus */
 
 #include <stdint.h>
-	extern int sqlGetDeviceStart(void);
+	extern int sqlGetDeviceCnt(void);
 	extern void sqlGetDevice(char *id,
 			int *dev_type,
 			uint16_t *addr,
-			uint16_t *channel);
+			uint16_t *channel,int index);
 	extern void sqlGetDeviceEnd(void);
 	extern void sqlInsertDevice(char *id,
 			int dev_type,
@@ -38,10 +38,14 @@ extern "C" {
 	extern void sqlClearDevice(void);
 	extern void sqlSetEleQuantity(int value,char *id);
 	extern int sqlGetEleQuantity(char *id);
-	extern void sqlSetMideaAddr(char *id,int slave_addr,int room_addr);
-	extern void sqlGetMideaAddr(char *id,int *slave_addr,int *room_addr);
+	extern void sqlSetMideaAddr(char *id,void *data,int size);
+	extern void sqlGetMideaAddr(char *id,void *data);
 	extern void sqlSetAirConditionPara(char *id,int temp,int mode,int speed);
 	extern void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed);
+	extern void sqlSetMotionCurtainArmStatus(char *id,int arm_status);
+	extern void sqlGetMotionCurtainArmStatus(char *id,int *arm_status);
+	extern void sqlSetDoorContactArmStatus(char *id,int arm_status);
+	extern void sqlGetDoorContactArmStatus(char *id,int *arm_status);
 
 
 #ifdef __cplusplus

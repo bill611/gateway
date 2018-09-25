@@ -37,6 +37,7 @@
 #include "device_door_contact.h"
 #include "device_outlet.h"
 #include "device_air_box.h"
+#include "device_lock.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -77,17 +78,18 @@ static GateWayPrivateAttr gw_attrs[];
 static List *sub_dev_list = NULL; // 链表保存子设备
 // static SubDevice sub_device;
 static SubDeviceRegist device_regist[] = {
-	{DEVICE_TYPE_DK,registDeviceLight},
-	{DEVICE_TYPE_XFXT,registDeviceFreshAir},
-	{DEVICE_TYPE_HW,registDeviceMotionCurtain},
-	{DEVICE_TYPE_ZYKT,registDeviceAirCondition},
-	{DEVICE_TYPE_JD,registDeviceAlarmWhistle},
-	{DEVICE_TYPE_CL,registDeviceCurtain},
-	{DEVICE_TYPE_MC,registDeviceDoorContact},
-	{DEVICE_TYPE_JLCZ10,registDeviceOutlet10},
-	{DEVICE_TYPE_JLCZ16,registDeviceOutlet16},
-	{DEVICE_TYPE_KQJCY,registDeviceAirBox},
+	{DEVICE_TYPE_DK,		registDeviceLight},
+	{DEVICE_TYPE_XFXT,		registDeviceFreshAir},
+	{DEVICE_TYPE_HW,		registDeviceMotionCurtain},
+	{DEVICE_TYPE_ZYKT,		registDeviceAirCondition},
+	{DEVICE_TYPE_JD,		registDeviceAlarmWhistle},
+	{DEVICE_TYPE_CL,		registDeviceCurtain},
+	{DEVICE_TYPE_MC,		registDeviceDoorContact},
+	{DEVICE_TYPE_JLCZ10,	registDeviceOutlet10},
+	{DEVICE_TYPE_JLCZ16,	registDeviceOutlet16},
+	{DEVICE_TYPE_KQJCY,		registDeviceAirBox},
 	{DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirConditionMidea},
+	{DEVICE_TYPE_LOCK_XLQ,	registDevicelock},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
@@ -188,6 +190,7 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
     int ret = -1;
 	unsigned int i;
 	for (i=0; i<NELEMENTS(device_regist); i++) {
+		DPRINT("[%s] device type:%d,type:%d\n",__func__,device_regist[i].device_type,type);
 		if (device_regist[i].device_type == type)	
 			break;
 	}
@@ -319,16 +322,15 @@ void gwDeviceInit(void)
 void gwLoadDeviceData(void)
 {
 	int i;
-	int device_num = sqlGetDeviceStart();
+	int device_num = sqlGetDeviceCnt();
 	char id[32] = {0};
 	int type;
 	uint16_t addr,channel;
 	sub_dev_list = listCreate(sizeof(DeviceStr *));
 	for (i=0; i<device_num; i++) {
-		sqlGetDevice(id,&type,&addr,&channel);	
+		sqlGetDevice(id,&type,&addr,&channel,i);	
 		gwRegisterSubDevice(id,type,addr,channel);
 	}
-	sqlGetDeviceEnd();
 }
 
 static DeviceStr *getSubDevice(char *id)
@@ -358,7 +360,7 @@ static DeviceStr *getSubDevice(char *id)
  * @param param
  */
 /* ---------------------------------------------------------------------------*/
-void gwReportPowerOn(char *id,char *param)
+void gwReportPowerOn(char *id,char *param,int channel)
 {
 	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
 	DeviceStr * dev = getSubDevice(id);
@@ -366,7 +368,7 @@ void gwReportPowerOn(char *id,char *param)
 		return;
 	if (dev->type_para->reportPowerOn) {
 		DPRINT("[%s]---->", dev->type_para->name);
-		dev->type_para->reportPowerOn(dev,param);
+		dev->type_para->reportPowerOn(dev,param,channel);
 	}
 }
 
@@ -377,14 +379,14 @@ void gwReportPowerOn(char *id,char *param)
  * @param id
  */
 /* ---------------------------------------------------------------------------*/
-void gwReportPowerOff(char *id)
+void gwReportPowerOff(char *id,int channel)
 {
 	DeviceStr * dev = getSubDevice(id);
 	if (!dev)
 		return;
 	if (dev->type_para->reportPowerOff) {
 		DPRINT("[%s]---->", dev->type_para->name);
-		dev->type_para->reportPowerOff(dev);
+		dev->type_para->reportPowerOff(dev,channel);
 	}
 }
 
@@ -498,6 +500,14 @@ void gwReportAirPara(char *id,char *param)
 	}
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwGetAirPara 查询空气参数,有空气盒子等设备时使用j
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
 void gwGetAirPara(char *id,char *param)
 {
 	// DPRINT("[%s]id:%s\n", __FUNCTION__,id);
@@ -508,5 +518,25 @@ void gwGetAirPara(char *id,char *param)
 	if (dev->type_para->getAirPara) {
 		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->getAirPara(dev);
+	}
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportPowerOn 上报设备开启
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
+void gwReportArmStatus(char *id,char *param)
+{
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
+	if (dev->type_para->reportArmStatus) {
+		DPRINT("[%s]---->", dev->type_para->name);
+		dev->type_para->reportArmStatus(dev,param);
 	}
 }

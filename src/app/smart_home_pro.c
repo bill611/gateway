@@ -89,7 +89,7 @@ static void smarthomeSendDataPacket(
 	packet->channel_num = ch_num;	//通道数据
 	packet->current_channel = ch;	//当前通道
 	packet->cmd = cmd;
-	
+
 	if (param)
 		memcpy(packet->param, param, param_len);
 	zigbeeSendData(d_addr,buf,param_len + 6);
@@ -106,14 +106,14 @@ void smarthomeMultiPacket(uint8_t *buf, uint8_t *len,uint8_t devNum)
 #if 0
 	MULTI_CTRL_TypeDef *multiPacket;
 	multiPacket = (MULTI_CTRL_TypeDef *)&buf[3];
-	
+
 	memset(multiPacket,0,sizeof(multiPacket)*MULTI_PACKET_DEV_MAX);
-	
+
 	memset(buf, 0xff, 3);	//协议类型，群控协议固定为3个0XFF
-	
+
 	for (uint32_t i=0; i<devNum; i++)
 	{
-		
+
 		EEPROM_GetDeviceInfo(multi[i].id, &sDev);
 		multiPacket[i].addr = (uint16_t)(sDev.devUnit>>16);		//设备的ZIGBEE地址
 		multiPacket[i].channel = (uint8_t)(sDev.devUnit&0xff);	//当前通道
@@ -127,9 +127,9 @@ void smarthomeMultiPacket(uint8_t *buf, uint8_t *len,uint8_t devNum)
 			multiPacket[i].param = multi[i].param;
 		}
 	}
-	
+
 	*len = 3+devNum*6;
-#endif	
+#endif
 }
 
 
@@ -148,15 +148,15 @@ void smarthomeReceiveNeeded(uint16_t addr, uint8_t ch, uint8_t cmd, uint8_t id)
 	SMART_HOME_PRO *packet;
 	int32_t param[3];
 
-	
+
 	packet = (SMART_HOME_PRO *)zbSend.cmdData;
-	
+
 	//正在发送中的数据是否为单控指令，只有单控指令才会等待回复
 	if (zbSend.dstAddr == 0xffff) //正在发送的指令为群控，不需回复
 	{
 		return;
 	}
-	
+
 	//判断收到的指令是不是正在等待回复的指令
 	if( (addr == packet->addr) && (ch == packet->current_channel) && (cmd == packet->cmd+1) )
 	{
@@ -166,7 +166,7 @@ void smarthomeReceiveNeeded(uint16_t addr, uint8_t ch, uint8_t cmd, uint8_t id)
 			param[1] = id;//设备的ID号
 			CtrlDeviceRep(param,zbSend.TAG,&zbSend.dAddr,&zbSend.tAddr);
 		}
-		
+
 		memset( &zbSend,0,sizeof(zbSend) );	//终止发送此命令
 	}
 	else
@@ -190,12 +190,12 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 	uint16_t addr;
 	uint8_t ch;
 	zbDev_TypeDef addrBuf[MAX_REGIST_DEVICE];
-	
+
 	EEPROM_GetZbAddr((uint8_t *)addrBuf);	//读出所有设备的地址及通道信息
-	
+
 	addr = (uint16_t)(devUnit>>16); //从单元码中提取地址
 	ch = (uint8_t)(devUnit&0xff);	//提取出当前通道
-	
+
 	for (int i=0; i<MAX_REGIST_DEVICE; i++)
 	{
 		if( (addr == addrBuf[i].addr) && (ch == addrBuf[i].channel) )
@@ -212,13 +212,13 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 
 /*********************************************************************************************************
 ** Descriptions:       添加新设备
-** input parameters:  
+** input parameters:
 ** output parameters:   无
 ** Returned value:      1成功
 *********************************************************************************************************/
 static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf,char *id)
 {
-	DPRINT("[%s]id:%s,type:%d,addr:%x\n", 
+	DPRINT("[%s]id:%s,type:%d,addr:%x\n",
 			__FUNCTION__,id,cmdBuf->device_type,cmdBuf->addr);
 	sqlInsertDevice(id,
 			cmdBuf->device_type,
@@ -282,7 +282,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 					DPRINT("is not net in status\n");
 					break;
 				}
+#if 1
+				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02XEEE",
+#else
 				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
+#endif
 						packet->param[0],
 						packet->param[1],
 						packet->param[2],
@@ -306,7 +310,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						packet->current_channel,
 						NULL,0);
 				int ret = gwRegisterSubDevice(id,packet->device_type,packet->addr,packet->channel_num);
-				if (ret == 0) 
+				if (ret == 0)
 					smarthomeAddNewDev(packet,id);
 				// 根据阿里APP设定，完成入网后禁止入网
 				zigbeeNetIn(0);
@@ -314,8 +318,8 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			break;
 		case NetOut_Report_Res:	//有设备要退网
 			DPRINT("out,addr:%x\n",packet->addr);
-			break;	
-			
+			break;
+
 		case Demand_Sw_Status_Res:	//开关状态返回
 			DPRINT("status\n");
 			// for (i=0; i<idCnt; i++)
@@ -327,7 +331,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				// EEPROM_GetDeviceInfo(id[i+1], &dev);	//读出下一个待处理设备信息
 			// }
 			break;
-		
+
 		case Demand_Air_Para:	//查询室内环境参数
 			{
 				smarthomeGetId(packet,id);
@@ -337,27 +341,27 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			{
 				smarthomeGetId(packet,id);
 				DPRINT("on:%s\n",id);
-				gwReportPowerOn(id,packet->param);
+				gwReportPowerOn(id,packet->param,packet->current_channel);
 			} break;
-			
+
 		case Device_Off_Res:	//设备关
 			{
 				smarthomeGetId(packet,id);
 				DPRINT("off:%s\n",id);
-				gwReportPowerOff(id);
+				gwReportPowerOff(id,packet->current_channel);
 			} break;
-		
+
 		case Demand_Device_Alarm_Type_Res:		//查询单元的警报状态返回
 			{
 				smarthomeGetId(packet,id);
 				DPRINT("alarm_status:%s,%d\n",id,packet->param[0]);
 				gwReportAlarmStatus(id,packet->param);
 			} break;
-			
+
 		case Device_Scene:		//情景控制
 			// SceneStart(packet->param[0],1);
 			break;
-			
+
 		case Device_Ele_Quantity:		//计量插座每隔30分钟上报用电量
 			{
 				smarthomeGetId(packet,id);
@@ -371,7 +375,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						packet->current_channel,
 						NULL,0);
 			} break;
-			
+
 		case Device_Ele_Power:		//计量插座每隔30分钟上报用功率
 			{
 				smarthomeGetId(packet,id);
@@ -385,7 +389,13 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						packet->current_channel,
 						NULL,0);
 			} break;
-			
+		case Device_Ele_Quantity_Check_Res:		//查询功率返回
+			{
+				smarthomeGetId(packet,id);
+				DPRINT("ele power:%s\n",id);
+				gwReportElePower(id,packet->param);
+			} break;
+
 		case Device_Air_Para:		// 空气盒子每隔段时间上报空气参数
 			{
 				smarthomeGetId(packet,id);
@@ -400,6 +410,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						NULL,0);
 			} break;
 
+		case Device_Arm_Res:	//布防返回
+			{
+				smarthomeGetId(packet,id);
+				gwReportArmStatus(id,packet->param);
+			}break;
 		default:
 			break;
 	}
@@ -417,19 +432,19 @@ static void *smarthomeThread(void *arg)
 	pthread_exit(NULL);
 }
 
-void smarthomeInit(void)                                        
-{                                                               
+void smarthomeInit(void)
+{
 	sqlInit();
 	zigbeeInit();
-    zigbeeSetDataRecvFunc(smarthomeRecieve);                    
-                                                                
-    pthread_t task;                                             
-    pthread_attr_t attr;                                        
-                                                                
-    pthread_attr_init(&attr);                                   
+    zigbeeSetDataRecvFunc(smarthomeRecieve);
+
+    pthread_t task;
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(&task, &attr, smarthomeThread, NULL);        
-}                                                               
+    pthread_create(&task, &attr, smarthomeThread, NULL);
+}
 
 void smarthomeAllDeviceCmdGetSwichStatus(DeviceStr *dev,uint16_t channel)
 {
@@ -469,7 +484,7 @@ void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value)
 	uint8_t param[2] = {0};
 	param[0] = value;
 	DPRINT("[%s]type:%d,value:%d\n",
-			__FUNCTION__, 
+			__FUNCTION__,
 			dev->type_para->device_type,
 			param[0]);
 	smarthomeSendDataPacket(
@@ -480,15 +495,16 @@ void smarthomeFreshAirCmdCtrOpen(DeviceStr *dev,uint8_t value)
 			0,param,sizeof(param));
 }
 
-void smarthomeFreshAirCmdCtrClose(DeviceStr *dev)
+void smarthomeFreshAirCmdCtrClose(DeviceStr *dev,uint8_t channel)
 {
 	DPRINT("[%s]type:%d\n",__FUNCTION__, dev->type_para->device_type);
+	channel++; // 通道从1开始
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Off,
 			dev->type_para->device_type,
 			dev->channel,
-			0,NULL,0);
+			channel,NULL,0);
 }
 
 void smarthomeFreshAirCmdGetPara(DeviceStr *dev,
@@ -515,7 +531,7 @@ void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
 	uint8_t param[2] = {0};
 	param[0] = 6; // 默认为６分钟
 	DPRINT("[%s]type:%d,value:%d\n",
-			__FUNCTION__, 
+			__FUNCTION__,
 			dev->type_para->device_type,
 			param[0]);
 	smarthomeSendDataPacket(
@@ -563,15 +579,15 @@ void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief smarthomeAirCondtionCmdCtrOpen 
- * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * @brief smarthomeAirCondtionCmdCtrOpen
+ * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档）
  * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
  * 协议对应为
  * 第1个Byte为空调温度，范围16-32℃
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  *
  * @param dev
@@ -583,47 +599,62 @@ void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
 void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t mode,
-		uint8_t speed)
+		uint8_t speed,
+		uint8_t channel)
 {
 	char speed_change[] = {0,3,3,2,1,1}; // 速度转换
 	char mode_change[] = {2,0,1,4,3}; // 模式转换
 	uint8_t param[2] = {0};
 	DPRINT("[%s]type:%d,temp:%d:,mode:%d,speed:%d\n",
-			__FUNCTION__, 
+			__FUNCTION__,
 			dev->type_para->device_type,
 			temp,
 			mode_change[mode],
 			speed_change[speed]);
 	param[0] = temp;
 	param[1] = mode_change[mode]<< 4 | speed_change[speed];
+	channel++; // 通道从1开始
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_On,
 			dev->type_para->device_type,
 			dev->channel,
-			1,param,sizeof(param));
+			channel,param,sizeof(param));
 }
 
 
 void smarthomeAirCondtionMideaCmdSlaveAddr(DeviceStr *dev,
 		uint8_t slave_addr,
-		uint8_t room_addr)
+		uint8_t room_addr,
+		uint8_t channel)
 {
 	uint8_t param[3] = {0};
 	DPRINT("[%s]type:%d,slave:%d:room:%d\n",
-			__FUNCTION__, 
+			__FUNCTION__,
 			dev->type_para->device_type,
 			slave_addr,
 			room_addr);
 	param[0] = slave_addr;
 	param[1] = 0;
 	param[2] = room_addr;
+	channel++; // 通道从1开始
 	smarthomeSendDataPacket(
 			dev->addr,
 			Device_Midea_Slave_addr,
 			dev->type_para->device_type,
 			dev->channel,
-			1,param,sizeof(param));
+			channel,param,sizeof(param));
+}
+
+
+void smarthomeCheckOutLetElePower(DeviceStr *dev)
+{
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Ele_Quantity_Check,
+			dev->type_para->device_type,
+			dev->channel,
+			dev->channel,NULL,0);
 }
 
 

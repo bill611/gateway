@@ -593,6 +593,8 @@ static int subDevGetProperty(char *in, char *out, int out_len, void *ctx)
 				}
 				break;
 			}
+			if (dev->type_para->checkAttrs)
+				dev->type_para->checkAttrs(dev);
 		}
 	}
 	char *p = cJSON_PrintUnformatted(pJson);
@@ -647,6 +649,8 @@ static int subDevSetProperty(char *in, void *ctx)
 					dev->type_para->attr[i].name,dev->value[i]);
 			if (dev->type_para->attr[i].attrcb)
 				dev->type_para->attr[i].attrcb(dev,dev->value[i]);
+			if (dev->type_para->attr[i].attrMultitermcb)
+				dev->type_para->attr[i].attrMultitermcb(dev,dev->value[i],dev->type_para->attr[i].name);
 		}
 	}
 	cJSON_Delete(rJson);
@@ -884,7 +888,8 @@ void aliSdkSubDevReportEvent(DeviceStr *dev,
 		cJSON_Delete(pJson);
 		return ;
 	}
-	DPRINT("report event: %s\n", p);
+	DPRINT("report event[%s]: %s\n", event_name,p);
+	// 上报事件，不等待云端确认
 	linkkit_gateway_trigger_event_json_sync(dev->devid,event_name, p, 5000);
 	cJSON_Delete(pJson);
 	free(p);

@@ -3,7 +3,7 @@
  *
  *       Filename:  device_motion_curtain.c
  *
- *    Description:  红外幕帘设备 
+ *    Description:  红外幕帘设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -39,10 +39,16 @@
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
 enum {
-	ATTR_ALARM,
-	ATTR_BATTERYPERCENTAGE,
-	ATTR_TAMPERALARM,
+	ATTR_ALARM, // 触发状态
+	ATTR_ARM_DISARM,  // 布防撤防
 };
+enum {
+	EVENT_ERROR,
+	EVENT_LOWELECTRICITYALARM,// 低电报警
+	EVENT_TAMPERALARM,// 防撬报警
+	EVENT_ACTIVEALARM,// 感应报警,布防状态时才上报报警
+};
+
 
 /* ---------------------------------------------------------------------------*
  *                      variables define
@@ -88,33 +94,54 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
+static void cmdTemplateEnableSwitch(DeviceStr *dev,char *value)
+{
+	int value_int = atoi(value);
+	sprintf(dev->value[ATTR_ARM_DISARM],"%d",value_int);
+	sqlSetMotionCurtainArmStatus(dev->id,value_int);
+}
+
 static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
 	DPRINT("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
 	if (alarm_type == TC_ALARM_ACTION)
 		sprintf(dev->value[ATTR_ALARM],"1");
-	else if (alarm_type == TC_ALARM_LOWPOWER)
-		sprintf(dev->value[ATTR_BATTERYPERCENTAGE],"20");
-	else if (alarm_type == TC_ALARM_TAMPER)
-		sprintf(dev->value[ATTR_TAMPERALARM],"0");
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_ALARM].name,
-		dev->type_para->attr[ATTR_BATTERYPERCENTAGE].name,
-		dev->type_para->attr[ATTR_TAMPERALARM].name,
+		dev->type_para->attr[ATTR_ARM_DISARM].name,
 		NULL};
 	const char *attr_value[] = {
 		dev->value[ATTR_ALARM],
-		dev->value[ATTR_BATTERYPERCENTAGE],
-		dev->value[ATTR_TAMPERALARM],
+		dev->value[ATTR_ARM_DISARM],
 		NULL};
 	int attr_value_type[] = {
 		dev->type_para->attr[ATTR_ALARM].value_type,
-		dev->type_para->attr[ATTR_BATTERYPERCENTAGE].value_type,
-		dev->type_para->attr[ATTR_TAMPERALARM].value_type,
+		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
 	};
+	// 属性上报
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
+
+	// 报警事件上报
+	const char *event_name[] = { NULL};
+	const char *event_value[] = {NULL};
+	int event_value_type[] = {};
+	if (alarm_type == TC_ALARM_LOWPOWER) {
+		aliSdkSubDevReportEvent(dev,
+				dev->type_para->event[EVENT_LOWELECTRICITYALARM],
+				event_name,event_value,event_value_type);
+	} else if (alarm_type == TC_ALARM_TAMPER) {
+		aliSdkSubDevReportEvent(dev,
+				dev->type_para->event[EVENT_TAMPERALARM],
+				event_name,event_value,event_value_type);
+	}
+	int arm_status = atoi(dev->value[ATTR_ARM_DISARM]);
+	if (arm_status && alarm_type == TC_ALARM_ACTION) {
+		aliSdkSubDevReportEvent(dev,
+				dev->type_para->event[EVENT_ACTIVEALARM],
+				event_name,event_value,event_value_type);
+	}
 }
 
 
@@ -136,11 +163,18 @@ static DeviceTypePara motion_curtain = {
 		{"TamperAlarm",NULL,DEVICE_VELUE_TYPE_INT},
 #else
 		{"MotionAlarmState",NULL,DEVICE_VELUE_TYPE_INT},
-		{"BatteryPercentage",NULL,DEVICE_VELUE_TYPE_INT},
-		{"TamperAlarm",NULL,DEVICE_VELUE_TYPE_INT},
+		{"TemplateEnableSwitch",cmdTemplateEnableSwitch,DEVICE_VELUE_TYPE_INT},
 #endif
 		{NULL,NULL},
 	},
+#if (defined V2)
+	.event = {
+		"Error",
+		"LowElectricityAlarm",
+		"TamperAlarm",
+		"ActiveAlarm",
+	},
+#endif
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.reportAlarmStatus = reportAlarmStatus,
@@ -151,6 +185,7 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 {
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
+	int arm_status = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
 	motion_curtain.product_key = theConfig.motion_curtain.product_key;
@@ -165,7 +200,12 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {
 		This->value[i] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[i],"%s","0");
-	}	
+	}
+	sqlGetMotionCurtainArmStatus(id,&arm_status);
+	sprintf(This->value[ATTR_ARM_DISARM],"%d",arm_status);
+	for (i=0; This->type_para->attr[i].name != NULL; i++) {
+		printf("[%s]name:%s,value:%s\n",__FUNCTION__,This->type_para->attr[i].name,This->value[i]);
+	}
 
 	return This;
 }

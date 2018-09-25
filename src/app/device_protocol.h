@@ -57,6 +57,7 @@ extern "C" {
 			char *name;  // 不同设备自身的属性参数
 			void (*attrcb)(struct _DeviceStr *dev,char *value);
 			int value_type;
+			void (*attrMultitermcb)(struct _DeviceStr *dev,char *value,const char *attr_name);
 		}attr[MAX_DEVICE_PARA];
 
 		char *event[MAX_DEVICE_PARA];
@@ -64,10 +65,12 @@ extern "C" {
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]); // 通用获取属性
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value); // 通用设置属性
 
+		int (*checkAttrs)(struct _DeviceStr *dev); // 主动查询设备属性
+
 		void (*getSwichStatus)(struct _DeviceStr *dev);
 		void (*getAirPara)(struct _DeviceStr *dev);
-		void (*reportPowerOn)(struct _DeviceStr *dev, char *param); // 上报电源打开
-		void (*reportPowerOff)(struct _DeviceStr *dev); // 上报电源关闭
+		void (*reportPowerOn)(struct _DeviceStr *dev, char *param,int channel); // 上报电源打开
+		void (*reportPowerOff)(struct _DeviceStr *dev,int channel); // 上报电源关闭
 
 		void (*reportAlarmStatus)(struct _DeviceStr *dev,char *param); // 上报报警状态
 
@@ -75,6 +78,8 @@ extern "C" {
 		void (*reportElePower)(struct _DeviceStr *dev,char *param);  // 上报功率
 
 		void (*reportAirPara)(struct _DeviceStr *dev,char *param);  // 上报空气质量
+
+		void (*reportArmStatus)(struct _DeviceStr *dev,char *param);  // 上报布防状态
 	}DeviceTypePara;
 
 	typedef struct _DeviceStr {

@@ -150,7 +150,7 @@ static void * timer1sThread(void *arg)
 			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
 		}
 		if (cnt) {
-			printfWifiInfo(cnt);
+			// printfWifiInfo(cnt);
 			cnt--;
 		}
 		sleep(1);

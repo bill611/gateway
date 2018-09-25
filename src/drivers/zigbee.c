@@ -152,7 +152,7 @@ static void callbackProcess(void)
 	}
 	if (len <= 0)
 		return;
-#if 0
+#if 1
 	DPRINT("[callbackProcess] rx_len:%d :", len);
 	int i = 0;
 	for (; i < len; i++) {

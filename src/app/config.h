@@ -57,7 +57,7 @@ extern "C" {
 		struct DevConfig outlet;		//插座
 		struct DevConfig air_box;		//新风系统
 		struct DevConfig air_condition_midea;	//美的空调
-		int  ele_quantity;				//电量x1000
+		struct DevConfig lock;			//门锁
 	} Config;
 
 	enum {

@@ -38,11 +38,18 @@
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
 enum {
+#if (defined V1)
 	ATTR_ERROR,
+#endif
 	ATTR_SWICH,
 	ATTR_POWER,
 	ATTR_QUANTITY,
-	ATTR_CLEAR_QUANTITY,
+	// ATTR_CLEAR_QUANTITY,
+};
+enum {
+	EVENT_ERROR,
+	EVENT_POWERWARNING,// 电量警告
+	EVENT_POWERABNORMAL,// 电量异常
 };
 
 /* ---------------------------------------------------------------------------*
@@ -115,7 +122,7 @@ static void cmdClearQuantity(DeviceStr *dev)
 	
 }
 
-static void reportPowerOnCb(DeviceStr *dev,char *param)
+static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
@@ -133,7 +140,7 @@ static void reportPowerOnCb(DeviceStr *dev,char *param)
 			attr_name,attr_value,attr_value_type);
 }
 
-static void reportPowerOffCb(DeviceStr *dev)
+static void reportPowerOffCb(DeviceStr *dev,int channel)
 {
 	sprintf(dev->value[ATTR_SWICH],"0");
 	const char *attr_name[] = {
@@ -181,8 +188,37 @@ static void reportElePowerCb(DeviceStr *dev,char *param)
 	int attr_value_type[] = {
 		dev->type_para->attr[ATTR_POWER].value_type,
 	};
+	// 属性上报
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
+
+	// 报警事件上报
+	int power_waring = 0,power_abnormal = 0;
+	if (dev->type_para->device_type == DEVICE_TYPE_JLCZ10) {
+		power_waring = 1800;
+		power_abnormal = 2100;
+	} else if (dev->type_para->device_type == DEVICE_TYPE_JLCZ16) {
+		power_waring = 3000;
+		power_abnormal = 3400;
+	}
+	const char *event_name[] = { NULL};
+	const char *event_value[] = {NULL};
+	int event_value_type[] = {};
+	if (power >= power_waring && power <= power_abnormal) {
+		aliSdkSubDevReportEvent(dev,
+				dev->type_para->event[EVENT_POWERWARNING],
+				event_name,event_value,event_value_type);
+	} else if (power >= power_abnormal) {
+		aliSdkSubDevReportEvent(dev,
+				dev->type_para->event[EVENT_POWERABNORMAL],
+				event_name,event_value,event_value_type);
+	}
+
+}
+
+static void checkElePowerCb(DeviceStr *dev)
+{
+	smarthomeCheckOutLetElePower(dev);
 }
 /* ---------------------------------------------------------------------------*/
 /**
@@ -203,14 +239,20 @@ static DeviceTypePara outlet10 = {
 		{"SumElectric",NULL,DEVICE_VELUE_TYPE_DOUBLE},
 		{"ClearConsumption",NULL,DEVICE_VELUE_TYPE_INT},
 #else
-		{"Error",NULL,DEVICE_VELUE_TYPE_INT},
 		{"PowerSwitch",cmdSwich,DEVICE_VELUE_TYPE_INT},
 		{"RealTimePower",NULL,DEVICE_VELUE_TYPE_INT},
 		{"TotalConsumption",NULL,DEVICE_VELUE_TYPE_DOUBLE},
-		{"ClearConsumption",NULL,DEVICE_VELUE_TYPE_INT},
+		// {"ClearConsumption",NULL,DEVICE_VELUE_TYPE_INT},
 #endif
 		{NULL,NULL},
 	},
+#if (defined V2)
+	.event = {
+		"Error",
+		"PowerWarning",
+		"PowerAbnormal",
+	},
+#endif
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.getSwichStatus = cmdGetSwichStatus,
@@ -218,6 +260,7 @@ static DeviceTypePara outlet10 = {
 	.reportPowerOff = reportPowerOffCb,
 	.reportElePower = reportElePowerCb,
 	.reportEleQuantity = reportEleQuantityCb,
+	.checkAttrs = checkElePowerCb,
 };
 
 /* ---------------------------------------------------------------------------*/
