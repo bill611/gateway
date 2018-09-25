@@ -229,6 +229,8 @@ static DeviceTypePara outlet10 = {
 	.name = "outlet10",
 	.short_model = 0x000a23c3,
 	.secret = "tPIMShBYjubW3SWJKw1o1XqxRbM8bcTrR2Fi0nsQ",
+	.product_key = "a1eatJeEJr5",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JLCZ10,
 	.attr = {
@@ -278,8 +280,6 @@ DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	outlet10.product_key = theConfig.outlet.product_key;
-	outlet10.device_secret = theConfig.outlet.device_secret;
 	This->type_para = &outlet10;
 	This->addr = addr;
 	This->channel = channel;
@@ -301,8 +301,6 @@ DeviceStr * registDeviceOutlet16(char *id,uint16_t addr,uint16_t channel)
 		memcpy(&outlet16,&outlet10,sizeof(DeviceTypePara));
 		outlet16.name = "outlet16";
 		outlet16.device_type = DEVICE_TYPE_JLCZ16;
-		outlet16.product_key = theConfig.outlet.product_key;
-		outlet16.device_secret = theConfig.outlet.device_secret;
 	}
 	This->type_para = &outlet16;
 	This->addr = addr;

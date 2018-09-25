@@ -215,6 +215,8 @@ static DeviceTypePara fresh_air = {
 
 	.short_model = 0x002824cd,
 	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
+	.product_key = "a1zDpSwyxoZ",
+	.device_secret = "",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_XFXT,
@@ -254,8 +256,6 @@ DeviceStr * registDeviceFreshAir(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	fresh_air.product_key = theConfig.fresh_air.product_key;
-	fresh_air.device_secret = theConfig.fresh_air.device_secret;
 	This->type_para = &fresh_air;
 	This->addr = addr;
 	This->channel = channel;

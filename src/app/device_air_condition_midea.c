@@ -313,6 +313,8 @@ static DeviceTypePara air_condition_midea = {
 	.name = "air_condition_midea",
 	.short_model = 0x00022531,
 	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
+	.product_key = "a1XuFDaBfIg",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_ZYKT_MIDEA,
 	.attr = {
@@ -412,8 +414,6 @@ DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channe
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	air_condition_midea.product_key = theConfig.air_condition_midea.product_key;
-	air_condition_midea.device_secret = theConfig.air_condition_midea.device_secret;
 	This->type_para = &air_condition_midea;
 	This->addr = addr;
 	This->channel = channel;

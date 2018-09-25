@@ -24,6 +24,7 @@
 
 #include "device_motion_curtain.h"
 #include "config.h"
+#include "timer.h"
 #include "sql_handle.h"
 
 /* ---------------------------------------------------------------------------*
@@ -94,6 +95,28 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
+static void timer6s(void *arg)
+{
+	DeviceStr *dev = (DeviceStr *)arg;
+	dev->type_para->timer->stop(dev->type_para->timer);
+	sprintf(dev->value[ATTR_ALARM],"0");
+	const char *attr_name[] = {
+		dev->type_para->attr[ATTR_ALARM].name,
+		dev->type_para->attr[ATTR_ARM_DISARM].name,
+		NULL};
+	const char *attr_value[] = {
+		dev->value[ATTR_ALARM],
+		dev->value[ATTR_ARM_DISARM],
+		NULL};
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_ALARM].value_type,
+		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
+	};
+	// 属性上报
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
+}
+
 static void cmdTemplateEnableSwitch(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
@@ -105,8 +128,16 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
 	DPRINT("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
-	if (alarm_type == TC_ALARM_ACTION)
+	if (alarm_type == TC_ALARM_ACTION) {
 		sprintf(dev->value[ATTR_ALARM],"1");
+		if (!dev->type_para->timer) {
+			dev->type_para->timer = timerCreate(1000 * 60 * 1 ,timer6s,dev); // 5分钟定时器
+			dev->type_para->timer->start(dev->type_para->timer);
+		} else  {
+			dev->type_para->timer->start(dev->type_para->timer);
+			dev->type_para->timer->resetTick(dev->type_para->timer);
+		}
+	}
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_ALARM].name,
 		dev->type_para->attr[ATTR_ARM_DISARM].name,
@@ -151,8 +182,8 @@ static DeviceTypePara motion_curtain = {
 	.short_model = 0x005c2503,
 	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
 
-	.product_key = "a1bZnQDt4Sk",
-	.device_secret = "UAcApq4PzN7uxu6cAxLpciEN6fkGPusq",
+	.product_key = "a1a5vfTsdM5",
+	.device_secret = "",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_HW,
@@ -175,6 +206,7 @@ static DeviceTypePara motion_curtain = {
 		"ActiveAlarm",
 	},
 #endif
+	.timer = NULL,
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.reportAlarmStatus = reportAlarmStatus,
@@ -188,8 +220,6 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 	int arm_status = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	motion_curtain.product_key = theConfig.motion_curtain.product_key;
-	motion_curtain.device_secret = theConfig.motion_curtain.device_secret;
 	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,motion_curtain.product_key,
 		motion_curtain.device_secret  );
 	This->type_para = &motion_curtain;

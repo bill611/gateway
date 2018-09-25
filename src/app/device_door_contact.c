@@ -151,6 +151,8 @@ static DeviceTypePara door_contact = {
 	.name = "door_contact",
 	.short_model = 0x00332560,
 	.secret = "i7ctpLwEHLYoOys5IjCnEiUGxyAIlwcMUEQus385",
+	.product_key = "a1SjmioRLkD",
+	.device_secret = "",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_MC,
@@ -186,8 +188,6 @@ DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
 	int arm_status = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	door_contact.product_key = theConfig.door_contact.product_key;
-	door_contact.device_secret = theConfig.door_contact.device_secret;
 	This->type_para = &door_contact;
 	This->addr = addr;
 	This->channel = channel;

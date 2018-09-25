@@ -41,6 +41,7 @@ extern "C" {
 		DEVICE_VELUE_TYPE_STRING,
 	};
 	struct _DeviceStr;
+	struct _Timer;
 	typedef struct {
 		char *name; // 设备类型名称 如灯控为light,调试使用
 
@@ -61,6 +62,8 @@ extern "C" {
 		}attr[MAX_DEVICE_PARA];
 
 		char *event[MAX_DEVICE_PARA];
+
+		struct _Timer *timer; // 定时器，用于各种设备的定时操作需求
 
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]); // 通用获取属性
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value); // 通用设置属性

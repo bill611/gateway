@@ -240,6 +240,9 @@ static DeviceTypePara air_condition = {
 	.name = "air_condition",
 	.short_model = 0x00022531,
 	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
+	.product_key = "a1Vf5joymGB",
+	.device_secret = "",
+
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_ZYKT,
 	.attr = {
@@ -274,8 +277,6 @@ DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	air_condition.product_key = theConfig.air_condition.product_key;
-	air_condition.device_secret = theConfig.air_condition.device_secret;
 	This->type_para = &air_condition;
 	This->addr = addr;
 	This->channel = channel;

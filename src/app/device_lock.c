@@ -142,6 +142,8 @@ static DeviceTypePara lock = {
 	.name = "lock",
 	.short_model = 0x00092316,
 	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
+	.product_key = "a1l4la2xZTl",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = 	DEVICE_TYPE_LOCK_XLQ,
 	.attr = {
@@ -163,8 +165,6 @@ DeviceStr * registDevicelock(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	lock.product_key = theConfig.lock.product_key;
-	lock.device_secret = theConfig.lock.device_secret;
 	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,lock.product_key,
 		lock.device_secret  );
 	This->type_para = &lock;

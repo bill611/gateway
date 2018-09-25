@@ -146,6 +146,8 @@ static DeviceTypePara alarm_whistle = {
 	.name = "alarm_whistle1",
 	.short_model = 0x005b255f,
 	.secret = "bQ0N06R7q5bRb50fwn4NluMrVPPutr0EjKWaIAFh",
+	.product_key = "a1gOjKV2g8n",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_JD,
 	.attr = {
@@ -167,8 +169,6 @@ DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	alarm_whistle.product_key = theConfig.alarm_whistle.product_key;
-	alarm_whistle.device_secret = theConfig.alarm_whistle.device_secret;
 	This->type_para = &alarm_whistle;
 	This->addr = addr;
 	This->channel = channel;

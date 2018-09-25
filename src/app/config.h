@@ -18,7 +18,7 @@ extern "C" {
 #define WPA_PATH                 	"/tmp/wpa_supplicant/"
 
 
-#define GW_VERSION	"v1.0.1.0"
+#define GW_VERSION	"v1.1.0"
 #define UPDATE_FILE	"/mnt/nand1-2/Update.cab"
 
 
@@ -47,17 +47,6 @@ extern "C" {
 	typedef struct _Config {
 		char  gate_way_id[32];		//网关
 		struct DevConfig gate_way;		//网关
-		struct DevConfig air_condition;	//空调
-		struct DevConfig alarm_whistle;	//声光报警
-		struct DevConfig curtain;		//窗帘
-		struct DevConfig door_contact;	//门磁
-		struct DevConfig fresh_air;		//新风系统
-		struct DevConfig light;			//灯控
-		struct DevConfig motion_curtain;//红外幕帘
-		struct DevConfig outlet;		//插座
-		struct DevConfig air_box;		//新风系统
-		struct DevConfig air_condition_midea;	//美的空调
-		struct DevConfig lock;			//门锁
 	} Config;
 
 	enum {

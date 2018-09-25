@@ -140,6 +140,8 @@ static DeviceTypePara curtain = {
 	.name = "curtain",
 	.short_model = 0x00042564,
 	.secret = "W8m15EVFuNuAEfYbecXchzXdcDFuC1EBhie6Enrz",
+	.product_key = "a17ietraFbg",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_CL,
 	.attr = {
@@ -160,8 +162,6 @@ DeviceStr * registDeviceCurtain(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	curtain.product_key = theConfig.curtain.product_key;
-	curtain.device_secret = theConfig.curtain.device_secret;
 	This->type_para = &curtain;
 	This->addr = addr;
 	This->channel = channel;

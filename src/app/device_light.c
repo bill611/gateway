@@ -139,6 +139,8 @@ static DeviceTypePara light = {
 	.name = "light",
 	.short_model = 0x00092316,
 	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
+	.product_key = "a1x4aLoOVJe",
+	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_DK,
 	.attr = {
@@ -167,8 +169,6 @@ DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	light.product_key = theConfig.light.product_key;
-	light.device_secret = theConfig.light.device_secret;
 	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,light.product_key,
 		light.device_secret  );
 	This->type_para = &light;

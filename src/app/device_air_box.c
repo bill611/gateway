@@ -122,6 +122,8 @@ static DeviceTypePara air_box = {
 
 	.short_model = 0,
 	.secret = "BCCcnkxFXVdi65csHXxJMfiSIcyjSQZCQHoIXdN7",
+	.product_key = "a1Vc1UH407Q",
+	.device_secret = "",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_KQJCY,
@@ -151,8 +153,6 @@ DeviceStr * registDeviceAirBox(char *id,uint16_t addr,uint16_t channel)
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	air_box.product_key = theConfig.air_box.product_key;
-	air_box.device_secret = theConfig.air_box.device_secret;
 	This->type_para = &air_box;
 	This->addr = addr;
 	This->channel = channel;
