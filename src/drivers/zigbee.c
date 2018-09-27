@@ -366,14 +366,11 @@ uint8_t *zigbeeGetIEEEAddr(void)
 }
 int zigbeeIsReady(void)
 {
-	if (get_ieee_flag
-			&& zigbee_net_addr > 0x1
-			&& zigbee_net_addr < 0xffff)	 {
-
+	if (get_ieee_flag)
 		return 1;
-	} else {
+	else 
 		return 0;
-	}
+
 }
 /* ---------------------------------------------------------------------------*/
 /**

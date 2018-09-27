@@ -309,6 +309,10 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 						packet->channel_num,
 						packet->current_channel,
 						NULL,0);
+				// sprintf(id,"%s","4F4DD51A004B1200EEE");
+				// packet->device_type = DEVICE_TYPE_KQJCY;
+				// packet->addr = 0;
+				// packet->channel_num = 1;
 				int ret = gwRegisterSubDevice(id,packet->device_type,packet->addr,packet->channel_num);
 				if (ret == 0)
 					smarthomeAddNewDev(packet,id);

@@ -326,7 +326,7 @@ static void * uartSendThead(UartServer *This)
 		This->priv->queue->get(This->priv->queue, &send_buf);
 		write(This->priv->fd, send_buf.data, send_buf.len);
 		printfbuf(send_buf.data,send_buf.len);
-		usleep(100000);
+		usleep(200000);
 	}
 	pthread_exit(NULL);
 }

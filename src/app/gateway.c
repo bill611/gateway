@@ -190,7 +190,7 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
     int ret = -1;
 	unsigned int i;
 	for (i=0; i<NELEMENTS(device_regist); i++) {
-		DPRINT("[%s] device type:%d,type:%d\n",__func__,device_regist[i].device_type,type);
+		// DPRINT("[%s] device type:%d,type:%d\n",__func__,device_regist[i].device_type,type);
 		if (device_regist[i].device_type == type)	
 			break;
 	}

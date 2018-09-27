@@ -95,10 +95,10 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void timer6s(void *arg)
+static void timer5min(void *arg)
 {
 	DeviceStr *dev = (DeviceStr *)arg;
-	dev->type_para->timer->stop(dev->type_para->timer);
+	dev->timer->stop(dev->timer);
 	sprintf(dev->value[ATTR_ALARM],"0");
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_ALARM].name,
@@ -130,12 +130,12 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 	int alarm_type = param[0];
 	if (alarm_type == TC_ALARM_ACTION) {
 		sprintf(dev->value[ATTR_ALARM],"1");
-		if (!dev->type_para->timer) {
-			dev->type_para->timer = timerCreate(1000 * 60 * 1 ,timer6s,dev); // 5分钟定时器
-			dev->type_para->timer->start(dev->type_para->timer);
+		if (!dev->timer) {
+			dev->timer = timerCreate(1000 * 60 * 1 ,timer5min,dev); // 5分钟定时器
+			dev->timer->start(dev->timer);
 		} else  {
-			dev->type_para->timer->start(dev->type_para->timer);
-			dev->type_para->timer->resetTick(dev->type_para->timer);
+			dev->timer->start(dev->timer);
+			dev->timer->resetTick(dev->timer);
 		}
 	}
 	const char *attr_name[] = {
@@ -206,7 +206,6 @@ static DeviceTypePara motion_curtain = {
 		"ActiveAlarm",
 	},
 #endif
-	.timer = NULL,
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
 	.reportAlarmStatus = reportAlarmStatus,
@@ -225,6 +224,7 @@ DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel)
 	This->type_para = &motion_curtain;
 	This->addr = addr;
 	This->channel = channel;
+	This->timer = NULL;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	for (i=0; This->type_para->attr[i].name != NULL; i++) {

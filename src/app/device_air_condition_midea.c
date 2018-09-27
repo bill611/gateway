@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "device_air_condition_midea.h"
 #include "sql_handle.h"
@@ -359,6 +360,28 @@ static DeviceTypePara air_condition_midea = {
 	.reportPowerOff = reportPowerOffCb,
 };
 
+static void *sendMideaSlaveAddrThread(void *arg)
+{
+	DeviceStr *This = (DeviceStr *)arg;
+	while (1) {
+		if (zigbeeIsReady() == 0) {
+			usleep(10000);
+			continue;
+		}
+		sleep(5);
+		smarthomeAirCondtionMideaCmdSlaveAddr(This,
+				dev_midea.dev[0].slave_addr,dev_midea.dev[0].room_addr,0);
+		smarthomeAirCondtionMideaCmdSlaveAddr(This,
+				dev_midea.dev[1].slave_addr,dev_midea.dev[1].room_addr,1);
+		smarthomeAirCondtionMideaCmdSlaveAddr(This,
+				dev_midea.dev[2].slave_addr,dev_midea.dev[2].room_addr,2);
+		smarthomeAirCondtionMideaCmdSlaveAddr(This,
+				dev_midea.dev[3].slave_addr,dev_midea.dev[3].room_addr,3);
+		break;
+	}
+	pthread_exit(NULL);
+}
+
 static void getMideaData(DeviceStr *This,char *id)
 {
 	int i;
@@ -371,28 +394,27 @@ static void getMideaData(DeviceStr *This,char *id)
 	sprintf(This->value[ATTR_TEMP],"%d",dev_midea.dev[0].temp);
 	sprintf(This->value[ATTR_SPEED],"%d",dev_midea.dev[0].speed);
 	sprintf(This->value[ATTR_MODE],"%d",dev_midea.dev[0].mode);
-	smarthomeAirCondtionMideaCmdSlaveAddr(This,
-			dev_midea.dev[0].slave_addr,dev_midea.dev[0].room_addr,0);
 
 	sprintf(This->value[ATTR_TEMP1],"%d",dev_midea.dev[1].temp);
 	sprintf(This->value[ATTR_SPEED1],"%d",dev_midea.dev[1].speed);
 	sprintf(This->value[ATTR_MODE1],"%d",dev_midea.dev[1].mode);
-	smarthomeAirCondtionMideaCmdSlaveAddr(This,
-			dev_midea.dev[1].slave_addr,dev_midea.dev[1].room_addr,1);
 
 	sprintf(This->value[ATTR_TEMP2],"%d",dev_midea.dev[2].temp);
 	sprintf(This->value[ATTR_SPEED2],"%d",dev_midea.dev[2].speed);
 	sprintf(This->value[ATTR_MODE2],"%d",dev_midea.dev[2].mode);
-	smarthomeAirCondtionMideaCmdSlaveAddr(This,
-			dev_midea.dev[2].slave_addr,dev_midea.dev[2].room_addr,2);
 
 	sprintf(This->value[ATTR_TEMP3],"%d",dev_midea.dev[3].temp);
 	sprintf(This->value[ATTR_SPEED3],"%d",dev_midea.dev[3].speed);
 	sprintf(This->value[ATTR_MODE3],"%d",dev_midea.dev[3].mode);
-	smarthomeAirCondtionMideaCmdSlaveAddr(This,
-			dev_midea.dev[3].slave_addr,dev_midea.dev[3].room_addr,3);
-}
 
+	pthread_t task;
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	pthread_create(&task, &attr, sendMideaSlaveAddrThread, This);
+
+}
 static void setMideaData(DeviceStr *This)
 {
 	sqlSetMideaAddr(This->id,&dev_midea,sizeof(dev_midea));
