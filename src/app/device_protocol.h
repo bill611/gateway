@@ -70,10 +70,9 @@ extern "C" {
 
 		void (*getSwichStatus)(struct _DeviceStr *dev);
 		void (*getAirPara)(struct _DeviceStr *dev);
+
 		void (*reportPowerOn)(struct _DeviceStr *dev, char *param,int channel); // 上报电源打开
 		void (*reportPowerOff)(struct _DeviceStr *dev,int channel); // 上报电源关闭
-
-		void (*reportAlarmStatus)(struct _DeviceStr *dev,char *param); // 上报报警状态
 
 		void (*reportEleQuantity)(struct _DeviceStr *dev,char *param); // 上报电量
 		void (*reportElePower)(struct _DeviceStr *dev,char *param);  // 上报功率
@@ -81,6 +80,8 @@ extern "C" {
 		void (*reportAirPara)(struct _DeviceStr *dev,char *param);  // 上报空气质量
 
 		void (*reportArmStatus)(struct _DeviceStr *dev,char *param);  // 上报布防状态
+		void (*reportAlarmStatus)(struct _DeviceStr *dev,char *param); // 上报报警状态
+		void (*reportAlarmWhistleOpen)(struct _DeviceStr *dev,char *param); // 上报声光报警器报警
 	}DeviceTypePara;
 
 	struct _Timer;
@@ -107,7 +108,7 @@ extern "C" {
 		int (*setCb)(const char *devid, const char *attr_name, const char *attr_value);
 		int (*execCmdCb)(const char *devid, const char *cmd_name, const char *cmd_args);
 		int (*removeDeviceCb)(const char *devid);
-		int (*permitSubDeviceJoinCb)(uint8_t duration);
+		int (*permitSubDeviceJoinCb)(char *pk,uint8_t duration);
 	}GateWayAttr;
 
 #ifdef __cplusplus

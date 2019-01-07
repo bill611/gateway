@@ -67,7 +67,7 @@ enum SERVER_ENV {
 
 #define ALI_SDK_ONLINE_TIME 180  // 检查3分钟在线状态，若连续3分钟不在线，
 								//关掉WIFI电源，重启设备
-#define LOG_LEVER_V2 0
+#define LOG_LEVER_V2 5
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -438,7 +438,7 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
             char *productKey = ev->event_data.subdev_permited.productKey;
             int   timeoutSec = ev->event_data.subdev_permited.timeoutSec;
 
-			gw->permitSubDeviceJoinCb(timeoutSec);
+			gw->permitSubDeviceJoinCb(productKey,timeoutSec);
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
 		}
 		break;

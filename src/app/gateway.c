@@ -7,7 +7,10 @@
  *
  *        Version:  1.0
  *        Created:  2018-05-08 16:26:03
- *       Revision:  none
+ *
+ *       Revision:  2019-01-07 
+ *         Author:  xubin
+ *         V2.0版本飞燕平台加入PK校验，将PK传入注册函数
  *
  *         Author:  xubin
  *        Company:  Taichuan
@@ -67,7 +70,7 @@ typedef struct {
 
 typedef struct {
 	int device_type;	
-	DeviceStr* (*regist) (char *,uint16_t,uint16_t);
+	DeviceStr* (*regist) (char *,uint16_t,uint16_t,char *);
 }SubDeviceRegist;
 
 /* ---------------------------------------------------------------------------*
@@ -76,6 +79,7 @@ typedef struct {
 static GateWayPrivateAttr gw_attrs[];
 
 static List *sub_dev_list = NULL; // 链表保存子设备
+static char regist_tmp_pk[64] = {0}; // 注册时临时保存允许入网的设备pk
 // static SubDevice sub_device;
 static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,		registDeviceLight},
@@ -181,11 +185,12 @@ static GateWayPrivateAttr gw_attrs[] = {
  * @param type 子设备类型
  * @param addr 子设备短地址
  * @param channel 子设备通道数量
+ * @param product_key V2.0平台产品唯一标识
  *
  * @returns 0成功 -1失败
  */
 /* ---------------------------------------------------------------------------*/
-int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
+int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel,char *product_key)
 {
     int ret = -1;
 	unsigned int i;
@@ -200,7 +205,9 @@ int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel)
 	}
 	DPRINT("id:%s,type:%d,channle:%d\n", id,type,channel);
 	// return -1;
-	DeviceStr *dev = device_regist[i].regist(id,addr,channel);
+	DeviceStr *dev = device_regist[i].regist(id,addr,channel,product_key);
+	if (dev == NULL)
+		return -1;
 	// test------------------
 	// sprintf(dev->id,"%s",dev->type_para->name);
 	// 
@@ -301,9 +308,12 @@ static int removeDeviceCb(const char *devid)
     return 0;
 }
 
-static int permitSubDeviceJoinCb(uint8_t duration)
+static int permitSubDeviceJoinCb(char *pk,uint8_t duration)
 {
-    DPRINT("permitSubDeviceJoinCb, duration:%d\n",duration);
+    DPRINT("permitSubDeviceJoinCb, pk:%s,duration:%d\n",pk,duration);
+	memset(regist_tmp_pk,0,sizeof(regist_tmp_pk));
+	if (pk)
+		sprintf(regist_tmp_pk,"%s",pk);
 	zigbeeNetIn(duration);
 	return 0;
 }
@@ -329,7 +339,7 @@ void gwLoadDeviceData(void)
 	sub_dev_list = listCreate(sizeof(DeviceStr *));
 	for (i=0; i<device_num; i++) {
 		sqlGetDevice(id,&type,&addr,&channel,i);	
-		gwRegisterSubDevice(id,type,addr,channel);
+		gwRegisterSubDevice(id,type,addr,channel,NULL);
 	}
 }
 
@@ -539,4 +549,42 @@ void gwReportArmStatus(char *id,char *param)
 		DPRINT("[%s]---->", dev->type_para->name);
 		dev->type_para->reportArmStatus(dev,param);
 	}
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwReportAlarmWhistleStatus 上报声光报警器报警
+ *
+ * @param id
+ * @param param
+ */
+/* ---------------------------------------------------------------------------*/
+void gwReportAlarmWhistleStatus(char *param)
+{
+	if (!sub_dev_list)
+		return;
+	sub_dev_list->foreachStart(sub_dev_list,0);
+	int i = 1;
+	while(sub_dev_list->foreachEnd(sub_dev_list)) {
+		DeviceStr *dev;
+		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
+		if (dev->type_para->reportAlarmWhistleOpen) {
+			// DPRINT("[%s]---->", dev->type_para->name);
+			dev->type_para->reportAlarmWhistleOpen(dev,param);
+		}
+		sub_dev_list->foreachNext(sub_dev_list);
+		i++;
+	}
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gwGetTempProductKey 返回注册时的product key
+ *
+ * @returns 
+ */
+/* ---------------------------------------------------------------------------*/
+char *gwGetTempProductKey(void)
+{
+	return regist_tmp_pk;	
 }

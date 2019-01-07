@@ -22,7 +22,7 @@ extern "C" {
 #endif  /* __cplusplus */
 
 
-	extern int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel);
+	extern int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel,char *pk);
 	extern void gwReportPowerOn(char *id,char *param,int channel);
 	extern void gwReportPowerOff(char *id,int channel);
 	extern void gwReportAlarmStatus(char *id,char *param);
@@ -35,6 +35,7 @@ extern "C" {
 	extern int gwRegisterGateway(void);
 	extern int gwRegisterGatewayAttribute(void);
 	extern int gwDeviceReportRegist(void);
+	extern char *gwGetTempProductKey(void);
 
 #ifdef __cplusplus
 }

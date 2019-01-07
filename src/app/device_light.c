@@ -163,8 +163,15 @@ static DeviceTypePara light = {
 };
 
 
-DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,light.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					light.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

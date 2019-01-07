@@ -156,8 +156,15 @@ static DeviceTypePara curtain = {
 };
 
 
-DeviceStr * registDeviceCurtain(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceCurtain(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,curtain.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					curtain.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

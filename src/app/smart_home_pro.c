@@ -313,7 +313,10 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				// packet->device_type = DEVICE_TYPE_KQJCY;
 				// packet->addr = 0;
 				// packet->channel_num = 1;
-				int ret = gwRegisterSubDevice(id,packet->device_type,packet->addr,packet->channel_num);
+				int ret = gwRegisterSubDevice(id,
+						packet->device_type,
+						packet->addr,
+						packet->channel_num,gwGetTempProductKey());
 				if (ret == 0)
 					smarthomeAddNewDev(packet,id);
 				// 根据阿里APP设定，完成入网后禁止入网
@@ -538,12 +541,16 @@ void smarthomeAlarmWhistleCmdCtrOpen(DeviceStr *dev)
 			__FUNCTION__,
 			dev->type_para->device_type,
 			param[0]);
-	smarthomeSendDataPacket(
-			dev->addr,
-			Device_On,
-			dev->type_para->device_type,
-			dev->channel,
-			0,param,sizeof(param));
+	int i; 
+	// 报警命令发三次，以保证可靠性
+	for (i=0; i<3; i++) {
+		smarthomeSendDataPacket(
+				dev->addr,
+				Device_On,
+				dev->type_para->device_type,
+				dev->channel,
+				0,param,sizeof(param));
+	}
 }
 
 void smarthomeAlarmWhistleCmdCtrClose(DeviceStr *dev)

@@ -18,7 +18,7 @@ extern "C" {
 #define WPA_PATH                 	"/tmp/wpa_supplicant/"
 
 
-#define GW_VERSION	"v1.1.0"
+#define GW_VERSION	"v1.1.1"
 #define UPDATE_FILE	"/mnt/nand1-2/Update.cab"
 
 

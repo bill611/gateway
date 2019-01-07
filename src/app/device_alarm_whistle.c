@@ -141,6 +141,11 @@ static void reportPowerOffCb(DeviceStr *dev,int channel)
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
 }
+static void reportAlarmWhistleOpen(DeviceStr *dev,char *param)
+{
+	reportPowerOnCb(dev,param,0);
+	smarthomeAlarmWhistleCmdCtrOpen(dev);
+}
 
 static DeviceTypePara alarm_whistle = {
 	.name = "alarm_whistle1",
@@ -160,11 +165,19 @@ static DeviceTypePara alarm_whistle = {
 	.getSwichStatus = cmdGetSwichStatus,
 	.reportPowerOn = reportPowerOnCb,
 	.reportPowerOff = reportPowerOffCb,
+	.reportAlarmWhistleOpen = reportAlarmWhistleOpen,
 };
 
 
-DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,alarm_whistle.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					alarm_whistle.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

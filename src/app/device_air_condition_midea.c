@@ -430,8 +430,15 @@ static void setMideaData(DeviceStr *This)
  * @returns
  */
 /* ---------------------------------------------------------------------------*/
-DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,air_condition_midea.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					air_condition_midea.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

@@ -24,7 +24,7 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel);
+	extern DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel,char *pk);
 
 #ifdef __cplusplus
 }

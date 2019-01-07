@@ -271,8 +271,15 @@ static DeviceTypePara air_condition = {
 };
 
 
-DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,air_condition.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					air_condition.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

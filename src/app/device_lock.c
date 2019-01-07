@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "sql_handle.h"
 #include "device_lock.h"
@@ -84,26 +85,52 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
+static void *reportDisArmThread(void *arg)
+{
+	DeviceStr *dev = (DeviceStr *)arg;
+
+	sleep(5);
+	printf("1111\n");
+	sprintf(dev->value[ATTR_ARM_DISARM],"0");
+	const char *attr_name[] = {
+		dev->type_para->attr[ATTR_ARM_DISARM].name,
+		NULL};
+	const char *attr_value[] = {
+		dev->value[ATTR_ARM_DISARM],
+		NULL};
+	int attr_value_type[] = {
+		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
+	};
+	aliSdkSubDevReportAttrs(dev,
+			attr_name,attr_value,attr_value_type);
+
+	return NULL;
+}
 
 static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 {
 	// 固定为开
 	sprintf(dev->value[ATTR_LOCKSTATE],"1");
-	sprintf(dev->value[ATTR_ARM_DISARM],"0");
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_LOCKSTATE].name,
-		dev->type_para->attr[ATTR_ARM_DISARM].name,
 		NULL};
 	const char *attr_value[] = {
 		dev->value[ATTR_LOCKSTATE],
-		dev->value[ATTR_ARM_DISARM],
 		NULL};
 	int attr_value_type[] = {
 		dev->type_para->attr[ATTR_LOCKSTATE].value_type,
-		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
+
+	pthread_t m_pthread;					//线程号
+	pthread_attr_t threadAttr1;				//线程属性
+	pthread_attr_init(&threadAttr1);		//附加参数
+	//设置线程为自动销毁
+	pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
+	//创建线程，无传递参数
+	pthread_create(&m_pthread,&threadAttr1,reportDisArmThread,dev);
+	pthread_attr_destroy(&threadAttr1);		//释放附加参数
 }
 
 static void reportPowerOffCb(DeviceStr *dev,int channel)
@@ -159,8 +186,15 @@ static DeviceTypePara lock = {
 };
 
 
-DeviceStr * registDevicelock(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDevicelock(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,lock.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					lock.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);

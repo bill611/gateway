@@ -143,6 +143,7 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 		aliSdkSubDevReportEvent(dev,
 				dev->type_para->event[EVENT_ACTIVEALARM],
 				event_name,event_value,event_value_type);
+		gwReportAlarmWhistleStatus(0);
 	}
 }
 
@@ -181,8 +182,15 @@ static DeviceTypePara door_contact = {
 };
 
 
-DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,door_contact.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					door_contact.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	int arm_status = 0;

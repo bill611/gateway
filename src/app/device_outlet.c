@@ -274,8 +274,15 @@ static DeviceTypePara outlet16 = {
 	.short_model = 0,
 };
 
-DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (pk) {
+		if (strcmp(pk,outlet10.product_key) != 0) {
+			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+					outlet10.product_key,pk );	
+			return NULL;
+		}
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
@@ -291,8 +298,13 @@ DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel)
 
 	return This;
 }
-DeviceStr * registDeviceOutlet16(char *id,uint16_t addr,uint16_t channel)
+DeviceStr * registDeviceOutlet16(char *id,uint16_t addr,uint16_t channel,char *pk)
 {
+	if (strcmp(pk,outlet16.product_key) != 0) {
+		DPRINT("diff pk :allow pk:%s,now pk:%s\n",
+				outlet16.product_key,pk );	
+		return NULL;
+	}
 	int i;
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
