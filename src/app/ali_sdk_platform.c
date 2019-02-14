@@ -39,7 +39,8 @@
 #include "sql_handle.h"
 #include "ali_sdk_platform.h"
 #include "device_protocol.h"
-#include "iwlib.h"		/* Header */
+#include "iwlib.h"
+#include "tc_interface.h"
 
 
 /* ---------------------------------------------------------------------------*
@@ -74,6 +75,7 @@ enum SERVER_ENV {
 static int (*service_func)(char *args, char *output_buf, unsigned int buf_sz);
 static char *service_name;
 static int online_status = 0; // 在线状态
+static int register_completed = 0; // 注册状态
 static int online_status_count = ALI_SDK_ONLINE_TIME; // 在线状态计时
 #if (defined V1)
 const char *env_str[] = {"daily", "sandbox", "online"};
@@ -85,6 +87,16 @@ static linkkit_params_t *initParams;
 static int link_fd;
 static GateWayAttr *gw_attr = NULL;
 static GateWayPrivateAttr *gw_priv_attrs = NULL;
+
+static int gateway_register_complete(void *ctx)
+{
+	GateWayPrivateAttr *gw = ctx;
+
+    register_completed = 1;
+
+    return 0;
+}
+
 static int gateway_get_property(char *in, char *out, int out_len, void *ctx)
 {
 	DPRINT("in: %s\n", in);
@@ -197,10 +209,14 @@ static int gateway_call_service(char *identifier, char *in, char *out, int out_l
 }
 
 static linkkit_cbs_t alink_cbs = {
+#if (defined V23)
+    .register_complete = gateway_register_complete,
+#endif
     .get_property = gateway_get_property,
     .set_property = gateway_set_property,
 };
 
+#if (!defined V23)
 static int ota_get_firmware_version(const char *productKey, const char *deviceName, char *version, int buff_len)
 {
     snprintf(version, buff_len, GW_VERSION);
@@ -233,7 +249,7 @@ static void *ota_start(const char *productKey, const char *deviceName, const cha
     octx->per = 0;
     octx->per_old = 0;
 
-	octx->fd = fopen(UPDATE_FILE,"wb");
+	octx->fd = fopen(tc_interface->getUpdateFilePath(),"wb");
 	if (octx->fd < 0)
 		DPRINT("open update file fail\n");
 
@@ -254,7 +270,7 @@ static int ota_write(void *handle, unsigned char *data, int data_len)
 	if (octx->per != octx->per_old) {
 		if (octx->per % 10 == 0)
 			DPRINT("%d%%->",octx->file_rec * 100 / octx->file_size );
-		octx->per_old = octx->per; 
+		octx->per_old = octx->per;
 	}
 #endif
     return 0;
@@ -288,7 +304,7 @@ static linkkit_ota_params ota_params = {
     .write = ota_write,
     .stop  = ota_stop,
 };
-
+#endif
 #endif
 
 #if (defined V1)
@@ -414,7 +430,7 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
     case LINKKIT_EVENT_CLOUD_CONNECTED:
         DPRINT("cloud connected\n");
 		gpioEnableWifiLed(1);
-        // post_all_properties(gw);    [> sync to cloud <]
+		// post_all_properties(gw);    [> sync to cloud <]
 		online_status = 1;
 		online_status_count = 0;
 
@@ -442,6 +458,7 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
 		}
 		break;
+#if (!defined V23)
 	case LINKKIT_EVENT_RESET_SUCCESS:
 		{
 			char *productKey = ev->event_data.reset_success.productKey;
@@ -450,6 +467,7 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
 
 		}
 		break;
+#endif
 	default:
 		DPRINT("unknown event type %d\n", ev->event_type);
 	}
@@ -473,8 +491,36 @@ void aliSdkInit(int argc, char *argv[])
     alink_register_callback(ALINK_CLOUD_DISCONNECTED, &cloud_disconnected);
 
     alink_register_callback(3, &cloud_get_device_status);
+#endif
+
+#if (defined V2)
+#if (defined V23)
+    int maxMsgSize, maxMsgQueueSize, prop_post_reply, event_post_reply;
+    IOT_SetLogLevel(IOT_LOG_DEBUG);
+
+    /* LINKKIT_OPT_MAX_MSG_SIZE: max size of message */
+    maxMsgSize = 4096;
+    linkkit_gateway_setopt(initParams, LINKKIT_OPT_MAX_MSG_SIZE, &maxMsgSize,
+                           sizeof(int));
+    /* LINKKIT_OPT_MAX_MSG_QUEUE_SIZE: max size of message queue */
+    maxMsgQueueSize = 8;
+    linkkit_gateway_setopt(initParams, LINKKIT_OPT_MAX_MSG_QUEUE_SIZE,
+                           &maxMsgQueueSize, sizeof(int));
+
+    prop_post_reply = 0;
+    linkkit_gateway_setopt(initParams, LINKKIT_OPT_PROPERTY_POST_REPLY,
+                           &prop_post_reply, sizeof(int));
+
+    event_post_reply = 0;
+    linkkit_gateway_setopt(initParams, LINKKIT_OPT_EVENT_POST_REPLY,
+                           &event_post_reply, sizeof(int));
+
+    int stacksize = 1024 * 4;
+    linkkit_gateway_setopt(initParams, LINKKIT_OPT_THREAD_STACK_SIZE,
+                           &stacksize, sizeof(int));
 
 #else
+
 	initParams = linkkit_gateway_get_default_params();
     int maxMsgSize = 20 * 1024;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_SIZE, &maxMsgSize, sizeof(int));
@@ -486,8 +532,9 @@ void aliSdkInit(int argc, char *argv[])
 	int threadPoolSize = 4;
 	linkkit_gateway_set_option(initParams, LINKKIT_OPT_THREAD_POOL_SIZE, &threadPoolSize, sizeof(int));
 
-
 #endif
+#endif
+
 }
 void aliSdkStart(void)
 {
@@ -509,7 +556,14 @@ void aliSdkStart(void)
         DPRINT("linkkit_gateway_start failed\n");
         return ;
     }
+#if (!defined V23)
 	linkkit_ota_service_init(&ota_params);
+#endif
+    while (register_completed == 0) {
+		sleep(1);
+    }
+	DPRINT("linkkit_gateway_regist finished\n");
+
 #endif
 }
 void aliSdkEnd(void)
@@ -529,7 +583,7 @@ int aliSdkReset(int is_reboot)
 		return	alink_factory_reset(ALINK_REBOOT);
 	else
 		return 	alink_factory_reset(ALINK_NOT_REBOOT);
-#else
+#elif (!defined V23)
 	linkkit_gateway_reset(link_fd);
 #endif
 }

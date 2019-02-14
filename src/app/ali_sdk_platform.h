@@ -32,8 +32,15 @@ extern char *calc_subdev_signature(const char *secret,
         char *sign_buff,
 	   	uint32_t buff_size);
 #elif (defined V2)
+#if (defined  V23)
+#include "iot_import.h"
+#include "iot_export.h"
+#include "exports/linkkit_gateway_export.h"
+#include "tc_interface.h"
+#else
 #include "linkkit.h"
 #include "iot_import.h"
+#endif
 #include "cJSON.h"
 #define ALI_SDK_PROTO_TYPE_ZIGBEE 2
 #endif

@@ -324,25 +324,6 @@ static GateWayAttr gw_attr = {
 	.removeDeviceCb = removeDeviceCb,
 	.permitSubDeviceJoinCb = permitSubDeviceJoinCb,
 };
-void gwDeviceInit(void)
-{
-	aliSdkRegistGwAttr("zigbee",ALI_SDK_PROTO_TYPE_ZIGBEE,&gw_attr);
-}
-
-void gwLoadDeviceData(void)
-{
-	int i;
-	int device_num = sqlGetDeviceCnt();
-	char id[32] = {0};
-	int type;
-	uint16_t addr,channel;
-	sub_dev_list = listCreate(sizeof(DeviceStr *));
-	for (i=0; i<device_num; i++) {
-		sqlGetDevice(id,&type,&addr,&channel,i);	
-		gwRegisterSubDevice(id,type,addr,channel,NULL);
-	}
-}
-
 static DeviceStr *getSubDevice(char *id)
 {
 	if (!id)
@@ -360,6 +341,25 @@ static DeviceStr *getSubDevice(char *id)
 	}
 
 	return dev;
+}
+
+void gwDeviceInit(void)
+{
+	aliSdkRegistGwAttr("zigbee",ALI_SDK_PROTO_TYPE_ZIGBEE,&gw_attr);
+}
+
+void gwLoadDeviceData(void)
+{
+	int i;
+	int device_num = sqlGetDeviceCnt();
+	char id[32] = {0};
+	int type;
+	uint16_t addr,channel;
+	sub_dev_list = listCreate(sizeof(DeviceStr *));
+	for (i=0; i<device_num; i++) {
+		sqlGetDevice(id,&type,&addr,&channel,i);	
+		gwRegisterSubDevice(id,type,addr,channel,NULL);
+	}
 }
 
 /* ---------------------------------------------------------------------------*/

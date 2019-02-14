@@ -1,7 +1,25 @@
 MAKEROOT = $(shell pwd)
-PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+
+ifeq ($(VERSION), 1)
+	PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+endif
+
+ifeq ($(VERSION), 2)
+	PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+endif
+
+ifeq ($(VERSION), 23)
+ifeq ($(DBG), 1)
+	PREFIX =
+else
+	PREFIX =$(ANYKA_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+endif
+endif
+
 VERSION =
-SDK_PATH =sdk/2.0/ilop-sdk-6aad4ee
+SDK10_PATH =sdk/1.0
+SDK20_PATH =sdk/2.0/ilop-sdk-6aad4ee
+SDK23_PATH =sdk/2.3/iotkit-embedded-2.3.0
 
 # 主程序Makefile
 
@@ -14,7 +32,6 @@ BIN_TARGET = ${BIN_DIR}/${EXE}
 SRC_DIR = $(MAKEROOT)/src
 OBJ_DIR = $(MAKEROOT)/obj
 BIN_DIR = $(MAKEROOT)
-include path.mk
 
 CC =$(PREFIX)gcc
 STRIP = $(PREFIX)strip $(BIN_TARGET)
@@ -33,29 +50,39 @@ INC_DIR = \
 SRC = \
 		$(wildcard ${SRC_DIR}/app/*.c) \
 		$(wildcard ${SRC_DIR}/wireless/*.c) \
-		$(wildcard ${SRC_DIR}/drivers/*.c)
+		$(wildcard ${SRC_DIR}/drivers/*.c) \
+		$(wildcard ${SRC_DIR}/drivers/iniparser/*.c)
 CFLAGS =
 ifeq ($(VERSION), 1)
 	INC_DIR += $(MAKEROOT)/include/v1.0
 
-	LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/sdk/1.0/lib
+	LIB_DIR += $(MAKEROOT)/lib/v1.0 $(MAKEROOT)/lib/libs/libs $(MAKEROOT)/$(SDK10_PATH)/lib
 
 	SRC += $(wildcard ${SRC_DIR}/platform/*.c) \
 		   $(wildcard ${SRC_DIR}/product/*.c)
 
-	XLINKER = -Xlinker "-(" -lsqlite3 -liniparser -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -lcjson -Xlinker "-)"
+	XLINKER = -Xlinker "-(" -lsqlite3 -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -lcjson -Xlinker "-)"
 	CFLAGS += -DV1
 endif
 
 ifeq ($(VERSION), 2)
-	INC_DIR += $(MAKEROOT)/include/v2.0 \
+	INC_DIR += $(MAKEROOT)/$(SDK20_PATH)/include \
 			   $(MAKEROOT)/src/hal
 
-	LIB_DIR += $(MAKEROOT)/lib $(MAKEROOT)/libs/libs $(MAKEROOT)/$(SDK_PATH)/lib
+	LIB_DIR += $(MAKEROOT)/lib/v2.0 $(MAKEROOT)/lib/libs/libs $(MAKEROOT)/$(SDK20_PATH)/lib
 
 	SRC += $(wildcard ${SRC_DIR}/hal/*.c)
-	XLINKER = -Xlinker "-(" -lsqlite3 -liniparser -lm -lilop-tls -lilop-sdk -lpthread -ldl -lrt -Xlinker "-)"
+	XLINKER = -Xlinker "-(" -lsqlite3 -lm -lilop-tls -lilop-sdk -lpthread -ldl -lrt -Xlinker "-)"
 	CFLAGS += -DV2
+endif
+
+ifeq ($(VERSION), 23)
+	INC_DIR += $(MAKEROOT)/$(SDK23_PATH)/output/release/include 
+
+	LIB_DIR += $(MAKEROOT)/lib/v2.3 $(MAKEROOT)/$(SDK23_PATH)/output/release/lib 
+
+	XLINKER = -Xlinker "-(" -lsqlite3 -lm -liot_hal -liot_tls -liot_sdk -lpthread -ldl -lrt -Xlinker "-)"
+	CFLAGS += -DV2 -DV23
 endif
 
 CFLAGS += ${addprefix -I,${INC_DIR}}

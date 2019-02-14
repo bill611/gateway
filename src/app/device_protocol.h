@@ -24,7 +24,6 @@ extern "C" {
 #include <stdint.h>
 #include "debug.h"
 #include "ali_sdk_platform.h"
-#include "cJSON.h"
 
 #define NELEMENTS(array)  \
 	        (sizeof (array) / sizeof ((array) [0]))                       

@@ -497,7 +497,7 @@ uint32_t HAL_Wifi_Get_IP(char ip_str[NETWORK_ADDR_LEN], const char *ifname)
 
 static kv_file_t *kvfile = NULL;
 
-#define KVFILE_DEFAULT_PATH "/mnt/nand1-2/kvfile.db"
+// #define KVFILE_DEFAULT_PATH "/mnt/nand1-2/kvfile.db"
 
 int HAL_Kv_Set(const char *key, const void *val, int len, int sync)
 {

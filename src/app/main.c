@@ -32,6 +32,7 @@
 #include "gateway.h"
 #include "smart_home_pro.h"
 #include "config.h"
+#include "tc_interface.h"
 
 
 /* ---------------------------------------------------------------------------*
@@ -43,6 +44,7 @@
  *----------------------------------------------------------------------------*/
 static void gpioResetHandle(void *arg,int port);
 static void gpioRegistHandle(void *arg,int port);
+static void loadInterface(void);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -171,6 +173,7 @@ int main(int argc, char *argv[])
 {
 	saveLog("start %s------------------------>\n",GW_VERSION);
 	configLoad();
+	loadInterface();
 	smarthomeInit();
 	gpioInit();
 	gpio->creatInputThread(gpio,gpioInputTread);
@@ -237,4 +240,60 @@ void gpioDisableWifiPower(void)
 {
 	saveLog("reset wifi power\n");
 	gpio->SetValue(gpio,ENUM_GPIO_WIFI_POWER,IO_INACTIVE);
+}
+
+static char* getUpdateFilePath(void)
+{
+	return UPDATE_FILE;
+}
+static char* getKvFilePath(void)
+{
+	return KVFILE_DEFAULT_PATH;
+}
+static char* getVersion(void)
+{
+	return GW_VERSION;
+}
+static char* getDeviceName(void)
+{
+	return theConfig.gate_way_id;
+}
+static char* getProductKey(void)
+{
+	return theConfig.gate_way.product_key;
+}
+static char* getDeviceSecret(void)
+{
+	return theConfig.gate_way.device_secret;
+}
+static char* getProductSecret(void)
+{
+
+}
+static void watchdogOpen(void)
+{
+	WatchDogOpen();
+}
+static void watchdogClose(void)
+{
+	WatchDogClose();
+}
+static void watchdogFeed(void)
+{
+	WatchDogFeed();
+}
+
+static void loadInterface(void)
+{
+	tc_interface = tcInterfaceCreate();
+	tc_interface->getVersion = getVersion;
+	tc_interface->getUpdateFilePath = getUpdateFilePath;
+	tc_interface->getKvFilePath = getKvFilePath;
+	tc_interface->getDeviceName = getDeviceName;
+	tc_interface->getProductKey = getProductKey;
+	tc_interface->getProductSecret = getProductSecret;
+	tc_interface->getDeviceSecret = getDeviceSecret;
+	tc_interface->watchdogOpen = watchdogOpen;
+	tc_interface->watchdogClose = watchdogClose;
+	tc_interface->watchdogFeed = watchdogFeed;
 }

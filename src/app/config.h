@@ -19,7 +19,13 @@ extern "C" {
 
 
 #define GW_VERSION	"v1.1.1"
+#if (defined V23)
+#define UPDATE_FILE	"/tmp/Update.cab"
+#define KVFILE_DEFAULT_PATH "/mnt/private/kvfile.db"
+#else
 #define UPDATE_FILE	"/mnt/nand1-2/Update.cab"
+#define KVFILE_DEFAULT_PATH "/mnt/nand1-2/kvfile.db"
+#endif
 
 
 	typedef struct _EtcValueChar {
