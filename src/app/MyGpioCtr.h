@@ -48,6 +48,10 @@ extern "C" {
 		IO_INACTIVE,	// 无效 (输出)
 	};
 
+	struct GpioArgs{
+		struct _MyGpio *gpio;
+		int port;
+	};
 
 	struct _MyGpioPriv;
 	typedef struct _MyGpio {
@@ -73,9 +77,8 @@ extern "C" {
 		int (*inputHandle)(struct _MyGpio *This,int port);
 		// 创建输出线程
 		void (*addInputThread)(struct _MyGpio *This,
-				void *arg,
-				int port,
-			   	void (* thread)(void *, int));
+				struct GpioArgs *args,
+			   	void *(* thread)(void *));
 
 		void (*Destroy)(struct _MyGpio *This);
 	}MyGpio;

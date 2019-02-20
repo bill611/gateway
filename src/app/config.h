@@ -19,12 +19,20 @@ extern "C" {
 
 
 #define GW_VERSION	"v1.1.1"
-#if (defined V23)
+#if (defined ANYKA)
 #define UPDATE_FILE	"/tmp/Update.cab"
 #define KVFILE_DEFAULT_PATH "/mnt/private/kvfile.db"
+#define CFG_PUBLIC_DRIVE "/mnt/private/"
+#define CFG_PRIVATE_DRIVE "/mnt/private/"
+#define CFG_TEMP_DRIVE "/mnt/private/"
+#define DATABSE_PATH "/mnt/private/"
 #else
 #define UPDATE_FILE	"/mnt/nand1-2/Update.cab"
 #define KVFILE_DEFAULT_PATH "/mnt/nand1-2/kvfile.db"
+#define CFG_PUBLIC_DRIVE "/mnt/nand1-2/"
+#define CFG_PRIVATE_DRIVE "/mnt/nand1-2/"
+#define CFG_TEMP_DRIVE "/mnt/nand1-2/"
+#define DATABSE_PATH 
 #endif
 
 

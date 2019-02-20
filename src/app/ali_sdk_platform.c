@@ -40,7 +40,6 @@
 #include "ali_sdk_platform.h"
 #include "device_protocol.h"
 #include "iwlib.h"
-#include "tc_interface.h"
 
 
 /* ---------------------------------------------------------------------------*
@@ -249,7 +248,7 @@ static void *ota_start(const char *productKey, const char *deviceName, const cha
     octx->per = 0;
     octx->per_old = 0;
 
-	octx->fd = fopen(tc_interface->getUpdateFilePath(),"wb");
+	octx->fd = fopen(UPDATE_FILE,"wb");
 	if (octx->fd < 0)
 		DPRINT("open update file fail\n");
 
@@ -286,7 +285,7 @@ static int ota_stop(void *handle, int err)
 			fclose(octx->fd);
 			sync();
 			gpioDisableWifiPower();
-			WatchDogClose();
+			halWatchDogClose();
 			exit(0);
 		}
 	} else
@@ -494,9 +493,14 @@ void aliSdkInit(int argc, char *argv[])
 #endif
 
 #if (defined V2)
+	initParams = linkkit_gateway_get_default_params();
+	if (!initParams) {                                
+       return -1;                                    
+	}
 #if (defined V23)
     int maxMsgSize, maxMsgQueueSize, prop_post_reply, event_post_reply;
-    IOT_SetLogLevel(IOT_LOG_DEBUG);
+	IOT_SetLogLevel(IOT_LOG_DEBUG);
+    // IOT_SetLogLevel(IOT_LOG_ERROR);
 
     /* LINKKIT_OPT_MAX_MSG_SIZE: max size of message */
     maxMsgSize = 4096;
@@ -521,7 +525,6 @@ void aliSdkInit(int argc, char *argv[])
 
 #else
 
-	initParams = linkkit_gateway_get_default_params();
     int maxMsgSize = 20 * 1024;
     linkkit_gateway_set_option(initParams, LINKKIT_OPT_MAX_MSG_SIZE, &maxMsgSize, sizeof(int));
     int maxMsgQueueSize = 8;
@@ -765,6 +768,23 @@ int aliSdkRegisterSubDevice(DeviceStr *dev)
 	};
 	// linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
 	// return -1;
+#if (defined V23)
+	if (dev->devid <= 0) {
+		dev->devid = linkkit_gateway_subdev_create(dev->type_para->product_key,
+				dev->id, &cbs, dev);
+	}
+	if (dev->devid < 0) {
+		DPRINT("linkkit_gateway_subdev_create %s<%s> failed\n", dev->id, dev->type_para->product_key);
+		// linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
+		// return -1;
+	}
+	if (linkkit_gateway_subdev_register(dev->type_para->product_key,
+			   	dev->id, dev->type_para->device_secret) < 0) {
+		linkkit_gateway_subdev_destroy(dev->devid);
+		DPRINT("subdev regist fail:%d\n", dev->devid);
+		return -1;
+	}
+#else
 	if (linkkit_gateway_subdev_register(dev->type_para->product_key,
 			   	dev->id, dev->type_para->device_secret) < 0) {
 		DPRINT("subdev regist fail:%d\n", dev->devid);
@@ -778,6 +798,7 @@ int aliSdkRegisterSubDevice(DeviceStr *dev)
 		linkkit_gateway_subdev_unregister(dev->type_para->product_key, dev->id);
 		return -1;
 	}
+#endif
 	if (linkkit_gateway_subdev_login(dev->devid) < 0) {
 		DPRINT("linkkit_gateway_subdev_login %s<%s> failed\n", dev->id, dev->type_para->product_key);
 		linkkit_gateway_subdev_destroy(dev->devid);

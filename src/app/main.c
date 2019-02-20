@@ -32,7 +32,9 @@
 #include "gateway.h"
 #include "smart_home_pro.h"
 #include "config.h"
+#if (defined V23)
 #include "tc_interface.h"
+#endif
 
 
 /* ---------------------------------------------------------------------------*
@@ -42,62 +44,49 @@
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
-static void gpioResetHandle(void *arg,int port);
-static void gpioRegistHandle(void *arg,int port);
+static void *gpioResetThread(void *arg);
+static void *gpioRegistThread(void *arg);
 static void loadInterface(void);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
  *----------------------------------------------------------------------------*/
-typedef struct _GpioInputHandle {
-	GPIO_TBL port;
-	void (*func)(void *,int);
-}GpioInputHandle;
+typedef struct _GpioInputThread {
+	struct GpioArgs args;
+	void *(*func)(void *);
+}GpioInputThread;
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
-static GpioInputHandle gpio_input_handle[] =
+static GpioInputThread gpio_input_handle[] =
 {
-    {ENUM_GPIO_RESET,	gpioResetHandle},
-    {ENUM_GPIO_MODE,	gpioRegistHandle},
+    {{NULL,ENUM_GPIO_RESET},	gpioResetThread},
+    {{NULL,ENUM_GPIO_MODE},		gpioRegistThread},
 };
 
-/* ---------------------------------------------------------------------------*/
-/**
- * @brief gpioInputTread IO输入处理线程
- *
- * @param arg
- *
- * @returns 
- */
-/* ---------------------------------------------------------------------------*/
-static void * gpioInputTread(void *arg)
+static void gpioInputRegist(void)
 {
 	unsigned int i;
-	while (1) {
-		for (i=0; i<NELEMENTS(gpio_input_handle); i++) {
-			gpio_input_handle[i].func(arg,gpio_input_handle[i].port);
-		}
-		usleep(100000);
+	for (i=0; i<NELEMENTS(gpio_input_handle); i++) {
+		gpio_input_handle[i].args.gpio = gpio;
+		gpio->addInputThread(gpio,&gpio_input_handle[i].args,gpio_input_handle[i].func);
 	}
-	return NULL;
 }
-
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief gpioResetHandle 复位按键，用于复位网关，重新配网，清除设备
+ * @brief gpioResetThread 复位按键，用于复位网关，重新配网，清除设备
  *
  * @param arg
  * @param port 当前设备端口
  */
 /* ---------------------------------------------------------------------------*/
-static void gpioResetHandle(void *arg,int port)
+static void *gpioResetThread(void *arg)
 {
-	MyGpio *This = arg;
-	static int cnt = 0;
-	int activ_time = This->getActiveTime(This,port);
-	if (This->inputHandle(This,port)) {
-		if (cnt == activ_time) {
+	struct GpioArgs *This = arg;
+	static int status = 0,status_old = 0;
+	while (1) {
+		status = This->gpio->inputHandle(This->gpio,This->port);
+		if (status && status_old == 0) {
 #if (defined V1)
 			gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
 			aliSdkresetWifi();
@@ -112,34 +101,33 @@ static void gpioResetHandle(void *arg,int port)
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
 #endif
-		} 
-		cnt++;
-	} else {
-		cnt = 0;
+		}
+		status_old = status;
+		usleep(10000);
 	}
+	return NULL;
 }
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief gpioRegistHandle 注册按键
+ * @brief gpioRegistThread 注册按键
  *
  * @param arg
  * @param port 当前设备端口
  */
 /* ---------------------------------------------------------------------------*/
-static void gpioRegistHandle(void *arg,int port)
+static void *gpioRegistThread(void *arg)
 {
-	MyGpio *This = arg;
-	static int cnt = 0;
-	int activ_time = This->getActiveTime(This,port);
-	if (This->inputHandle(This,port)) {
-		if (cnt == activ_time) {
+	struct GpioArgs *This = arg;
+	static int status = 0,status_old = 0;
+	while (1) {
+		status = This->gpio->inputHandle(This->gpio,This->port);
+		if (status && status_old == 0) {
 			gwDeviceReportRegist();
-			DPRINT("[%s]:%d\n", __FUNCTION__,activ_time);
-		} 
-		cnt++;
-	} else {
-		cnt = 0;
+		}
+		status_old = status;
+		usleep(10000);
 	}
+	return NULL;
 }
 
 static void * timer1sThread(void *arg)
@@ -176,7 +164,6 @@ int main(int argc, char *argv[])
 	loadInterface();
 	smarthomeInit();
 	gpioInit();
-	gpio->creatInputThread(gpio,gpioInputTread);
 	createTimer1sThread();
 	aliSdkInit(argc, argv);
     gwRegisterGateway();
@@ -189,10 +176,10 @@ int main(int argc, char *argv[])
 		sleep(1);
 	}
 	gwLoadDeviceData();
-	WatchDogOpen();
+	halWatchDogOpen();
 
     while (1) {
-		WatchDogFeed();
+		halWatchDogFeed();
         sleep(2);
     }
 
@@ -268,23 +255,25 @@ static char* getDeviceSecret(void)
 }
 static char* getProductSecret(void)
 {
-
+	return "iCgDBldcZHNJ8iuM";
 }
 static void watchdogOpen(void)
 {
-	WatchDogOpen();
+	halWatchDogOpen();
 }
 static void watchdogClose(void)
 {
-	WatchDogClose();
+	halWatchDogClose();
 }
 static void watchdogFeed(void)
 {
-	WatchDogFeed();
+	halWatchDogFeed();
 }
 
 static void loadInterface(void)
 {
+#if (defined V23)
+#if (!defined X86)
 	tc_interface = tcInterfaceCreate();
 	tc_interface->getVersion = getVersion;
 	tc_interface->getUpdateFilePath = getUpdateFilePath;
@@ -296,4 +285,6 @@ static void loadInterface(void)
 	tc_interface->watchdogOpen = watchdogOpen;
 	tc_interface->watchdogClose = watchdogClose;
 	tc_interface->watchdogFeed = watchdogFeed;
+#endif
+#endif
 }

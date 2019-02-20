@@ -72,34 +72,26 @@ typedef struct _MyGpioPriv {
 
  
 #if (defined V23)
-#define GPIO_ZIGBEE_POWER		84,-1,IO_ACTIVE
-#define GPIO_WIFI_POWER			83,-1,IO_ACTIVE
-#define GPIO_LED_WIFI			80,-1,IO_INACTIVE
-#define GPIO_LED_RESET			80,-1,IO_INACTIVE
-#define GPIO_LED_ONLINE			80,-1,IO_INACTIVE
-#define GPIO_LED_NET_IN			80,-1,IO_ACTIVE
+#define GPIO_ZIGBEE_POWER		84,-1,1,IO_ACTIVE
+#define GPIO_WIFI_POWER			83,-1,1,IO_ACTIVE
+#define GPIO_LED_WIFI			80,-1,0,IO_INACTIVE
+#define GPIO_LED_RESET			80,-1,0,IO_INACTIVE
+#define GPIO_LED_ONLINE			80,-1,0,IO_INACTIVE
+#define GPIO_LED_NET_IN			80,-1,0,IO_ACTIVE
 
-#define GPIO_RESET				85,-1,IO_INPUT
-#define GPIO_MODE				80,-1,IO_INPUT
+#define GPIO_RESET				85,-1,0,IO_INPUT
+#define GPIO_MODE				80,-1,0,IO_INPUT
 #else
 
-#define GPIO_GROUP_A 'a'
-#define GPIO_GROUP_B 'b'
-#define GPIO_GROUP_C 'c'
-#define GPIO_GROUP_D 'd'
-#define GPIO_GROUP_E 'e'
-#define GPIO_GROUP_G 'g'
-#define GPIO_GROUP_H 'h'
+#define GPIO_ZIGBEE_POWER		'c',15,1,IO_ACTIVE
+#define GPIO_WIFI_POWER			'e',0, 1,IO_ACTIVE
+#define GPIO_LED_WIFI			'c',14,0,IO_INACTIVE
+#define GPIO_LED_RESET			'd',11,0,IO_INACTIVE
+#define GPIO_LED_ONLINE			'd',10,0,IO_INACTIVE
+#define GPIO_LED_NET_IN			'c',13,0,IO_ACTIVE
 
-#define GPIO_ZIGBEE_POWER		GPIO_GROUP_C,15,1,IO_ACTIVE
-#define GPIO_WIFI_POWER			GPIO_GROUP_E,0, 1,IO_ACTIVE
-#define GPIO_LED_WIFI			GPIO_GROUP_C,14,0,IO_INACTIVE
-#define GPIO_LED_RESET			GPIO_GROUP_D,11,0,IO_INACTIVE
-#define GPIO_LED_ONLINE			GPIO_GROUP_D,10,0,IO_INACTIVE
-#define GPIO_LED_NET_IN			GPIO_GROUP_C,13,0,IO_ACTIVE
-
-#define GPIO_RESET				GPIO_GROUP_E,1,0,IO_INPUT
-#define GPIO_MODE				GPIO_GROUP_D,3,0,IO_INPUT
+#define GPIO_RESET				'e',1,0,IO_INPUT
+#define GPIO_MODE				'd',3,0,IO_INPUT
 #endif
 /* ----------------------------------------------------------------*
  *                      variables define
@@ -138,7 +130,7 @@ static int myGpioSetValue(MyGpio *This,int port,int  Value)
 	if (	(table->default_value == IO_INPUT)
 		||  (table->default_value == IO_NO_EXIST) ) {   //Êä³ö
 #endif
-		printf("[%d]set value fail,it is input or not exist!\n",port);
+		// printf("[%d]set value fail,it is input or not exist!\n",port);
 		return 0;
 	}
 
@@ -487,10 +479,10 @@ static void myGpioOutputThreadCreate(MyGpio *This)
 }
 
 static void myGpioAddInputThread(MyGpio *This,
-		void *arg,
-		int port,
-	   	void (* thread)(void *, int))
+		struct GpioArgs *args,
+		void *(* thread)(void *))
 {
+#if 0
 	if (This->priv->task_num == GPIO_MAX_INPUT_TASK) {
 		printf("Err: input thread task full!!\n");
 		return;
@@ -501,6 +493,19 @@ static void myGpioAddInputThread(MyGpio *This,
 	This->priv->task[This->priv->task_num].port = port;
 	This->priv->task_num++;
 	pthread_mutex_unlock(&This->priv->mutex);
+#else
+    int result;
+    pthread_t m_pthread;
+    pthread_attr_t threadAttr1;
+
+    pthread_attr_init(&threadAttr1);
+    pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
+    result = pthread_create(&m_pthread,&threadAttr1,thread,args);
+    if(result)
+        printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);
+
+    pthread_attr_destroy(&threadAttr1);
+#endif
 }
 
 static void * myGpioInputThread(void *arg)
@@ -571,7 +576,7 @@ MyGpio* myGpioPrivCreate(MyGpioTable *gpio_table,int io_num)
 	This->addInputThread = myGpioAddInputThread;
 	myGpioInit(This);
 	myGpioOutputThreadCreate(This);
-	myGpioInputThreadCreate(This);
+	// myGpioInputThreadCreate(This);
 	return This;
 }
 

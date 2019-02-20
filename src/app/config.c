@@ -9,9 +9,6 @@
 #include "config.h"
 #include "debug.h"
 
-#define CFG_PUBLIC_DRIVE "/mnt/nand1-2/"
-#define CFG_PRIVATE_DRIVE "/mnt/nand1-2/"
-#define CFG_TEMP_DRIVE "/mnt/nand1-2/"
 
 #define INI_PUBLIC_FILENAME "config_para.ini"
 #define INI_PRIVATE_FILENAME "config.ini"

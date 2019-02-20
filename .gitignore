@@ -6,6 +6,9 @@ cscope*
 *.bak
 obj
 *.mk
+*.db
+*.db_bak
+log.txt
 libs
 gw
 libplatform.so

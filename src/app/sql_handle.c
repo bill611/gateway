@@ -25,6 +25,7 @@
 #include "sqlite.h"
 #include "sql_handle.h"
 #include "debug.h"
+#include "config.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -45,7 +46,7 @@ static int sqlCheck(TSqlite *sql);
 static pthread_mutex_t mutex;
 
 TSqliteData sql_local = {
-	.file_name = "device.db",
+	.file_name = DATABSE_PATH"device.db",
 	.sql = NULL,
 	.checkFunc = sqlCheck,
 };

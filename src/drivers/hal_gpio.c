@@ -23,10 +23,9 @@
 #include <stdlib.h>
 #include "hal_gpio.h"
 
-#if (defined V23)
+#if (defined ANYKA)
 #include "akgpio.h"
 #define GPIO_DEVICE "/dev/akgpio"
-#else
 #endif
 
 /* ---------------------------------------------------------------------------*
@@ -48,14 +47,14 @@ static int fd;
 
 void halGpioSetMode(int port_id,int port_mask,int dir)
 {
-#if (defined V23)
+#if (defined ANYKA)
 	if (fd <= 0) {
 		fd = open(GPIO_DEVICE, O_RDWR);
 		if (fd <= 0) {
 			printf("Init:%s open failed.\n",GPIO_DEVICE);
 		}
 	}
-#else
+#elif (defined NUVOTON) 
 	char string_buf[50];
 	FILE *fp;
 	if ((fp = fopen("/sys/class/gpio/export", "w")) == NULL) {
@@ -90,7 +89,7 @@ void halGpioSetMode(int port_id,int port_mask,int dir)
 
 void halGpioOut(int port_id,int port_mask,int value)
 {
-#if (defined V23)
+#if (defined ANYKA)
     struct gpio_info info;
 	info.pin = port_id;
 	info.dir = AK_GPIO_DIR_OUTPUT;
@@ -103,7 +102,7 @@ void halGpioOut(int port_id,int port_mask,int value)
 		info.value   = AK_GPIO_OUT_LOW;
 	if (fd)
 		ioctl(fd, SET_GPIO_FUNC, &info);
-#else
+#elif (defined NUVOTON) 
 	char string_buf[50],buffer[10];
 	FILE *fp;
 	switch (port_id)
@@ -133,7 +132,7 @@ void halGpioOut(int port_id,int port_mask,int value)
 
 int halGpioIn(int port_id,int port_mask)
 {
-#if (defined V23)
+#if (defined ANYKA)
     struct gpio_info info;
 	info.pin = port_id;
 	info.dir = AK_GPIO_DIR_OUTPUT;
@@ -144,7 +143,7 @@ int halGpioIn(int port_id,int port_mask)
 	if (fd)
 		ioctl(fd, GET_GPIO_VALUE, &info);
 	return info.value;
-#else
+#elif (defined NUVOTON) 
 	char string_buf[50],buffer[10];
 	FILE *fp;
 	switch (port_id)

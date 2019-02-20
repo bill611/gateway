@@ -1,19 +1,22 @@
 MAKEROOT = $(shell pwd)
 
-ifeq ($(VERSION), 1)
+CFLAGS =
+ifeq ($(PLATFORM), NU)
 	PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+	CFLAGS += -DNUVOTON
+	LINKFLAGS = -muclibc
 endif
 
-ifeq ($(VERSION), 2)
-	PREFIX =$(NUVOTON_CROOS_PATH)/bin/arm-none-linux-gnueabi-
-endif
-
-ifeq ($(VERSION), 23)
-ifeq ($(DBG), 1)
-	PREFIX =
-else
+ifeq ($(PLATFORM), AK)
 	PREFIX =$(ANYKA_CROOS_PATH)/bin/arm-none-linux-gnueabi-
+	CFLAGS += -DANYKA
+	LINKFLAGS = 
 endif
+
+ifeq ($(PLATFORM), PC)
+	PREFIX =
+	CFLAGS += -DX86
+	LINKFLAGS = 
 endif
 
 VERSION =
@@ -52,7 +55,7 @@ SRC = \
 		$(wildcard ${SRC_DIR}/wireless/*.c) \
 		$(wildcard ${SRC_DIR}/drivers/*.c) \
 		$(wildcard ${SRC_DIR}/drivers/iniparser/*.c)
-CFLAGS =
+
 ifeq ($(VERSION), 1)
 	INC_DIR += $(MAKEROOT)/include/v1.0
 
@@ -63,6 +66,7 @@ ifeq ($(VERSION), 1)
 
 	XLINKER = -Xlinker "-(" -lsqlite3 -lresolv -lm -lssl -lcrypto -lalink_agent -lpthread -ldl -lcjson -Xlinker "-)"
 	CFLAGS += -DV1
+	CP_TARGET = $(MAKEROOT)/../nand/v1.0/nand1-2/
 endif
 
 ifeq ($(VERSION), 2)
@@ -74,6 +78,7 @@ ifeq ($(VERSION), 2)
 	SRC += $(wildcard ${SRC_DIR}/hal/*.c)
 	XLINKER = -Xlinker "-(" -lsqlite3 -lm -lilop-tls -lilop-sdk -lpthread -ldl -lrt -Xlinker "-)"
 	CFLAGS += -DV2
+	CP_TARGET = $(MAKEROOT)/../nand/v2.0/nand1-2/
 endif
 
 ifeq ($(VERSION), 23)
@@ -83,11 +88,21 @@ ifeq ($(VERSION), 23)
 
 	XLINKER = -Xlinker "-(" -lsqlite3 -lm -liot_hal -liot_tls -liot_sdk -lpthread -ldl -lrt -Xlinker "-)"
 	CFLAGS += -DV2 -DV23
+	CP_TARGET = $(MAKEROOT)/../nand/v2.3/bin/
 endif
 
-CFLAGS += ${addprefix -I,${INC_DIR}}
+ifeq ($(DBG), 1)
+	CFLAGS += -g -O0 -DWATCHDOG_DEBUG
+	LINKFLAGS += -g -O0
+	LIB_DIR += $(MAKEROOT)/lib/x86
+	CP_TARGET := ${HOME}/arm_share/ankgw
+else
+	CFLAGS += -O2
+endif
 
-include evn.mk
+
+CFLAGS += -D_PLATFORM_IS_LINUX_ -D_GNU_SOURCE ${addprefix -I,${INC_DIR}}
+
 
 # wildcard:扩展通配符，notdir;去除路径，patsubst;替换通配符
 
@@ -103,7 +118,7 @@ DEPS = $(patsubst %.c, ${OBJ_DIR}/%.d, $(notdir ${SRC}))
 export CC LIB_DIR CFLAGS OBJ_DIR INC_DIR DEPS VERSION
 # $@：表示目标文件，$^：表示所有的依赖文件，$<：表示第一个依赖文件，$?：表示比目标还要新的依赖文件列表
 all: make_C ${BIN_TARGET}
-	${CP_TARGET}
+	cp -u ${BIN_TARGET} ${CP_TARGET}
 
 make_C:
 	@mkdir -p ${OBJ_DIR}
@@ -111,7 +126,7 @@ make_C:
 
 # 在指定目录下，将所有的.c文件编译为相应的同名.o文件
 ${BIN_TARGET}:${OBJ}
-	@$(COMPILE)
+	@$(CC) $(LINKFLAGS) -o $@ $(OBJ) ${addprefix -L,${LIB_DIR}} ${XLINKER}
 	@${STRIP} $@
 
 debug:
