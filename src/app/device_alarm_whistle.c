@@ -169,7 +169,11 @@ static DeviceTypePara alarm_whistle = {
 };
 
 
-DeviceStr * registDeviceAlarmWhistle(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceAlarmWhistle(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,alarm_whistle.product_key) != 0) {

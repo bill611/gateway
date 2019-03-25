@@ -145,45 +145,6 @@ void ErrorLog(int ecode,const char *fmt,...)
 	}
 }
 //---------------------------------------------------------------------------
-#ifndef WIN32
-//windows 的GetLocalIP代码在capture.c中实现
-
-int GetLocalIP(char *IP,char *NetMask,char *MAC)
-{
-	struct ifreq ifr;
-	int sock;
-	if((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		return 0;
-	}
-	strcpy(ifr.ifr_name, "eth0");
-	if(ioctl(sock, SIOCGIFADDR, &ifr) < 0)
-		goto error;
-
-	strcpy(IP,(char*)inet_ntoa(((struct sockaddr_in *)(&ifr.ifr_addr))->sin_addr));
-
-	if (ioctl(sock, SIOCGIFNETMASK, &ifr) < 0)
-		goto error;
-	strcpy(NetMask,(char*)inet_ntoa(((struct sockaddr_in *)(&ifr.ifr_addr))->sin_addr));
-
-	//获取MAC地址
-	if (!(ioctl (sock, SIOCGIFHWADDR, &ifr))) {
-		sprintf(MAC,"%02X:%02X:%02X:%02X:%02X:%02X",
-			(unsigned char)ifr.ifr_hwaddr.sa_data[0],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[1],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[2],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[3],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[4],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[5]);
-	}
-   close(sock);
-   return 1;
-error:
-	close(sock);
-	return 0;
-}
-//---------------------------------------------------------------------------
-#endif
-
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief GetDate 取当前日期时间格式

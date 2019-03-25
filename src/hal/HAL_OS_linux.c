@@ -184,14 +184,14 @@ char *HAL_GetChipID(_OU_ char cid_str[HAL_CID_LEN])
 int HAL_GetDeviceID(_OU_ char device_id[DEVICE_ID_MAXLEN])
 {
     memset(device_id, 0x0, DEVICE_ID_MAXLEN);
-    HAL_Snprintf(device_id, DEVICE_ID_MAXLEN, "%s.%s", theConfig.gate_way.product_key, theConfig.gate_way_id);
+    HAL_Snprintf(device_id, DEVICE_ID_MAXLEN, "%s.%s", theConfig.gate_way.product_key, theConfig.gate_way.device_name);
     return strlen(device_id);
 }
 
 int HAL_GetDeviceName(_OU_ char device_name[DEVICE_NAME_MAXLEN])
 {
     memset(device_name, 0x0, DEVICE_NAME_MAXLEN);
-    HAL_Snprintf(device_name, DEVICE_NAME_MAXLEN, "%s", theConfig.gate_way_id);
+    HAL_Snprintf(device_name, DEVICE_NAME_MAXLEN, "%s", theConfig.gate_way.device_name);
     return strlen(device_name);
 }
 

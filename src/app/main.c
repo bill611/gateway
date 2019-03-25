@@ -97,9 +97,9 @@ static void *gpioResetThread(void *arg)
 			exit(0);
 #else
 			gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
-			aliSdkresetWifi();
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
+			aliSdkresetWifi();
 #endif
 		}
 		status_old = status;
@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
 	loadInterface();
 	smarthomeInit();
 	gpioInit();
+	gpioInputRegist();
 	createTimer1sThread();
 	aliSdkInit(argc, argv);
     gwRegisterGateway();
@@ -243,7 +244,7 @@ static char* getVersion(void)
 }
 static char* getDeviceName(void)
 {
-	return theConfig.gate_way_id;
+	return theConfig.gate_way.device_name;
 }
 static char* getProductKey(void)
 {
@@ -255,7 +256,7 @@ static char* getDeviceSecret(void)
 }
 static char* getProductSecret(void)
 {
-	return "iCgDBldcZHNJ8iuM";
+	// return "iCgDBldcZHNJ8iuM";
 }
 static void watchdogOpen(void)
 {

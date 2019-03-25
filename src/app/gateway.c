@@ -23,8 +23,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "debug.h"
-#include "linklist.h"		/* Header */
+#include "queue.h"
 #include "device_protocol.h"
 #include "sql_handle.h"
 #include "zigbee.h"
@@ -41,6 +42,7 @@
 #include "device_outlet.h"
 #include "device_air_box.h"
 #include "device_lock.h"
+#include "device_scene.h"
 
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
@@ -51,6 +53,7 @@
  *----------------------------------------------------------------------------*/
 void gwGetSwichStatus(void);
 void gwDeviceInit(void);
+static void createRegistSubThread(void);
 
 /* ---------------------------------------------------------------------------*
  *                        macro define
@@ -70,13 +73,22 @@ typedef struct {
 
 typedef struct {
 	int device_type;	
-	DeviceStr* (*regist) (char *,uint16_t,uint16_t,char *);
+	DeviceStr* (*regist) (char *id,
+			uint16_t addr,
+			uint16_t channel,
+			char *pk,
+			RegistSubDevType regist_type);
 }SubDeviceRegist;
 
+struct RegistData{
+	char pk[64];
+	uint8_t duration;
+};
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
 static GateWayPrivateAttr gw_attrs[];
+static Queue *regist_queue;
 
 static List *sub_dev_list = NULL; // 链表保存子设备
 static char regist_tmp_pk[64] = {0}; // 注册时临时保存允许入网的设备pk
@@ -85,15 +97,16 @@ static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,		registDeviceLight},
 	{DEVICE_TYPE_XFXT,		registDeviceFreshAir},
 	{DEVICE_TYPE_HW,		registDeviceMotionCurtain},
-	{DEVICE_TYPE_ZYKT,		registDeviceAirCondition},
+	{DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirCondition},
 	{DEVICE_TYPE_JD,		registDeviceAlarmWhistle},
 	{DEVICE_TYPE_CL,		registDeviceCurtain},
 	{DEVICE_TYPE_MC,		registDeviceDoorContact},
 	{DEVICE_TYPE_JLCZ10,	registDeviceOutlet10},
 	{DEVICE_TYPE_JLCZ16,	registDeviceOutlet16},
 	{DEVICE_TYPE_KQJCY,		registDeviceAirBox},
-	{DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirConditionMidea},
+	// {DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirConditionMidea},
 	{DEVICE_TYPE_LOCK_XLQ,	registDevicelock},
+	{DEVICE_TYPE_QJ,		registDeviceScene},
 };
 
 static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int buf_sz)
@@ -113,6 +126,7 @@ static int __factory_reset_service_cb(char *args, char *output_buf, unsigned int
 }
 int gwRegisterGateway(void)
 {
+	createRegistSubThread();
 	int ret = aliSdkRegistGwService(GW_SERVICE_FACTORY_RESET,
 			__factory_reset_service_cb);
 	if (0 != ret) {
@@ -186,37 +200,48 @@ static GateWayPrivateAttr gw_attrs[] = {
  * @param addr 子设备短地址
  * @param channel 子设备通道数量
  * @param product_key V2.0平台产品唯一标识
+ * @param regist_type 注册子设备类型
  *
  * @returns 0成功 -1失败
  */
 /* ---------------------------------------------------------------------------*/
-int gwRegisterSubDevice(char *id,int type,uint16_t addr,uint16_t channel,char *product_key)
+int gwRegisterSubDevice(char *id,
+		int dev_type,
+		uint16_t addr,
+		uint16_t channel,
+		char *product_key,
+		RegistSubDevType regist_type)
 {
     int ret = -1;
 	unsigned int i;
 	for (i=0; i<NELEMENTS(device_regist); i++) {
 		// DPRINT("[%s] device type:%d,type:%d\n",__func__,device_regist[i].device_type,type);
-		if (device_regist[i].device_type == type)	
+		if (device_regist[i].device_type == dev_type)	
 			break;
 	}
 	if (i == NELEMENTS(device_regist)) {
-		DPRINT("unknow device type:%d\n",type );
+		DPRINT("unknow device type:%d\n",dev_type );
 		return -1;
 	}
-	DPRINT("id:%s,type:%d,channle:%d\n", id,type,channel);
+	DPRINT("id:%s,type:%d,channle:%d\n", id,dev_type,channel);
 	// return -1;
-	DeviceStr *dev = device_regist[i].regist(id,addr,channel,product_key);
-	if (dev == NULL)
-		return -1;
-	// test------------------
-	// sprintf(dev->id,"%s",dev->type_para->name);
-	// 
+	DeviceStr* dev = device_regist[i].regist(id,addr,channel,product_key,regist_type);
 	ret = aliSdkRegisterSubDevice(dev);
-	if (ret != 0) 
+	if (ret != 0)  {
 		DPRINT("[%s]register sub device fail,id:%s\n",
 				dev->type_para->name, dev->id);
-	else
+		if (dev)
+			free(dev);
+		return 1;	
+	} else {
+		DPRINT("[%s]register sub device ok,id:%s\n",
+				dev->type_para->name, dev->id);
 		sub_dev_list->append(sub_dev_list,&dev);
+	}
+	if (regist_type > REGIST_INIT)
+		smarthomeAddNewDev(dev->id,
+				dev->type_para->device_type,
+				dev->addr,dev->channel,dev->type_para->product_key);
     return ret;
 }
 
@@ -231,7 +256,7 @@ static int getAttrCb(const char *devid, const char *attr_set[])
 		return 0;
 	sub_dev_list->foreachStart(sub_dev_list,0);
 	while(sub_dev_list->foreachEnd(sub_dev_list)) {
-		DeviceStr *dev;
+		DeviceStr *dev = NULL;
 		sub_dev_list->foreachGetElem(sub_dev_list,&dev);
 		if (strcmp(dev->id,devid) == 0) {
 			dev->type_para->getAttr(dev,attr_set);
@@ -310,11 +335,16 @@ static int removeDeviceCb(const char *devid)
 
 static int permitSubDeviceJoinCb(char *pk,uint8_t duration)
 {
-    DPRINT("permitSubDeviceJoinCb, pk:%s,duration:%d\n",pk,duration);
+	struct RegistData regist_data;
 	memset(regist_tmp_pk,0,sizeof(regist_tmp_pk));
-	if (pk)
+	memset(&regist_data,0,sizeof(regist_data));
+	if (pk) {
 		sprintf(regist_tmp_pk,"%s",pk);
-	zigbeeNetIn(duration);
+		strcpy(regist_data.pk,regist_tmp_pk);
+	}
+	regist_data.duration = duration;
+	regist_queue->post(regist_queue,&regist_data);
+
 	return 0;
 }
 static GateWayAttr gw_attr = {
@@ -355,10 +385,11 @@ void gwLoadDeviceData(void)
 	char id[32] = {0};
 	int type;
 	uint16_t addr,channel;
+	char product_key[32];
 	sub_dev_list = listCreate(sizeof(DeviceStr *));
 	for (i=0; i<device_num; i++) {
-		sqlGetDevice(id,&type,&addr,&channel,i);	
-		gwRegisterSubDevice(id,type,addr,channel,NULL);
+		sqlGetDevice(id,&type,&addr,&channel,product_key,i);	
+		gwRegisterSubDevice(id,type,addr,channel,product_key,REGIST_INIT);
 	}
 }
 
@@ -533,7 +564,7 @@ void gwGetAirPara(char *id,char *param)
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief gwReportPowerOn 上报设备开启
+ * @brief gwReportArmStatus 上报报警
  *
  * @param id
  * @param param
@@ -587,4 +618,57 @@ void gwReportAlarmWhistleStatus(char *param)
 char *gwGetTempProductKey(void)
 {
 	return regist_tmp_pk;	
+}
+
+void gwReportSceneControl(char *id,int channel)
+{
+	DPRINT("[%s]id:%s\n", __FUNCTION__,id);
+	DeviceStr * dev = getSubDevice(id);
+	if (!dev)
+		return;
+	if (dev->type_para->reportSceneControl) {
+		DPRINT("[%s]---->", dev->type_para->name);
+		dev->type_para->reportSceneControl(dev,channel);
+	}
+}
+
+static void* regsitThread(void *arg)
+{
+	struct RegistData regist_data;
+	while(1) {
+		memset(&regist_data,0,sizeof(regist_data));
+		regist_queue->get(regist_queue,&regist_data);
+		// 注册中央空调较特殊，选择空调后，再次注册空调，则不需要进入入网
+		// 直接返回注册成功
+		DeviceStr* dev = registDeviceAirCondition(NULL,0,0,regist_data.pk,REGIST_PERMIT);
+		if (dev == NULL)
+			zigbeeNetIn(regist_data.duration);
+		else {
+			int ret = aliSdkRegisterSubDevice(dev);
+			if (ret != 0)  {
+				DPRINT("[%s]register sub device fail1,id:%s\n",
+						dev->type_para->name, dev->id);
+				if (dev)
+					free(dev);
+			} else {
+				DPRINT("[%s]register sub device ok1,id:%s\n",
+						dev->type_para->name, dev->id);
+				sub_dev_list->append(sub_dev_list,&dev);
+			}
+			smarthomeAddNewDev(dev->id,
+					dev->type_para->device_type,
+					dev->addr,dev->channel,dev->type_para->product_key);
+		}
+	}	
+}
+
+static void createRegistSubThread(void)
+{
+	regist_queue = queueCreate("regist",QUEUE_BLOCK,sizeof(struct RegistData));
+    pthread_t m_pthread;		//线程号
+	pthread_attr_t threadAttr1;			//线程属性
+	pthread_attr_init(&threadAttr1);		//附加参数
+	pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);	//设置线程为自动销毁
+	pthread_create(&m_pthread,&threadAttr1,regsitThread,NULL);	//创建线程
+	pthread_attr_destroy(&threadAttr1);		//释放附加参数
 }

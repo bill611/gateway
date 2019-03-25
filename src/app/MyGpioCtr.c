@@ -71,7 +71,7 @@ typedef struct _MyGpioPriv {
 }MyGpioPriv;
 
  
-#if (defined V23)
+#if (defined ANYKA)
 #define GPIO_ZIGBEE_POWER		84,-1,1,IO_ACTIVE
 #define GPIO_WIFI_POWER			83,-1,1,IO_ACTIVE
 #define GPIO_LED_WIFI			80,-1,0,IO_INACTIVE

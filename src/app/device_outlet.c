@@ -274,7 +274,11 @@ static DeviceTypePara outlet16 = {
 	.short_model = 0,
 };
 
-DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceOutlet10(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,outlet10.product_key) != 0) {
@@ -298,7 +302,11 @@ DeviceStr * registDeviceOutlet10(char *id,uint16_t addr,uint16_t channel,char *p
 
 	return This;
 }
-DeviceStr * registDeviceOutlet16(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceOutlet16(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (strcmp(pk,outlet16.product_key) != 0) {
 		DPRINT("diff pk :allow pk:%s,now pk:%s\n",

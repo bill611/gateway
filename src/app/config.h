@@ -18,7 +18,7 @@ extern "C" {
 #define WPA_PATH                 	"/tmp/wpa_supplicant/"
 
 
-#define GW_VERSION	"v1.1.1"
+#define GW_VERSION	"v2.0.0"
 #if (defined ANYKA)
 #define UPDATE_FILE	"/tmp/Update.cab"
 #define KVFILE_DEFAULT_PATH "/mnt/private/kvfile.db"
@@ -52,22 +52,32 @@ extern "C" {
 	} EtcValueInt;
 
 	struct DevConfig{
+		char device_name[64];
 		char product_key[64];
 		char device_secret[64];
 	};
-	/**
-	 * Configuration definition.
-	 */
-	typedef struct _Config {
-		char  gate_way_id[32];		//网关
-		struct DevConfig gate_way;		//网关
-	} Config;
-
-	enum {
-		TC_SET_STATION,
-		TC_SET_AP,
-	};
 	typedef struct {
+#if (defined V23)
+        // ethernet
+		char dhcp[3];
+		char ipaddr[16];
+		char netmask[16];
+		char gateway[16];
+		char macaddr[20];
+		char firstdns[16];
+		char backdns[16];
+
+		// station 
+		char ssid[64];
+		char mode[64];
+		char security[128];
+		char password[64];
+		char running[64];
+
+		// ap
+		char s_ssid[64];
+		char s_password[64];
+#else		
 		// station 
 		char boot_proto[64];
 		char network_type[64];
@@ -83,8 +93,25 @@ extern "C" {
 		char ap_encrypt_type[64];
 		char ap_auth_key[64];
 		char ap_channel;
+#endif
 	}TcWifiConfig;
+
 	extern TcWifiConfig tc_wifi_config;
+	/**
+	 * Configuration definition.
+	 */
+	typedef struct _Config {
+        char imei[64];      // 太川设备机身码
+        char version[16];      // 太川软件版本
+		struct DevConfig gate_way;	//网关阿里相关参数
+        TcWifiConfig net_config;  // 网络设置
+	} Config;
+
+	enum {
+		TC_SET_STATION,
+		TC_SET_AP,
+	};
+
 	/**
 	 * Global instance variable of configuration.
 	 */
@@ -236,7 +263,6 @@ extern "C" {
 	int isConfigMaster(void);
 
 	void tcSetNetwork(int type);
-	void printfWifiInfo(int cnt );
 	extern char *auth_mode[];
 	extern char *encrypt_type[];
 #ifdef __cplusplus

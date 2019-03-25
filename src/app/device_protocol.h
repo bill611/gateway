@@ -6,7 +6,7 @@
  *    Description:  阿里相关json接口
  *
  *        Version:  virsion
- *        Created:  2018-05-08 16:39:45 
+ *        Created:  2018-05-08 16:39:45
  *       Revision:  none
  *
  *         Author:  xubin
@@ -23,10 +23,11 @@ extern "C" {
 
 #include <stdint.h>
 #include "debug.h"
+#include "linklist.h"
 #include "ali_sdk_platform.h"
 
 #define NELEMENTS(array)  \
-	        (sizeof (array) / sizeof ((array) [0]))                       
+	        (sizeof (array) / sizeof ((array) [0]))
 
 #define SET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"properties\":{\"%s\":{\"value\":\"%s\"}}}]}"
 #define GET_PROPERTY_REQ_FMT            "{\"items\":[{\"uuid\":\"%s\",\"group\":\"\",\"attrSet\":[\"%s\"]}]}"
@@ -39,6 +40,12 @@ extern "C" {
 		DEVICE_VELUE_TYPE_DOUBLE,
 		DEVICE_VELUE_TYPE_STRING,
 	};
+	typedef	enum _RegistSubDevType{
+		REGIST_INIT,  // 重新上电初始化时注册
+		REGIST_PERMIT,  // 允许入网时注册，只用于中央空调类型时需要
+		REGIST_NORMAL,  // 正常子设备入网时注册流程
+	}RegistSubDevType;
+	
 	struct _DeviceStr;
 	typedef struct {
 		char *name; // 设备类型名称 如灯控为light,调试使用
@@ -65,7 +72,7 @@ extern "C" {
 		int (*getAttr)(struct _DeviceStr *dev, const char *attr_set[]); // 通用获取属性
 		int (*setAttr)(struct _DeviceStr *dev, const char *attr_name, const char *attr_value); // 通用设置属性
 
-		int (*checkAttrs)(struct _DeviceStr *dev); // 主动查询设备属性
+		void (*checkAttrs)(struct _DeviceStr *dev); // 主动查询设备属性
 
 		void (*getSwichStatus)(struct _DeviceStr *dev);
 		void (*getAirPara)(struct _DeviceStr *dev);
@@ -81,6 +88,8 @@ extern "C" {
 		void (*reportArmStatus)(struct _DeviceStr *dev,char *param);  // 上报布防状态
 		void (*reportAlarmStatus)(struct _DeviceStr *dev,char *param); // 上报报警状态
 		void (*reportAlarmWhistleOpen)(struct _DeviceStr *dev,char *param); // 上报声光报警器报警
+
+		void (*reportSceneControl)(struct _DeviceStr *dev,int channel); // 上报情景状态
 	}DeviceTypePara;
 
 	struct _Timer;
@@ -95,11 +104,11 @@ extern "C" {
 	}DeviceStr;
 
 	typedef struct _GateWayPrivateAttr{
-		char *attr;	
+		char *attr;
 		int (*getCb)(char *output_buf, unsigned int buf_sz);
 		int (*setCb)(char *value);
 		int value_type;
-		char value[32];	
+		char value[32];
 	}GateWayPrivateAttr;
 
 	typedef struct _GateWayAttr{

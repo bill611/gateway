@@ -182,7 +182,11 @@ static DeviceTypePara door_contact = {
 };
 
 
-DeviceStr * registDeviceDoorContact(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceDoorContact(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,door_contact.product_key) != 0) {

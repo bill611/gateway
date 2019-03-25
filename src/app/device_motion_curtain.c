@@ -95,7 +95,7 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void timer5min(void *arg)
+static void timer1s(void *arg)
 {
 	DeviceStr *dev = (DeviceStr *)arg;
 	dev->timer->stop(dev->timer);
@@ -131,7 +131,7 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 	if (alarm_type == TC_ALARM_ACTION) {
 		sprintf(dev->value[ATTR_ALARM],"1");
 		if (!dev->timer) {
-			dev->timer = timerCreate(1000 * 60 * 1 ,timer5min,dev); // 5分钟定时器
+			dev->timer = timerCreate(1000 * 60 * 1 ,timer1s,dev); // 1分钟定时器
 			dev->timer->start(dev->timer);
 		} else  {
 			dev->timer->start(dev->timer);
@@ -213,7 +213,11 @@ static DeviceTypePara motion_curtain = {
 };
 
 
-DeviceStr * registDeviceMotionCurtain(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceMotionCurtain(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,motion_curtain.product_key) != 0) {

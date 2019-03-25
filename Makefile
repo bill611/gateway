@@ -34,7 +34,7 @@ BIN_TARGET = ${BIN_DIR}/${EXE}
 
 SRC_DIR = $(MAKEROOT)/src
 OBJ_DIR = $(MAKEROOT)/obj
-BIN_DIR = $(MAKEROOT)
+BIN_DIR = $(MAKEROOT)/out/bin
 
 CC =$(PREFIX)gcc
 STRIP = $(PREFIX)strip $(BIN_TARGET)
@@ -134,4 +134,4 @@ debug:
 
 .PHONY:clean
 clean:
-	@-rm -rf ${BIN_TARGET} ${OBJ_DIR}
+	@-rm -rf ${BIN_TARGET} obj* ${BIN_DIR}

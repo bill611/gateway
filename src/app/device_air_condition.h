@@ -24,7 +24,10 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceAirCondition(char *id,uint16_t addr,uint16_t channel,char *pk);
+	extern DeviceStr* registDeviceAirCondition(char *id,
+			uint16_t addr,
+			uint16_t channel,
+			char *pk,RegistSubDevType add_sql);
 
 #ifdef __cplusplus
 }

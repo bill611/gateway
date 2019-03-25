@@ -24,7 +24,11 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceCurtain(char *id,uint16_t addr,uint16_t channel,char *pk);
+	extern DeviceStr * registDeviceCurtain(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type);
 
 #ifdef __cplusplus
 }

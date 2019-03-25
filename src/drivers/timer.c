@@ -162,7 +162,7 @@ static void realTimerCreateDefault(Timer *This,double value,void (*function)(int
 
 	pthread_attr_setdetachstate(&threadAttr,
 			PTHREAD_CREATE_DETACHED);	//设置线程为自动销毁
-	This->priv->real_id = 1;
+	This->priv->real_id = (timer_t)1;
 	result = pthread_create(&m_pthread, &threadAttr, timerThread,This );
 	if(result) {
 		printf("[%s] pthread failt,Error code:%d\n",__FUNCTION__,result);

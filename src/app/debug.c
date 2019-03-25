@@ -788,7 +788,7 @@ void udpDebugInit(void)
 
 	udp_debug = udpServerCreate(0,UDP_DEBUG_PORT);
 	udp_debug->udpSocketRead = udpDebugHandle;
-	udp_debug_queue = queueCreate("/udp_debug",QUEUE_BLOCK,sizeof(UdpSocket));
+	udp_debug_queue = queueCreate("udp_debug",QUEUE_BLOCK,sizeof(UdpSocket));
 
 	pthread_attr_init(&threadAttr1);		//附加参数
 	pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);	//设置线程为自动销毁

@@ -31,21 +31,42 @@ static dictionary* cfg_private_ini;
 static pthread_mutex_t cfg_mutex  = PTHREAD_MUTEX_INITIALIZER;
 
 static EtcValueInt etc_public_int[]={
-// {"Params",	"ele_quantity",				&theConfig.ele_quantity,		0},
 };
-// static EtcValueChar etc_public_char[]={
-// };
+static EtcValueChar etc_public_char[]={
+};
 
 static EtcValueInt etc_private_int[]={
-// {"Public",	"devicetype",		&theConfig.devType,6},
 };
 
 static EtcValueChar etc_private_char[]={
-{"GateWay",			"id",				SIZE_CONFIG(theConfig.gate_way_id),		"0"},
-{"GateWay",			"product_key",		SIZE_CONFIG(theConfig.gate_way.product_key),		"0"},
-{"GateWay",			"device_secret",	SIZE_CONFIG(theConfig.gate_way.device_secret),		"0"},
+{"gateway",		"device_name",		SIZE_CONFIG(theConfig.gate_way.device_name),		"0"},
+{"gateway",	    "product_key",		SIZE_CONFIG(theConfig.gate_way.product_key),		"a1mrCtDYEbi"},
+{"gateway",		"device_secret",	SIZE_CONFIG(theConfig.gate_way.device_secret),		"0"},
+
+{"taichuan",	"imei",	            SIZE_CONFIG(theConfig.imei),		"0"},
+{"taichuan",	"version",	        SIZE_CONFIG(theConfig.version),		GW_VERSION},
+
+#if (defined V23)
+{"ethernet",	"dhcp",	    SIZE_CONFIG(theConfig.net_config.dhcp),		"1"},
+{"ethernet",	"ipaddr",	SIZE_CONFIG(theConfig.net_config.ipaddr),	"172.16.10.10"},
+{"ethernet",	"netmask",	SIZE_CONFIG(theConfig.net_config.netmask),	"255.255.0.0"},
+{"ethernet",	"gateway",	SIZE_CONFIG(theConfig.net_config.gateway),	"172.16.1.1"},
+{"ethernet",	"macaddr",	SIZE_CONFIG(theConfig.net_config.macaddr),	"00:01:02:03:04:05"},
+{"ethernet",	"firstdns",	SIZE_CONFIG(theConfig.net_config.firstdns),	"114.114.114.114"},
+{"ethernet",	"backdns",	SIZE_CONFIG(theConfig.net_config.backdns),	"8.8.8.8"},
+
+{"wireless",	"ssid",	    SIZE_CONFIG(theConfig.net_config.ssid),		"MINI"},
+{"wireless",	"mode",	    SIZE_CONFIG(theConfig.net_config.mode),		"Infra"},
+{"wireless",	"security",	SIZE_CONFIG(theConfig.net_config.security),	"WPA/WPA2 PSK"},
+{"wireless",	"password",	SIZE_CONFIG(theConfig.net_config.password),	"12345678"},
+{"wireless",	"running",	SIZE_CONFIG(theConfig.net_config.running),	"station"},
+
+{"softap",	    "s_ssid",	 SIZE_CONFIG(theConfig.net_config.s_ssid),	  "alitest"},
+{"softap",	    "s_password",SIZE_CONFIG(theConfig.net_config.s_password),"12345678"},
+#endif
 };
 
+#if (!defined V23)
 char *auth_mode[] = {
 	"OPEN",
 	"SHARED",
@@ -70,10 +91,10 @@ char *encrypt_type[] = {
 TcWifiConfig tc_wifi_config = {
 	.boot_proto = "DHCP",
 	.network_type = "Infra",
-	.ssid = "alitest",
+	.ssid = "MINI",
 	.auth_mode = "WPA2PSK",
 	.encrypt_type = "AES",
-	.auth_key = "alitest123",
+	.auth_key = "12345678",
 
 	.ap_addr = "192.168.100.1",
 	.ap_ssid = "AliGateWay",
@@ -82,6 +103,7 @@ TcWifiConfig tc_wifi_config = {
 	.ap_auth_key = "12345678",
 	.ap_channel = 11,
 };
+#endif
 
 void configSync(void)
 {
@@ -133,51 +155,6 @@ static void configLoadEtcChar(dictionary *cfg_ini, EtcValueChar *etc_file,
 	}
 }
 
-void configPrivateFileCheck(void)
-{
-	int ret = true;
-	unsigned int i;
-	char check = 0;
-	// if (atoi(theConfig.has_check_fuc) == 0)
-		// return;
-	// for (i=0; i<NELEMENTS(etc_private_char) - 1; i++) {
-		// unsigned int k;
-		// for (k=0; k<etc_private_char[i].leng; k++) {
-			// check += etc_private_char[i].value[k];
-		// }
-	// }
-	// if (check  != theConfig.check[0])
-		// copyfile(CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME,CFG_PRIVATE_DRIVE ":/" INI_PRIVATE_FILENAME "_bak");
-}
-
-void configLoad(void)
-{
-	// cfg_public_ini = iniparser_load(CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
-	// if (!cfg_public_ini) {
-		// cfg_public_ini = dictionary_new(0);
-		// assert(cfg_public_ini);
-
-	// }
-
-    cfg_private_ini = iniparser_load(CFG_PRIVATE_DRIVE INI_PRIVATE_FILENAME);
-	if (!cfg_private_ini) {
-	    cfg_private_ini = dictionary_new(0);
-        assert(cfg_private_ini);
-	}
-
-    // cfg_temp_ini = iniparser_load(CFG_TEMP_DRIVE ":/" INI_PUBLIC_FILENAME);
-	// if (!cfg_temp_ini) {
-		// cfg_temp_ini = dictionary_new(0);
-        // assert(cfg_temp_ini);
-
-        // dictionary_set(cfg_temp_ini, "doorbell", NULL);
-	// }
-	// configLoadEtcInt(cfg_public_ini,etc_public_int,NELEMENTS(etc_public_int));
-	// configLoadEtcChar(cfg_public_ini,etc_public_char,NELEMENTS(etc_public_char));
-	configLoadEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
-	configLoadEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
-}
-
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief configSaveEtcInt 加载int型配置文件
@@ -215,49 +192,102 @@ static void configSaveEtcChar(dictionary *cfg_ini, EtcValueChar *etc_file,
 	char buf[64];
 	for (i=0; i<length; i++) {
 		sprintf(buf,"%s:%s",etc_file->section,etc_file->key);
+		DPRINT("[%d]iniparser_set:%s--%s\n",i,buf,etc_file->value );
 		iniparser_set(cfg_ini, buf, etc_file->value);
 		etc_file++;
 	}
 }
-static void SavePublic(void)
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief dumpIniFile iniparser_dump_ini 配置
+ *
+ * @param d
+ * @param file_name
+ */
+/* ---------------------------------------------------------------------------*/
+static void dumpIniFile(dictionary *d,char *file_name)
 {
     FILE* f;
-
-	configSaveEtcInt(cfg_public_ini,etc_public_int,NELEMENTS(etc_public_int));
-	// configSaveEtcChar(cfg_public_ini,etc_public_char,NELEMENTS(etc_public_char));
-
     // save to file
-    f = fopen(CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME, "wb");
+    f = fopen(file_name, "wb");
 	if (!f) {
-	    DPRINT("cannot open ini file: %s\n", CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
+	    printf("cannot open ini file: %s\n", file_name);
         return;
     }
 
-    iniparser_dump_ini(cfg_public_ini, f);
+    iniparser_dump_ini(d, f);
 	fflush(f);
     fclose(f);
-	DPRINT("[%s]end\n", __FUNCTION__);
+	
+}
+
+static void SavePublic(void)
+{
+	configSaveEtcInt(cfg_public_ini,etc_public_int,NELEMENTS(etc_public_int));
+	configSaveEtcChar(cfg_public_ini,etc_public_char,NELEMENTS(etc_public_char));
+	dumpIniFile(cfg_public_ini,CFG_PUBLIC_DRIVE  INI_PUBLIC_FILENAME);
+	printf("[%s]end\n", __FUNCTION__);
 }
 
 static void SavePrivate(void)
 {
-    FILE* f;
-
-	// configSaveEtcInt(etc_public_int,NELEMENTS(etc_public_int));
-	configSaveEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
 	configSaveEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
+	dumpIniFile(cfg_private_ini,CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
+	printf("[%s]end\n", __FUNCTION__);
+}
 
-    // save to file
-    f = fopen(CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME, "wb");
-	if (!f) {
-	    DPRINT("cannot open ini file: %s\n", CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
-        return;
-    }
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief loadIniFile 加载ini文件，同时检测字段完整性
+ *
+ * @param d
+ * @param file_path
+ * @param sec[]
+ *
+ * @returns >0 有缺少字段，需要保存更新， 0无缺少字段，正常
+ */
+/* ---------------------------------------------------------------------------*/
+static int loadIniFile(dictionary **d,char *file_path,char *sec[])
+{
+	int ret = 0;
+	int i;
+    *d = iniparser_load(file_path);
+    if (*d == NULL) {
+        *d = dictionary_new(0);
+        assert(*d);
+		ret++;
+		for (i=0; sec[i] != NULL; i++)
+			iniparser_set(*d, sec[i], NULL);
+	} else {
+		int nsec = iniparser_getnsec(*d);
+		int j;
+		char *  secname;
+		for (i=0; sec[i] != NULL; i++) {
+			for (j=0; j<nsec; j++) {
+				secname = iniparser_getsecname(*d, j);
+				if (strcasecmp(secname,sec[i]) == 0) 
+					break;
+			}
+			if (j == nsec)  {
+				ret++;
+				iniparser_set(*d, sec[i], NULL);
+			}
+		}
+	}
+	return ret;	
+}
 
-    iniparser_dump_ini(cfg_private_ini, f);
-	fflush(f);
-    fclose(f);
-	DPRINT("[%s]end\n", __FUNCTION__);
+void configLoad(void)
+{
+	char *sec_private[] = {"gateway","taichuan","ethernet","wireless","softap",NULL};
+
+	int ret = loadIniFile(&cfg_private_ini,CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME,sec_private);
+	configLoadEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
+	configLoadEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
+	if (ret || strcmp(theConfig.version,GW_VERSION) != 0)
+		strcpy(theConfig.version,GW_VERSION);
+		SavePrivate();
 }
 
 static void SaveTemp(void)
@@ -372,6 +402,9 @@ void ConfigSaveTemp(void)
 
 void tcSetNetwork(int type)
 {
+#if (defined V23)
+    system(CFG_PRIVATE_DRIVE"/wifi/wifi_softap.sh start");
+#else
 	FILE *fp;
 	char *ret;
 	DPRINT("[%s]\n",__FUNCTION__);
@@ -404,10 +437,12 @@ void tcSetNetwork(int type)
 		ret = excuteCmd("./network.sh","Infra",NULL);
 		printf("%s\n", ret);
 	}
+#endif
 }
 
 void resetWifi(void)
 {
+#if (defined V1)
 	char *ret;
 	char buf[256];
 	int cnt = 50;
@@ -427,6 +462,7 @@ void resetWifi(void)
 	snprintf(buf, sizeof(buf), "udhcpc -i %s", WLAN_IFNAME);
 	int ret_sys = system(buf);
 	DPRINT("[%s]system:%s,%d\n",__FUNCTION__,buf,ret_sys);
+#endif
 }
 
 void activeAp(void)
@@ -434,25 +470,3 @@ void activeAp(void)
 	tcSetNetwork(TC_SET_AP);
 }
 
-void printfWifiInfo(int cnt )
-{
-	FILE *fd = fopen("network_config","rb");	
-	char buff[32] = {0};
-	char ssid[32] = {0};
-	char pass[32] = {0};
-	if (fd) {
-		while (!feof(fd))	 {
-			memset(ssid,0,sizeof(ssid));
-			memset(pass,0,sizeof(pass));
-			fgets(buff,sizeof(buff),fd);
-			sscanf(buff,"SSID %s\n",ssid);
-			if (ssid[0])
-				printf("%d-->ssid:[%s],",cnt, ssid);
-			sscanf(buff,"AUTH_KEY %s\n",pass);
-			if (pass[0])
-				printf("password:[%s]\n", pass);
-		}
-		fclose(fd);
-	}
-	
-}

@@ -163,7 +163,11 @@ static DeviceTypePara light = {
 };
 
 
-DeviceStr * registDeviceLight(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceLight(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,light.product_key) != 0) {

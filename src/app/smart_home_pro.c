@@ -59,6 +59,7 @@ typedef struct _PacketsID {
 
 static PacketsID packets_id[10];
 static int packet_pos;
+static pthread_mutex_t mutex;
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief smarthomeSendDataPacket 单控命令封包
@@ -216,15 +217,15 @@ uint32_t smarthomeDelDev(uint32_t devUnit)
 ** output parameters:   无
 ** Returned value:      1成功
 *********************************************************************************************************/
-static char* smarthomeAddNewDev(SMART_HOME_PRO *cmdBuf,char *id)
+void smarthomeAddNewDev(char *id,
+		int dev_type,
+		uint16_t addr,
+		uint16_t channel,
+		char *product_key)
 {
 	DPRINT("[%s]id:%s,type:%d,addr:%x\n",
-			__FUNCTION__,id,cmdBuf->device_type,cmdBuf->addr);
-	sqlInsertDevice(id,
-			cmdBuf->device_type,
-			cmdBuf->addr,
-			cmdBuf->channel_num);
-	return id;
+			__FUNCTION__,id,dev_type,addr);
+	sqlInsertDevice(id, dev_type, addr, channel,product_key);
 }
 
 static int smarthomeCmdFilter(SMART_HOME_PRO *data)
@@ -261,6 +262,11 @@ static void smarthomeGetId(SMART_HOME_PRO *cmdBuf,char *id)
 	if (!id)
 		return;
 	sqlGetDeviceId(cmdBuf->addr,id);
+    // 当设备类型为美的中央空调时，需要在ID后加上当前通道
+    if (cmdBuf->device_type == DEVICE_TYPE_ZYKT_MIDEA) {
+        if (cmdBuf->current_channel > 1)
+            sprintf(id,"%s%d",id,cmdBuf->current_channel - 1);
+    }
 }
 /*********************************************************************************************************
 ** Descriptions:       协议解析
@@ -282,7 +288,7 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 					DPRINT("is not net in status\n");
 					break;
 				}
-#if 1
+#if 0 //测试产品使用，保证一个zigbee模块使用多次
 				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02XEEE",
 #else
 				sprintf(id,"%02X%02X%02X%02X%02X%02X%02X%02X",
@@ -313,12 +319,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				// packet->device_type = DEVICE_TYPE_KQJCY;
 				// packet->addr = 0;
 				// packet->channel_num = 1;
-				int ret = gwRegisterSubDevice(id,
+				gwRegisterSubDevice(id,
 						packet->device_type,
 						packet->addr,
-						packet->channel_num,gwGetTempProductKey());
-				if (ret == 0)
-					smarthomeAddNewDev(packet,id);
+						packet->channel_num,
+						gwGetTempProductKey(), REGIST_NORMAL);
 				// 根据阿里APP设定，完成入网后禁止入网
 				zigbeeNetIn(0);
 			}
@@ -366,7 +371,11 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 			} break;
 
 		case Device_Scene:		//情景控制
-			// SceneStart(packet->param[0],1);
+            {
+				smarthomeGetId(packet,id);
+				DPRINT("scene control:%d\n",id,packet->current_channel);
+                gwReportSceneControl(id,packet->current_channel);
+            }
 			break;
 
 		case Device_Ele_Quantity:		//计量插座每隔30分钟上报用电量
@@ -447,6 +456,11 @@ void smarthomeInit(void)
 
     pthread_t task;
     pthread_attr_t attr;
+	
+	pthread_mutexattr_t mutexattr;
+	pthread_mutexattr_init(&mutexattr);
+    pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutex_init(&mutex, &mutexattr);
 
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -590,7 +604,7 @@ void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief smarthomeAirCondtionCmdCtrOpen
+ * @brief smarthomeAirCondtionCmdCtrClose
  * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档）
  * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
  * 协议对应为
@@ -607,6 +621,17 @@ void smarthomeCurtainCmdCtrClose(DeviceStr *dev)
  * @param speed
  */
 /* ---------------------------------------------------------------------------*/
+void smarthomeAirCondtionCmdCtrClose(DeviceStr *dev, uint8_t channel)
+{
+	channel++; // 通道从1开始
+	smarthomeSendDataPacket(
+			dev->addr,
+			Device_Off,
+			dev->type_para->device_type,
+			dev->channel,
+			channel,NULL,0);
+}
+
 void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t mode,
@@ -639,6 +664,7 @@ void smarthomeAirCondtionMideaCmdSlaveAddr(DeviceStr *dev,
 		uint8_t room_addr,
 		uint8_t channel)
 {
+	pthread_mutex_lock(&mutex);
 	uint8_t param[3] = {0};
 	DPRINT("[%s]type:%d,slave:%d:room:%d\n",
 			__FUNCTION__,
@@ -655,6 +681,7 @@ void smarthomeAirCondtionMideaCmdSlaveAddr(DeviceStr *dev,
 			dev->type_para->device_type,
 			dev->channel,
 			channel,param,sizeof(param));
+	pthread_mutex_unlock(&mutex);
 }
 
 

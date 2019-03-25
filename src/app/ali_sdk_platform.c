@@ -444,8 +444,8 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
         {
             char *productKey = ev->event_data.subdev_deleted.productKey;
             char *deviceName = ev->event_data.subdev_deleted.deviceName;
-			gw->removeDeviceCb(deviceName);
             DPRINT("delete subdev %s<%s>\n", productKey, deviceName);
+			gw->removeDeviceCb(deviceName);
         }
         break;
     case LINKKIT_EVENT_SUBDEV_PERMITED:
@@ -453,8 +453,8 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
             char *productKey = ev->event_data.subdev_permited.productKey;
             int   timeoutSec = ev->event_data.subdev_permited.timeoutSec;
 
-			gw->permitSubDeviceJoinCb(productKey,timeoutSec);
             DPRINT("permit subdev %s in %d seconds\n", productKey, timeoutSec);
+			gw->permitSubDeviceJoinCb(productKey,timeoutSec);
 		}
 		break;
 #if (!defined V23)
@@ -495,12 +495,12 @@ void aliSdkInit(int argc, char *argv[])
 #if (defined V2)
 	initParams = linkkit_gateway_get_default_params();
 	if (!initParams) {                                
-       return -1;                                    
+       return;                                    
 	}
 #if (defined V23)
     int maxMsgSize, maxMsgQueueSize, prop_post_reply, event_post_reply;
-	IOT_SetLogLevel(IOT_LOG_DEBUG);
-    // IOT_SetLogLevel(IOT_LOG_ERROR);
+	// IOT_SetLogLevel(IOT_LOG_DEBUG);
+	IOT_SetLogLevel(IOT_LOG_ERROR);
 
     /* LINKKIT_OPT_MAX_MSG_SIZE: max size of message */
     maxMsgSize = 4096;
@@ -548,17 +548,23 @@ void aliSdkStart(void)
     alink_start();
     alink_wait_connect(ALINK_WAIT_FOREVER);
 #else
-    linkkit_gateway_set_event_callback(initParams, event_handler, gw_attr);
-    if (linkkit_gateway_init(initParams) < 0) {
-        DPRINT("linkkit_gateway_init failed\n");
-        return ;
-    }
-    link_fd = linkkit_gateway_start(&alink_cbs, gw_priv_attrs);
-    if (link_fd < 0) {
-		linkkit_gateway_exit();
-        DPRINT("linkkit_gateway_start failed\n");
-        return ;
-    }
+	int retry_times = 20; // 失败后每秒尝试1次，总共尝试20次失败后则重启
+	do {
+		linkkit_gateway_set_event_callback(initParams, event_handler, gw_attr);
+		if (linkkit_gateway_init(initParams) < 0) {
+			DPRINT("linkkit_gateway_init failed-%d\n",retry_times);
+			sleep(1);
+			continue;
+		}
+		link_fd = linkkit_gateway_start(&alink_cbs, gw_priv_attrs);
+		if (link_fd < 0) {
+			linkkit_gateway_exit();
+			DPRINT("linkkit_gateway_start failed-%d\n",retry_times);
+			sleep(1);
+			continue;
+		}
+		break;
+	} while(retry_times--);
 #if (!defined V23)
 	linkkit_ota_service_init(&ota_params);
 #endif
@@ -586,7 +592,9 @@ int aliSdkReset(int is_reboot)
 		return	alink_factory_reset(ALINK_REBOOT);
 	else
 		return 	alink_factory_reset(ALINK_NOT_REBOOT);
-#elif (!defined V23)
+#elif (defined V23)
+	awss_report_reset();
+#else
 	linkkit_gateway_reset(link_fd);
 #endif
 }
@@ -928,7 +936,7 @@ void aliSdkSubDevReportAttrs(DeviceStr *dev,
 }
 
 void aliSdkSubDevReportEvent(DeviceStr *dev,
-		const char *event_name,
+		char *event_name,
 		const char *attr_name[],
 		const char *attr_value[],
 		int attr_value_type[])

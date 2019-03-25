@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_lock.c
+ *       Filename:  device_scene.c
  *
- *    Description:  西勒奇门锁/安朗杰门锁
+ *    Description:  情景控制器
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -20,10 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "sql_handle.h"
-#include "device_lock.h"
+#include "device_scene.h"
 #include "config.h"
 
 /* ---------------------------------------------------------------------------*
@@ -39,8 +38,8 @@
  *----------------------------------------------------------------------------*/
 #define MAX_VALUE_LENG 32
 enum {
-	ATTR_LOCKSTATE,
-	ATTR_ARM_DISARM,
+	ATTR_TRIGGER,
+	ATTR_TRIGGER1,
 };
 
 /* ---------------------------------------------------------------------------*
@@ -85,117 +84,68 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
     return 0;
 }
 
-static void *reportDisArmThread(void *arg)
+static void cmdGetSwichStatus(DeviceStr *dev)
 {
-	DeviceStr *dev = (DeviceStr *)arg;
-
-	sleep(5);
-	printf("1111\n");
-	sprintf(dev->value[ATTR_ARM_DISARM],"0");
-	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_ARM_DISARM].name,
-		NULL};
-	const char *attr_value[] = {
-		dev->value[ATTR_ARM_DISARM],
-		NULL};
-	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
-	};
-	aliSdkSubDevReportAttrs(dev,
-			attr_name,attr_value,attr_value_type);
-
-	return NULL;
+	int i;
+	for (i=0; i<3; i++) {
+		smarthomeAllDeviceCmdGetSwichStatus(dev,i);
+	}
 }
 
-static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
+static void reportSceneControl(DeviceStr *dev,int channel)
 {
-	// 固定为开
-	sprintf(dev->value[ATTR_LOCKSTATE],"1");
+	if (channel == 1) {
+		sprintf(dev->value[ATTR_TRIGGER],"1");
+		sprintf(dev->value[ATTR_TRIGGER1],"0");
+	} else if (channel == 2) {
+		sprintf(dev->value[ATTR_TRIGGER],"0");
+		sprintf(dev->value[ATTR_TRIGGER1],"1");
+	}
 	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_LOCKSTATE].name,
+		dev->type_para->attr[ATTR_TRIGGER].name,
+		dev->type_para->attr[ATTR_TRIGGER1].name,
 		NULL};
 	const char *attr_value[] = {
-		dev->value[ATTR_LOCKSTATE],
+		dev->value[ATTR_TRIGGER],
+		dev->value[ATTR_TRIGGER1],
 		NULL};
 	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_LOCKSTATE].value_type,
-	};
-	aliSdkSubDevReportAttrs(dev,
-			attr_name,attr_value,attr_value_type);
-
-	pthread_t m_pthread;					//线程号
-	pthread_attr_t threadAttr1;				//线程属性
-	pthread_attr_init(&threadAttr1);		//附加参数
-	//设置线程为自动销毁
-	pthread_attr_setdetachstate(&threadAttr1,PTHREAD_CREATE_DETACHED);
-	//创建线程，无传递参数
-	pthread_create(&m_pthread,&threadAttr1,reportDisArmThread,dev);
-	pthread_attr_destroy(&threadAttr1);		//释放附加参数
-}
-
-static void reportPowerOffCb(DeviceStr *dev,int channel)
-{
-	sprintf(dev->value[ATTR_LOCKSTATE],"0");
-	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_LOCKSTATE].name,
-		NULL};
-	const char *attr_value[] = {
-		dev->value[ATTR_LOCKSTATE],
-		NULL};
-	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_LOCKSTATE].value_type,
+		dev->type_para->attr[ATTR_TRIGGER].value_type,
+		dev->type_para->attr[ATTR_TRIGGER1].value_type,
 	};
 	aliSdkSubDevReportAttrs(dev,
 			attr_name,attr_value,attr_value_type);
 }
 
-static void reportArmStatus(DeviceStr *dev,char *param)
-{
-	sprintf(dev->value[ATTR_ARM_DISARM],"1");
-	const char *attr_name[] = {
-		dev->type_para->attr[ATTR_ARM_DISARM].name,
-		NULL};
-	const char *attr_value[] = {
-		dev->value[ATTR_ARM_DISARM],
-		NULL};
-	int attr_value_type[] = {
-		dev->type_para->attr[ATTR_ARM_DISARM].value_type,
-	};
-	aliSdkSubDevReportAttrs(dev,
-			attr_name,attr_value,attr_value_type);
-}
-
-static DeviceTypePara lock = {
-	.name = "lock",
+static DeviceTypePara scene = {
+	.name = "scene",
 	.short_model = 0x00092316,
-	.secret = "ZO431NU7020UT9Iu8B8yQnfQbmjagPbRZm7zfuGm",
-	.product_key = "a1l4la2xZTl",
+	.secret = "2rCCZnGzb76Wgp4G2etzWb2d4gYOidx6",
+	.product_key = "a1sMCmcx5N2",
 	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
-	.device_type = 	DEVICE_TYPE_LOCK_XLQ,
+	.device_type = DEVICE_TYPE_QJ,
 	.attr = {
-		{"LockState",NULL,DEVICE_VELUE_TYPE_INT},
-		{"ArmStatus",NULL,DEVICE_VELUE_TYPE_INT},
+		{"SceneTrigger",NULL,DEVICE_VELUE_TYPE_INT},
+		{"SceneTrigger_1",NULL,DEVICE_VELUE_TYPE_INT},
 		{NULL,NULL},
 	},
 	.getAttr = getAttrCb,
 	.setAttr = setAttrCb,
-	.reportPowerOn = reportPowerOnCb,
-	.reportPowerOff = reportPowerOffCb,
-	.reportArmStatus = reportArmStatus,
+	.reportSceneControl = reportSceneControl,
 };
 
 
-DeviceStr * registDevicelock(char *id,
+DeviceStr * registDeviceScene(char *id,
 		uint16_t addr,
 		uint16_t channel,
 		char *pk,
 		RegistSubDevType regist_type)
 {
 	if (pk) {
-		if (strcmp(pk,lock.product_key) != 0) {
+		if (strcmp(pk,scene.product_key) != 0) {
 			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
-					lock.product_key,pk );	
+					scene.product_key,pk );	
 			return NULL;
 		}
 	}
@@ -203,9 +153,9 @@ DeviceStr * registDevicelock(char *id,
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,lock.product_key,
-		lock.device_secret  );
-	This->type_para = &lock;
+	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,scene.product_key,
+		scene.device_secret  );
+	This->type_para = &scene;
 	This->addr = addr;
 	This->channel = channel;
 	// 初始化属性

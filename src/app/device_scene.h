@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_air_box.h
+ *       Filename:  device_scene.h
  *
- *    Description:  空气检测仪
+ *    Description:  情景控制器 
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:47:22 
@@ -14,8 +14,8 @@
  *
  * =============================================================================
  */
-#ifndef _DEVICE_AIRBOX_H
-#define _DEVICE_AIRBOX_H
+#ifndef _DEVICE_SCENE_H
+#define _DEVICE_SCENE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 #include "device_protocol.h"
 #include "smart_home_pro.h"
 
-	extern DeviceStr * registDeviceAirBox(char *id,
+	extern DeviceStr * registDeviceScene(char *id,
 		uint16_t addr,
 		uint16_t channel,
 		char *pk,

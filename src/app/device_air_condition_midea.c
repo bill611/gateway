@@ -314,7 +314,8 @@ static DeviceTypePara air_condition_midea = {
 	.name = "air_condition_midea",
 	.short_model = 0x00022531,
 	.secret = "Xf3r8BQV1Utz5o6EnJfFXF4tE3BhfAKH3ABYaQDr",
-	.product_key = "a1XuFDaBfIg",
+	.product_key = "a1tJYtuu3RZ",
+	// .product_key = "a1XuFDaBfIg",
 	.device_secret = "",
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
 	.device_type = DEVICE_TYPE_ZYKT_MIDEA,
@@ -430,7 +431,11 @@ static void setMideaData(DeviceStr *This)
  * @returns
  */
 /* ---------------------------------------------------------------------------*/
-DeviceStr * registDeviceAirConditionMidea(char *id,uint16_t addr,uint16_t channel,char *pk)
+DeviceStr * registDeviceAirConditionMidea(char *id,
+		uint16_t addr,
+		uint16_t channel,
+		char *pk,
+		RegistSubDevType regist_type)
 {
 	if (pk) {
 		if (strcmp(pk,air_condition_midea.product_key) != 0) {

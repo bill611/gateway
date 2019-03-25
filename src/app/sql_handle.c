@@ -56,6 +56,7 @@ static int sqlCheck(TSqlite *sql)
     int ret;
 	char *string = "CREATE TABLE  DeviceList(\
 ID char(32) PRIMARY KEY,\
+ProductKey char(32),\
 DevType INTEGER,\
 Addr INTEGER,\
 Channel INTEGER,\
@@ -98,7 +99,8 @@ int sqlGetDeviceCnt(void)
 void sqlGetDevice(char *id,
 		int *dev_type,
 		uint16_t *addr,
-		uint16_t *channel,int index)
+		uint16_t *channel,
+		char *product_key,int index)
 {
 	int i;
 	LocalQueryOpen(sql_local.sql,"select * from DeviceList ");
@@ -113,6 +115,8 @@ void sqlGetDevice(char *id,
 		*addr = LocalQueryOfInt(sql_local.sql,"Addr");
 	if (channel)
 		*channel = LocalQueryOfInt(sql_local.sql,"Channel");
+	if (product_key)
+		LocalQueryOfChar(sql_local.sql,"ProductKey",product_key,32);
 }
 void sqlGetDeviceEnd(void)
 {
@@ -122,12 +126,13 @@ void sqlGetDeviceEnd(void)
 void sqlInsertDevice(char *id,
 		int dev_type,
 		uint16_t addr,
-		uint16_t channel)
+		uint16_t channel,
+		char *product_key)
 {
 	char buf[128];
 	pthread_mutex_lock(&mutex);
-	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr,Channel) VALUES('%s','%d','%d','%d')",
-			id, dev_type,addr,channel);
+	sprintf(buf, "INSERT INTO DeviceList(ID,DevType,Addr,Channel,ProductKey) VALUES('%s','%d','%d','%d','%s')",
+			id, dev_type,addr,channel,product_key);
 	saveLog("%s\n",buf);
 	LocalQueryExec(sql_local.sql,buf);
 	sql_local.checkFunc(sql_local.sql);
@@ -203,6 +208,7 @@ void sqlSetMideaAddr(char *id,void *data,int size)
 	pthread_mutex_lock(&mutex);
 	sprintf(buf, "UPDATE DeviceList SET MideaSlaveData=?,Channel=4 \
 		   	Where id = \"%s\"", id);
+	printf("%s\n",buf);
 	sql_local.sql->prepare(sql_local.sql,buf);
 	sql_local.sql->reset(sql_local.sql);
 	sql_local.sql->bind_blob(sql_local.sql,data,size);

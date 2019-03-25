@@ -11,6 +11,9 @@ obj
 log.txt
 libs
 gw
+out
+path
+update
 libplatform.so
 libproduct.so
 sdk/2.3/iotkit-embedded-2.3.0

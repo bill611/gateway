@@ -1,4 +1,8 @@
 #!/bin/bash
+# TOOLS_PATH="/home/xubin/work/tools/platform/anyka/platform/rootfs"    
+source path
+mkdir -p update/
+mkdir -p out/bin
 set -e
 
 if [ "$#" -lt 1 ]; then
@@ -15,5 +19,16 @@ elif [ "$1" -eq 23 ]; then
 		make VERSION=23 PLATFORM=PC DBG=1
 	else
 		make VERSION=23 PLATFORM=AK DBG=1
+		if [ "$?" == 0 ]; then
+			$TOOLS_PATH/mksquashfs out/bin update/bin.sqsh4 -noappend > /dev/null
+			echo "Debug build finished!"
+		else
+			echo "make error!"
+		fi
+		echo "  "
+		echo "tar czf Update.tar.gz update"
+		tar czf Update.tar.gz update/
+		mv Update.tar.gz Update.cab
+		mv Update.cab out/
 	fi
 fi

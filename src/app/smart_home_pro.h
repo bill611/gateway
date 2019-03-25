@@ -160,6 +160,8 @@ extern void smarthomeAirCondtionCmdCtrOpen(DeviceStr *dev,
 		uint8_t mode,
 		uint8_t speed,
 		uint8_t channel);
+extern void smarthomeAirCondtionCmdCtrClose(DeviceStr *dev,
+		uint8_t channel);
 extern void smarthomeFreshAirCmdGetPara(DeviceStr *dev,
 		uint8_t temp,
 		uint8_t hum,
@@ -167,4 +169,9 @@ extern void smarthomeFreshAirCmdGetPara(DeviceStr *dev,
 		uint16_t pm25);
 extern void smarthomeCheckOutLetElePower(DeviceStr *dev);
 extern void smarthomeInit(void);
+void smarthomeAddNewDev(char *id,
+		int dev_type,
+		uint16_t addr,
+		uint16_t channel,
+		char *product_key);
 #endif
