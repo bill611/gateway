@@ -36,7 +36,7 @@
 /* ---------------------------------------------------------------------------*
  *                  extern variables declare
  *----------------------------------------------------------------------------*/
-extern void gpioEnableNetInLed(int time);
+extern void gpioZigbeeInLed(int time);
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
  *----------------------------------------------------------------------------*/
@@ -415,7 +415,7 @@ void zigbeeNetIn(uint8_t time)
 {
 	printf("[%d]\n", time);
 	allow_net_in = time;
-	gpioEnableNetInLed(time);
+	gpioZigbeeInLed(time);
 	setSendCmd(SET_NETIN_ENABLE, time);
 }
 /* ---------------------------------------------------------------------------*/
@@ -467,8 +467,9 @@ static void *zigbeeModuleTask(void *arg)
 		}
 		sendCmdProcess();
 		if (allow_net_in) {
-			if (--allow_net_in == 0)
-				gpioEnableNetInLed(0);
+			if (--allow_net_in == 0) {
+				zigbeeNetIn(0);
+			}
 		}
 		sleep(1);
 	}

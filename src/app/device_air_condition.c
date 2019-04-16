@@ -3,7 +3,7 @@
  *
  *       Filename:  device_air_condition.c
  *
- *    Description:  空调设备 
+ *    Description:  空调设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -54,19 +54,18 @@ enum {
 
 struct ProductKey {
 	char *pk; // 空调PK
-	int total_num;  // 对应的空调数量
+	int total_channel;  // 对应的空调数量，即总通道数
 	char id[32]; // 空调devicename
 	int cur_num; // 当前已注册的空调数量
 	uint16_t addr; // 相同设备共享地址
-	uint16_t channel; // 相同设备共享通道
 };
-typedef struct _MideaAirConditionSlave {                
-    int slave_addr ;                                    
-    int room_addr ;                                     
-    int temp ;                                          
-    int mode ;                                          
-    int speed ;                                         
-}MideaAirConditionSlave;                                
+typedef struct _MideaAirConditionSlave {
+    int slave_addr ;
+    int room_addr ;
+    int temp ;
+    int mode ;
+    int speed ;
+}MideaAirConditionSlave;
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
@@ -145,7 +144,7 @@ static void cmdSwich(DeviceStr *dev,char *value)
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  *
  */
@@ -164,13 +163,13 @@ static void cmdWorkMode(DeviceStr *dev,char *value)
 }
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief cmdWindSpeed APP端对应模式为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * @brief cmdWindSpeed APP端对应模式为 0（自动） 2（低档） 3（中档） 4（高档）
  * 协议对应为
  * 第1个Byte为空调温度，范围16-32℃
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  * @param dev
  * @param value
@@ -214,7 +213,7 @@ static void cmdSetModbusSlaveAddress(DeviceStr *dev,char *value)
 {
 	int leng = strlen(dev->id);
 	int channel = atoi(&dev->id[leng-1]);
-	
+
 	sprintf(dev->value[ATTR_SLAVE_ADDR],"%s",value);
 	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
 			atoi(dev->value[ATTR_SLAVE_ADDR]),
@@ -225,7 +224,7 @@ static void cmdSetRoomAdress(DeviceStr *dev,char *value)
 {
 	int leng = strlen(dev->id);
 	int channel = atoi(&dev->id[leng-1]);
-	
+
 	sprintf(dev->value[ATTR_ROOM_ADDR],"%s",value);
 	smarthomeAirCondtionMideaCmdSlaveAddr(dev,
 			atoi(dev->value[ATTR_SLAVE_ADDR]),
@@ -234,16 +233,16 @@ static void cmdSetRoomAdress(DeviceStr *dev,char *value)
 }
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief reportPowerOnCb 
+ * @brief reportPowerOnCb
  *
- * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档） 
+ * APP端对应风速为 0（自动） 2（低档） 3（中档） 4（高档）
  * 		  模式为 0（自动） 1（制冷） 2（制热） 3（通风） 4（除湿）
  * 协议对应为
  * 第1个Byte为空调温度，范围16-32℃
  * 第2个byte:
  * 高4位:0制冷  1制热  2自动
  *        3除湿  4送风
- *        低4位: 0自动    1风高速 
+ *        低4位: 0自动    1风高速
  *        2风中速  3风低速
  * @param dev
  * @param param
@@ -255,9 +254,9 @@ static void reportPowerOnCb(DeviceStr *dev,char *param,int channel)
 	char mode_change[] = {1,2,0,4,3}; // 模式转换
 	// 固定为开
 	sprintf(dev->value[ATTR_SWICH],"1");
-	sprintf(dev->value[ATTR_TEMP],"%d",param[0]); 
-	sprintf(dev->value[ATTR_SPEED],"%d",speed_change[param[1] & 0x0f]); 
-	sprintf(dev->value[ATTR_MODE],"%d",mode_change[param[1] >> 4]); 
+	sprintf(dev->value[ATTR_TEMP],"%d",param[0]);
+	sprintf(dev->value[ATTR_SPEED],"%d",speed_change[param[1] & 0x0f]);
+	sprintf(dev->value[ATTR_MODE],"%d",mode_change[param[1] >> 4]);
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_SWICH].name,
 		dev->type_para->attr[ATTR_SPEED].name,
@@ -300,6 +299,7 @@ static struct ProductKey pks[] =
 {
 	{"a1o4mhNwSUD",4},
 	{"a1VdfF3IHzT",5},
+	{"a10Mw3gzEqd",6},
 	{NULL,0},
 };
 
@@ -365,7 +365,7 @@ static void getMideaData(DeviceStr *dev)
 	sqlGetMideaAddr(dev->id,&dev_midea);
 	if (dev_midea.temp < 16)
 		dev_midea.temp = 16;
-		
+
 	sprintf(dev->value[ATTR_TEMP],"%d",dev_midea.temp);
 	sprintf(dev->value[ATTR_SPEED],"%d",dev_midea.speed);
 	sprintf(dev->value[ATTR_MODE],"%d",dev_midea.mode);
@@ -416,39 +416,36 @@ DeviceStr* registDeviceAirCondition(char *id,
 	int i;
 	struct ProductKey *pk_key;
 	for (i=0; pks[i].pk != NULL ; i++) {
+		DPRINT("judge aircondition pk[%d]:%s,pk now:%s\n",i,pks[i].pk,pk );
 		if (strcmp(pk,pks[i].pk) == 0) {
 			break;
 		}
 	}
 	if (pks[i].pk == NULL) {
-		DPRINT("diff pk :now pk:%s\n",pk );	
 		return NULL;
 	}
 	pk_key = &pks[i];
 
 	// 当达到当前空调上限，则返回允许入网,添加新设备
-	DPRINT("cur:%d,total:%d,id:%s\n",pk_key->cur_num , pk_key->total_num,id );
+	DPRINT("cur:%d,total:%d,id:%s\n",pk_key->cur_num , pk_key->total_channel,id );
 	if (regist_type == REGIST_INIT) {
 		strcpy(pk_key->id,id);
 		int len = strlen(pk_key->id);
 		pk_key->id[len-1] = '\0';
-		pk_key->channel = channel;	
-		pk_key->addr = addr;	
-		if (pk_key->cur_num >= pk_key->total_num)
-			pk_key->cur_num = 0;	
+		pk_key->addr = addr;
+		if (pk_key->cur_num >= pk_key->total_channel)
+			pk_key->cur_num = 0;
 	} else if (regist_type == REGIST_PERMIT) {
 		if (pk_key->cur_num == 0) {
-			pk_key->channel = channel;	
-			pk_key->addr = addr;	
+			pk_key->addr = addr;
 			return NULL;
 		}
-		if (pk_key->cur_num >= pk_key->total_num) {
-			pk_key->cur_num = 0;	
+		if (pk_key->cur_num >= pk_key->total_channel) {
+			pk_key->cur_num = 0;
 			return NULL;
 		}
 	} else if (regist_type == REGIST_NORMAL) {
-		pk_key->channel = channel;	
-		pk_key->addr = addr;	
+		pk_key->addr = addr;
 		strcpy(pk_key->id,id);
 	}
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
@@ -457,14 +454,14 @@ DeviceStr* registDeviceAirCondition(char *id,
 	This->type_para = &air_condition;
 	This->type_para->product_key = pk_key->pk;
 	This->addr = pk_key->addr;
-	This->channel = pk_key->channel;
+	This->channel = pk_key->total_channel;
 	DPRINT("[%s]addr:%x,channel:%d\n",__FUNCTION__,This->addr,This->channel );
 	// 初始化属性
 	int j;
 	for (j=0; This->type_para->attr[j].name != NULL; j++) {
 		This->value[j] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[j],"%s","0");
-	}	
+	}
 	getMideaData(This);
 
 	pthread_t task;

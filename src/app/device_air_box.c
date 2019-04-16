@@ -92,11 +92,11 @@ static int setAttrCb(DeviceStr *dev, const char *attr_name, const char *attr_val
 
 static void reportAirParaCb(DeviceStr *dev,char *param)
 {
-	int value = ((int)param[0] << 16) + (int)param[1];
+	int value = ((int)param[0] << 8) + (int)param[1];
 	sprintf(dev->value[ATTR_PM25],"%d",value);
-	value = ((int)param[2] << 16) + (int)param[3];
-	sprintf(dev->value[ATTR_TEMP],"%d",value);
-	value = ((int)param[4] << 16) + (int)param[5];
+	value = ((int)param[2] << 8) + (int)param[3];
+	sprintf(dev->value[ATTR_TEMP],"%.1f",(float)value / 10.0);
+	value = ((int)param[4] << 8) + (int)param[5];
 	sprintf(dev->value[ATTR_HUM],"%d",value);
 	const char *attr_name[] = {
 		dev->type_para->attr[ATTR_TEMP].name,

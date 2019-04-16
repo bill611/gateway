@@ -74,10 +74,11 @@ typedef struct _MyGpioPriv {
 #if (defined ANYKA)
 #define GPIO_ZIGBEE_POWER		84,-1,1,IO_ACTIVE
 #define GPIO_WIFI_POWER			83,-1,1,IO_ACTIVE
-#define GPIO_LED_WIFI			80,-1,0,IO_INACTIVE
-#define GPIO_LED_RESET			80,-1,0,IO_INACTIVE
-#define GPIO_LED_ONLINE			80,-1,0,IO_INACTIVE
-#define GPIO_LED_NET_IN			80,-1,0,IO_ACTIVE
+#define GPIO_LED_WIFI			80,-1,0,IO_INACTIVE  // Ë«É«µÆ£¬ÂÌ
+#define GPIO_LED_RESET			-1,-1,0,IO_NO_EXIST
+#define GPIO_LED_ONLINE			79,-1,0,IO_INACTIVE  // Ë«É«µÆ£¬ºì
+#define GPIO_LED_NET_IN			-1,-1,0,IO_NO_EXIST
+#define GPIO_LED_POWER			23,-1,0,IO_ACTIVE  // µ¥É«µÆ£¬ºì
 
 #define GPIO_RESET				85,-1,0,IO_INPUT
 #define GPIO_MODE				80,-1,0,IO_INPUT
@@ -89,6 +90,7 @@ typedef struct _MyGpioPriv {
 #define GPIO_LED_RESET			'd',11,0,IO_INACTIVE
 #define GPIO_LED_ONLINE			'd',10,0,IO_INACTIVE
 #define GPIO_LED_NET_IN			'c',13,0,IO_ACTIVE
+#define GPIO_LED_POWER			'c',0, 0,IO_ACTIVE
 
 #define GPIO_RESET				'e',1,0,IO_INPUT
 #define GPIO_MODE				'd',3,0,IO_INPUT
@@ -104,6 +106,7 @@ static MyGpioTable gpio_normal_tbl[]={
 	{GPIO_LED_RESET,	0},
 	{GPIO_LED_ONLINE,	0},
 	{GPIO_LED_NET_IN,	0},
+	{GPIO_LED_POWER,	0},
 
 	{GPIO_RESET,		30},
 	{GPIO_MODE,			1},

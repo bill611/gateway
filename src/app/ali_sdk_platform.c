@@ -49,7 +49,7 @@
 extern char *optarg;
 #endif
 
-extern void gpioEnableWifiLed(int type);
+extern void gpioOnlineStateLed(int type);
 extern void gpioDisableWifiPower(void);
 /* ---------------------------------------------------------------------------*
  *                  internal functions declare
@@ -312,14 +312,14 @@ void cloud_connected(void)
     DPRINT("alink cloud connected!\n");
     const char *arrt_set[1] = {NULL};
     alink_report_attrs(arrt_set);
-	gpioEnableWifiLed(1);
+	gpioOnlineStateLed(1);
 	online_status = 1;
 	online_status_count = 0;
 }
 
 void cloud_disconnected(void)
 {
-	gpioEnableWifiLed(0);
+	gpioOnlineStateLed(0);
     DPRINT("alink cloud disconnected!\n");
 	online_status = 0;
 	online_status_count = ALI_SDK_ONLINE_TIME;
@@ -428,14 +428,14 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
     switch (ev->event_type) {
     case LINKKIT_EVENT_CLOUD_CONNECTED:
         DPRINT("cloud connected\n");
-		gpioEnableWifiLed(1);
+		gpioOnlineStateLed(1);
 		// post_all_properties(gw);    [> sync to cloud <]
 		online_status = 1;
 		online_status_count = 0;
 
         break;
     case LINKKIT_EVENT_CLOUD_DISCONNECTED:
-		gpioEnableWifiLed(0);
+		gpioOnlineStateLed(0);
 		online_status = 0;
 		online_status_count = ALI_SDK_ONLINE_TIME;
         DPRINT("cloud disconnected\n");
@@ -474,6 +474,16 @@ static int event_handler(linkkit_event_t *ev, void *ctx)
     return 0;
 }
 #endif
+void linkkit_fota_callback(service_fota_callback_type_t callback_type, const char *version)
+{
+#define LINKKIT_OTA_BUFFER_SIZE (1024)
+    char fota_buffer[LINKKIT_OTA_BUFFER_SIZE] = {0};
+
+    DPRINT("Fota Version: %s\n", version);
+
+    linkkit_gateway_invoke_fota_service(fota_buffer, LINKKIT_OTA_BUFFER_SIZE);
+}
+
 void aliSdkInit(int argc, char *argv[])
 {
 #if (defined V1)
@@ -494,8 +504,8 @@ void aliSdkInit(int argc, char *argv[])
 
 #if (defined V2)
 	initParams = linkkit_gateway_get_default_params();
-	if (!initParams) {                                
-       return;                                    
+	if (!initParams) {
+       return;
 	}
 #if (defined V23)
     int maxMsgSize, maxMsgQueueSize, prop_post_reply, event_post_reply;
@@ -565,7 +575,9 @@ void aliSdkStart(void)
 		}
 		break;
 	} while(retry_times--);
-#if (!defined V23)
+#if (defined V23)
+	linkkit_gateway_fota_init(linkkit_fota_callback);
+#else
 	linkkit_ota_service_init(&ota_params);
 #endif
     while (register_completed == 0) {

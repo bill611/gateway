@@ -264,8 +264,12 @@ static void smarthomeGetId(SMART_HOME_PRO *cmdBuf,char *id)
 	sqlGetDeviceId(cmdBuf->addr,id);
     // 当设备类型为美的中央空调时，需要在ID后加上当前通道
     if (cmdBuf->device_type == DEVICE_TYPE_ZYKT_MIDEA) {
-        if (cmdBuf->current_channel > 1)
-            sprintf(id,"%s%d",id,cmdBuf->current_channel - 1);
+		char buf[64] = {0};	
+		int len = strlen(id);
+		if (cmdBuf->current_channel >= 1) {
+			strncpy(buf,id,len-1);
+            sprintf(id,"%s%d",buf,cmdBuf->current_channel - 1);
+		}
     }
 }
 /*********************************************************************************************************

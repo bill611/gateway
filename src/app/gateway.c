@@ -226,6 +226,8 @@ int gwRegisterSubDevice(char *id,
 	DPRINT("id:%s,type:%d,channle:%d\n", id,dev_type,channel);
 	// return -1;
 	DeviceStr* dev = device_regist[i].regist(id,addr,channel,product_key,regist_type);
+	if (dev == NULL)
+		return -1;
 	ret = aliSdkRegisterSubDevice(dev);
 	if (ret != 0)  {
 		DPRINT("[%s]register sub device fail,id:%s\n",

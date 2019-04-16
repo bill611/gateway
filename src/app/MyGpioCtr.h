@@ -30,6 +30,7 @@ extern "C" {
 		ENUM_GPIO_LED_RESET,	// 复位灯
 		ENUM_GPIO_LED_ONLINE,		// wifi灯(指示是否连上平台)
 		ENUM_GPIO_LED_NET_IN,	// 入网指示灯
+		ENUM_GPIO_LED_POWER,	// 电源指示灯
 
 		ENUM_GPIO_RESET,	// 复位按键
 		ENUM_GPIO_MODE,	// 激活按键

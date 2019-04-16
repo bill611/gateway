@@ -46,6 +46,8 @@
  *----------------------------------------------------------------------------*/
 static void *gpioResetThread(void *arg);
 static void *gpioRegistThread(void *arg);
+static void gpioNetStateLed(int type);
+static void gpioResetStateLed(void);
 static void loadInterface(void);
 
 /* ---------------------------------------------------------------------------*
@@ -96,7 +98,7 @@ static void *gpioResetThread(void *arg)
 			sqlClearDevice();
 			exit(0);
 #else
-			gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
+			gpioResetStateLed();
 			aliSdkReset(0);// 清除所有设备
 			sqlClearDevice();
 			aliSdkresetWifi();
@@ -135,9 +137,9 @@ static void * timer1sThread(void *arg)
 	int cnt = 600;
 	while(1) {
 		if (net_detect() < 0) {
-			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+			gpioNetStateLed(0);
 		} else {
-			gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+			gpioNetStateLed(1);
 		}
 		if (cnt) {
 			// printfWifiInfo(cnt);
@@ -189,12 +191,12 @@ int main(int argc, char *argv[])
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief gpioEnableWifiLed 设置wifi灯亮与灭
+ * @brief gpioOnlineStateLed  指示是否登上阿里平台
  *
- * @param type 0灭 1亮
+ * @param type 已登录1 未登陆
  */
 /* ---------------------------------------------------------------------------*/
-void gpioEnableWifiLed(int type)
+void gpioOnlineStateLed(int type)
 {
 	gpio->FlashStop(gpio,ENUM_GPIO_LED_ONLINE);
 	if (type)
@@ -205,20 +207,45 @@ void gpioEnableWifiLed(int type)
 
 /* ---------------------------------------------------------------------------*/
 /**
- * @brief gpioEnableNetInLed 入网指示灯
+ * @brief gpioNetStateLed 指示网络连接状态,是否连上网络
+ *
+ * @param type
+ */
+/* ---------------------------------------------------------------------------*/
+static void gpioNetStateLed(int type)
+{
+	if (type)
+		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_ACTIVE);
+	else
+		gpio->SetValue(gpio,ENUM_GPIO_LED_WIFI,IO_INACTIVE);
+}
+
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gpioZigbeeInLed 入网指示灯
  *
  * @param time 0 灭， 非0 闪烁
  */
 /* ---------------------------------------------------------------------------*/
-void gpioEnableNetInLed(int time)
+void gpioZigbeeInLed(int time)
 {
-	gpio->FlashStop(gpio,ENUM_GPIO_LED_NET_IN);
+	gpio->FlashStop(gpio,ENUM_GPIO_LED_ONLINE);
 	if (time)
-		gpio->FlashStart(gpio,ENUM_GPIO_LED_NET_IN,FLASH_SLOW,FLASH_FOREVER);
+		gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
 	else
-		gpio->SetValue(gpio,ENUM_GPIO_LED_NET_IN,IO_ACTIVE);
+		gpio->SetValue(gpio,ENUM_GPIO_LED_ONLINE,IO_ACTIVE);
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief gpioResetStateLed 复位时灯状态，wifi与在线灯同时慢闪
+ */
+/* ---------------------------------------------------------------------------*/
+static void gpioResetStateLed(void)
+{
+	gpio->FlashStart(gpio,ENUM_GPIO_LED_ONLINE,FLASH_SLOW,FLASH_FOREVER);
+	gpio->FlashStart(gpio,ENUM_GPIO_LED_WIFI,FLASH_SLOW,FLASH_FOREVER);
+}
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief gpioDisableWifiPower 因网络不通时重启前先关掉wifi电源

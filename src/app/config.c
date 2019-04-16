@@ -111,6 +111,17 @@ void configSync(void)
     ioctl(ITP_DEVICE_NOR, ITP_IOCTL_FLUSH, NULL);
 #endif
 }
+static int etcFileCheck(void)
+{
+	const char * buf = iniparser_getstring(cfg_private_ini, "gateway:product_key", "0");
+	if (strcmp(buf,"0") == 0) {
+		recoverData(CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
 /* ---------------------------------------------------------------------------*/
 /**
  * @brief configoadEtcInt 加载int型配置文件
@@ -219,7 +230,7 @@ static void dumpIniFile(dictionary *d,char *file_name)
     iniparser_dump_ini(d, f);
 	fflush(f);
     fclose(f);
-	
+
 }
 
 static void SavePublic(void)
@@ -234,6 +245,9 @@ static void SavePrivate(void)
 {
 	configSaveEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
 	dumpIniFile(cfg_private_ini,CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
+	if (etcFileCheck() == 1) {
+		backData(CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME);
+	}
 	printf("[%s]end\n", __FUNCTION__);
 }
 
@@ -266,7 +280,7 @@ static int loadIniFile(dictionary **d,char *file_path,char *sec[])
 		for (i=0; sec[i] != NULL; i++) {
 			for (j=0; j<nsec; j++) {
 				secname = iniparser_getsecname(*d, j);
-				if (strcasecmp(secname,sec[i]) == 0) 
+				if (strcasecmp(secname,sec[i]) == 0)
 					break;
 			}
 			if (j == nsec)  {
@@ -275,7 +289,7 @@ static int loadIniFile(dictionary **d,char *file_path,char *sec[])
 			}
 		}
 	}
-	return ret;	
+	return ret;
 }
 
 void configLoad(void)
@@ -285,6 +299,7 @@ void configLoad(void)
 	int ret = loadIniFile(&cfg_private_ini,CFG_PRIVATE_DRIVE  INI_PRIVATE_FILENAME,sec_private);
 	configLoadEtcInt(cfg_private_ini,etc_private_int,NELEMENTS(etc_private_int));
 	configLoadEtcChar(cfg_private_ini,etc_private_char,NELEMENTS(etc_private_char));
+	etcFileCheck();
 	if (ret || strcmp(theConfig.version,GW_VERSION) != 0)
 		strcpy(theConfig.version,GW_VERSION);
 		SavePrivate();
@@ -327,7 +342,7 @@ static void* ConfigSaveTask(void* arg)
 	} else if (action == CONFIG_SAVE_PRIVATE)  {
 		func = (int)args[2];
 		SavePrivate();
-	} 
+	}
     else if (action == CONFIG_SAVE_TEMP)
         SaveTemp();
 
@@ -400,15 +415,39 @@ void ConfigSaveTemp(void)
     CreateWorkerThread(ConfigSaveTask, args);
 }
 
+/* ---------------------------------------------------------------------------*/
+/**
+ * @brief tcSetNetwork 如果为有线网络时，复位后直接重启
+ *
+ * @param type
+ */
+/* ---------------------------------------------------------------------------*/
 void tcSetNetwork(int type)
 {
 #if (defined V23)
-    system(CFG_PRIVATE_DRIVE"/wifi/wifi_softap.sh start");
+	FILE *fd;
+	char buf[64] = {0};
+	char net_type[16] = {0};
+	char connect_status[8] = {0};
+	fd = fopen("/mnt/public/net_status","rb");
+	if (fd) {
+		int ret = fread(buf,sizeof(buf),1,fd);
+		sscanf(buf,"net=%s,connect=%s",net_type,connect_status);
+		fclose(fd);
+	}
+	printf("net_type:%s\n",net_type );
+	// 只有在无线网卡时，复位时建立AP
+	if (strncmp(net_type,"wlan0",strlen("wlan0")) == 0) {
+		system(CFG_PRIVATE_DRIVE"/wifi/wifi_softap.sh start");
+	} else {
+		sleep(5);
+		exit(0);
+	}
 #else
 	FILE *fp;
 	char *ret;
 	DPRINT("[%s]\n",__FUNCTION__);
-	fp = fopen("network_config","wb");	
+	fp = fopen("network_config","wb");
 	if (fp == NULL) {
 		DPRINT("Can't open network_config\n");
 		return;
