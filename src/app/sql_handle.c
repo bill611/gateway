@@ -66,6 +66,7 @@ AirConditionMode INTEGER,\
 AirConditionTemp INTEGER,\
 MideaSlaveData BLOB,\
 MotionCurtainArm INTEGER,\
+InfraredArm INTEGER,\
 DoorContactArm INTEGER\
 	   	)";
     if (sql == NULL)
@@ -262,11 +263,11 @@ void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed)
 	pthread_mutex_unlock(&mutex);
 }
 
-void sqlSetMotionCurtainArmStatus(char *id,int arm_status)
+void sqlSetInfraredArmStatus(char *id,int arm_status)
 {
 	pthread_mutex_lock(&mutex);
 	char buf[128];
-	sprintf(buf, "UPDATE DeviceList SET MotionCurtainArm ='%d',\
+	sprintf(buf, "UPDATE DeviceList SET InfraredArm ='%d',\
 		   	 Where id = \"%s\"",
 			arm_status,id);
 	LocalQueryExec(sql_local.sql,buf);
@@ -274,14 +275,14 @@ void sqlSetMotionCurtainArmStatus(char *id,int arm_status)
 	sync();
 	pthread_mutex_unlock(&mutex);
 }
-void sqlGetMotionCurtainArmStatus(char *id,int *arm_status)
+void sqlGetInfraredArmStatus(char *id,int *arm_status)
 {
 	pthread_mutex_lock(&mutex);
 	char buf[128];
-	sprintf(buf, "select MotionCurtainArm From DeviceList Where ID=\"%s\"", id);
+	sprintf(buf, "select InfraredArm From DeviceList Where ID=\"%s\"", id);
 	LocalQueryOpen(sql_local.sql,buf);
 	if (arm_status)
-		*arm_status = LocalQueryOfInt(sql_local.sql,"MotionCurtainArm");
+		*arm_status = LocalQueryOfInt(sql_local.sql,"InfraredArm");
 	sql_local.sql->Close(sql_local.sql);
 	pthread_mutex_unlock(&mutex);
 }

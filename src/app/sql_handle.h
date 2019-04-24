@@ -44,8 +44,8 @@ extern "C" {
 	extern void sqlGetMideaAddr(char *id,void *data);
 	extern void sqlSetAirConditionPara(char *id,int temp,int mode,int speed);
 	extern void sqlGetAirConditionPara(char *id,int *temp,int *mode,int *speed);
-	extern void sqlSetMotionCurtainArmStatus(char *id,int arm_status);
-	extern void sqlGetMotionCurtainArmStatus(char *id,int *arm_status);
+	extern void sqlSetInfraredArmStatus(char *id,int arm_status);
+	extern void sqlGetInfraredArmStatus(char *id,int *arm_status);
 	extern void sqlSetDoorContactArmStatus(char *id,int arm_status);
 	extern void sqlGetDoorContactArmStatus(char *id,int *arm_status);
 

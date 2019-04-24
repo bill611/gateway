@@ -34,6 +34,7 @@
 #include "device_light.h"
 #include "device_fresh_air.h"
 #include "device_motion_curtain.h"
+#include "device_infrared.h"
 #include "device_air_condition.h"
 #include "device_air_condition_midea.h"
 #include "device_alarm_whistle.h"
@@ -96,7 +97,8 @@ static char regist_tmp_pk[64] = {0}; // 注册时临时保存允许入网的设�
 static SubDeviceRegist device_regist[] = {
 	{DEVICE_TYPE_DK,		registDeviceLight},
 	{DEVICE_TYPE_XFXT,		registDeviceFreshAir},
-	{DEVICE_TYPE_HW,		registDeviceMotionCurtain},
+	{DEVICE_TYPE_HW,		registDeviceInfrared},
+	{DEVICE_TYPE_HWML,		registDeviceMotionCurtain},
 	{DEVICE_TYPE_ZYKT_MIDEA,registDeviceAirCondition},
 	{DEVICE_TYPE_JD,		registDeviceAlarmWhistle},
 	{DEVICE_TYPE_CL,		registDeviceCurtain},

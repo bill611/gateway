@@ -98,7 +98,7 @@ static void cmdTemplateEnableSwitch(DeviceStr *dev,char *value)
 {
 	int value_int = atoi(value);
 	sprintf(dev->value[ATTR_ARM_DISARM],"%d",value_int);
-	sqlSetMotionCurtainArmStatus(dev->id,value_int);
+	sqlSetInfraredArmStatus(dev->id,value_int);
 }
 
 static void reportAlarmStatus(DeviceStr *dev,char *param)

@@ -563,14 +563,14 @@ void aliSdkStart(void)
 		linkkit_gateway_set_event_callback(initParams, event_handler, gw_attr);
 		if (linkkit_gateway_init(initParams) < 0) {
 			DPRINT("linkkit_gateway_init failed-%d\n",retry_times);
-			sleep(1);
+			sleep(10);
 			continue;
 		}
 		link_fd = linkkit_gateway_start(&alink_cbs, gw_priv_attrs);
 		if (link_fd < 0) {
 			linkkit_gateway_exit();
 			DPRINT("linkkit_gateway_start failed-%d\n",retry_times);
-			sleep(1);
+			sleep(10);
 			continue;
 		}
 		break;

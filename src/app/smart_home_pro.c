@@ -372,6 +372,13 @@ static void smarthomeRecieve(uint8_t *buf, uint8_t len)
 				smarthomeGetId(packet,id);
 				DPRINT("alarm_status:%s,%d\n",id,packet->param[0]);
 				gwReportAlarmStatus(id,packet->param);
+				smarthomeSendDataPacket(
+						packet->addr,
+						Demand_Device_Alarm_Type,
+						packet->device_type,
+						packet->channel_num,
+						packet->current_channel,
+						NULL,0);
 			} break;
 
 		case Device_Scene:		//Çé¾°¿ØÖÆ

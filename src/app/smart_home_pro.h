@@ -32,7 +32,7 @@ typedef enum
 	DEVICE_TYPE_CC,				// 16	窗磁报警
 	DEVICE_TYPE_TY,				// 17	通用报警
 	DEVICE_TYPE_DS,				// 18	电视控制器
-	DEVICE_TYPE_WXHW,			// 19	无线红外
+	DEVICE_TYPE_HWML,			// 19	红外幕帘
 	DEVICE_TYPE_QJ,				// 20	情景控制器
 	DEVICE_TYPE_DHX,			// 21	单火线灯控
 	DEVICE_TYPE_LED,			// 22	LED控制器
@@ -101,8 +101,8 @@ enum {
 	TC_ALARM_OPEN_WINDOW,   // 开门/窗报警
 	TC_ALARM_CLOSE_WINDOW,   // 关门/窗报警
 	TC_ALARM_ERR,   // 故障报警（机械手）
-	TC_ALARM_OPEN_DOOR,   // 非法开门报警
-	TC_ALARM_CLOSE_DOOR,   // 门未关报警
+	TC_ALARM_OUT_DOOR,   // 出室感应
+	TC_ALARM_IN_DOOR,   // 入室感应
 }TC_ALARM_STATUS;
 
 #pragma pack(1)

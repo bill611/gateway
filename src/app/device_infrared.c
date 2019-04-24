@@ -1,9 +1,9 @@
 /*
  * =============================================================================
  *
- *       Filename:  device_motion_curtain.c
+ *       Filename:  device_infrared.c
  *
- *    Description:  红外幕帘设备
+ *    Description:  红外报警设备
  *
  *        Version:  1.0
  *        Created:  2018-05-09 08:46:55
@@ -22,7 +22,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "device_motion_curtain.h"
+#include "device_infrared.h"
 #include "config.h"
 #include "timer.h"
 #include "sql_handle.h"
@@ -128,11 +128,8 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 {
 	DPRINT("[%s]%d\n",__FUNCTION__,param[0] );
 	int alarm_type = param[0];
-	if (alarm_type == TC_ALARM_OUT_DOOR || alarm_type == TC_ALARM_IN_DOOR) {
-		if (alarm_type == TC_ALARM_OUT_DOOR)
-			sprintf(dev->value[ATTR_ALARM],"1");
-		else
-			sprintf(dev->value[ATTR_ALARM],"2");
+	if (alarm_type == TC_ALARM_ACTION) {
+		sprintf(dev->value[ATTR_ALARM],"1");
 		if (!dev->timer) {
 			dev->timer = timerCreate(1000 * 60 * 1 ,timer1s,dev); // 1分钟定时器
 			dev->timer->start(dev->timer);
@@ -180,19 +177,19 @@ static void reportAlarmStatus(DeviceStr *dev,char *param)
 }
 
 
-static DeviceTypePara motion_curtain = {
-	.name = "motion_curtain1",
+static DeviceTypePara infrared = {
+	.name = "infrared",
 
 	.short_model = 0x005c2503,
 	.secret = "RoBoY85GiDdhdxyfhVuJ8peRav2HLKQjlW57880S",
 
-	.product_key = "a1VR4glbdbf",
+	.product_key = "a1a5vfTsdM5",
 	.device_secret = "",
 
 	.proto_type = ALI_SDK_PROTO_TYPE_ZIGBEE,
-	.device_type = DEVICE_TYPE_HWML,
+	.device_type = DEVICE_TYPE_HW,
 	.attr = {
-		{"AlarmDir",NULL,DEVICE_VELUE_TYPE_INT},
+		{"MotionAlarmState",NULL,DEVICE_VELUE_TYPE_INT},
 		{"TemplateEnableSwitch",cmdTemplateEnableSwitch,DEVICE_VELUE_TYPE_INT},
 		{NULL,NULL},
 	},
@@ -208,16 +205,16 @@ static DeviceTypePara motion_curtain = {
 };
 
 
-DeviceStr * registDeviceMotionCurtain(char *id,
+DeviceStr * registDeviceInfrared(char *id,
 		uint16_t addr,
 		uint16_t channel,
 		char *pk,
 		RegistSubDevType regist_type)
 {
 	if (pk) {
-		if (strcmp(pk,motion_curtain.product_key) != 0) {
+		if (strcmp(pk,infrared.product_key) != 0) {
 			DPRINT("diff pk :allow pk:%s,now pk:%s\n",
-					motion_curtain.product_key,pk );	
+					infrared.product_key,pk );	
 			return NULL;
 		}
 	}
@@ -226,9 +223,9 @@ DeviceStr * registDeviceMotionCurtain(char *id,
 	int arm_status = 0;
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,motion_curtain.product_key,
-		motion_curtain.device_secret  );
-	This->type_para = &motion_curtain;
+	DPRINT("[%s]key:%s,sec:%s\n",__FUNCTION__,infrared.product_key,
+		infrared.device_secret  );
+	This->type_para = &infrared;
 	This->addr = addr;
 	This->channel = channel;
 	This->timer = NULL;
