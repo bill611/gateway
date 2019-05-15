@@ -462,14 +462,13 @@ DeviceStr* registDeviceAirCondition(char *id,
 		This->value[j] = (char *)calloc(1,MAX_VALUE_LENG);
 		sprintf(This->value[j],"%s","0");
 	}
-	getMideaData(This);
+	if (regist_type == REGIST_INIT) {
+		getMideaData(This);
+	} else {
+		sprintf(This->value[ATTR_SLAVE_ADDR],"%d",1);
+		sprintf(This->value[ATTR_ROOM_ADDR],"%d",pk_key->cur_num - 1);
+	}
 
-	pthread_t task;
-	pthread_attr_t attr;
-
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	pthread_create(&task, &attr, sendMideaSlaveAddrThread, This);
 	return This;
 }
 

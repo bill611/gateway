@@ -561,6 +561,34 @@ time_t MyGetTickCount(void)
  * @returns 0正常 -1不正常
  */
 /* ---------------------------------------------------------------------------*/
+static void getNetTypeStatus(char *buf_in,char *type,char *status)
+{
+	char *p = buf_in;
+	int cont = 0;
+	int get_key = 0;
+	while (*p != '\0') {
+		if (*p == '=') {
+			get_key = 1;
+			cont++;
+			p++;
+		}
+		if (*p == ',') {
+			get_key = 0;
+		}
+		if (get_key) {
+			if (cont == 1) {
+				*type = *p;
+				type++;
+			} else if (cont == 2) {
+				*status = *p;
+				status++;
+			}
+		}
+		p++;
+	}
+	*type = '\0';
+	*status = '\0';
+}
 int net_detect(void)
 {
 #if (defined ANYKA)
@@ -571,13 +599,20 @@ int net_detect(void)
 	fd = fopen("/mnt/public/net_status","rb");
 	if (fd) {
 		int ret = fread(buf,sizeof(buf),1,fd);	
-		sscanf(buf,"net=%s,connect=%s",net_type,connect_status);
+		// sscanf(buf,"net=%s,connect=%s\n",net_type,connect_status);
 		fclose(fd);
-		if (atoi(connect_status))
+		getNetTypeStatus(buf,net_type,connect_status);
+		// connect_status[2] = '\0';
+		// printf("buf[%d]:%s\n",strlen(buf),buf );
+		// printf("net:%s,status:%s\n",net_type,connect_status );
+		ret = atoi(connect_status);
+		// printf("ret :%d\n", ret);
+		if (ret)
 			return 0;
 		else
 			return -1;
 	} else {
+		printf("open net_status failed\n");
 		return -1;
 	}
 #else

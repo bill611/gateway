@@ -18,7 +18,7 @@ extern "C" {
 #define WPA_PATH                 	"/tmp/wpa_supplicant/"
 
 
-#define GW_VERSION	"v2.0.2"
+#define GW_VERSION	"v2.0.3"
 #if (defined ANYKA)
 #define UPDATE_FILE	"/tmp/Update.cab"
 #define KVFILE_DEFAULT_PATH "/mnt/private/kvfile.db"

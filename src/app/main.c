@@ -60,6 +60,7 @@ typedef struct _GpioInputThread {
 /* ---------------------------------------------------------------------------*
  *                      variables define
  *----------------------------------------------------------------------------*/
+static int net_connect = 0;
 static GpioInputThread gpio_input_handle[] =
 {
     {{NULL,ENUM_GPIO_RESET},	gpioResetThread},
@@ -99,8 +100,10 @@ static void *gpioResetThread(void *arg)
 			exit(0);
 #else
 			gpioResetStateLed();
-			aliSdkReset(0);// 清除所有设备
-			sqlClearDevice();
+			if (net_connect) {
+				aliSdkReset(0);// 清除所有设备
+				sqlClearDevice();
+			}
 			aliSdkresetWifi();
 #endif
 		}
@@ -137,8 +140,10 @@ static void * timer1sThread(void *arg)
 	int cnt = 600;
 	while(1) {
 		if (net_detect() < 0) {
+			net_connect = 0;
 			gpioNetStateLed(0);
 		} else {
+			net_connect = 1;
 			gpioNetStateLed(1);
 		}
 		if (cnt) {
@@ -168,6 +173,10 @@ int main(int argc, char *argv[])
 	gpioInit();
 	gpioInputRegist();
 	createTimer1sThread();
+	// 等待网络连接上才进行阿里设备入网
+	while (net_connect == 0) {
+		sleep(1);
+	}
 	aliSdkInit(argc, argv);
     gwRegisterGateway();
 	aliSdkStart();
