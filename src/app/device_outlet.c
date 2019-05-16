@@ -308,6 +308,11 @@ DeviceStr * registDeviceOutlet16(char *id,
 		char *pk,
 		RegistSubDevType regist_type)
 {
+	if (outlet16.short_model == 0) {
+		memcpy(&outlet16,&outlet10,sizeof(DeviceTypePara));
+		outlet16.name = "outlet16";
+		outlet16.device_type = DEVICE_TYPE_JLCZ16;
+	}
 	if (strcmp(pk,outlet16.product_key) != 0) {
 		DPRINT("diff pk :allow pk:%s,now pk:%s\n",
 				outlet16.product_key,pk );	
@@ -317,11 +322,6 @@ DeviceStr * registDeviceOutlet16(char *id,
 	DeviceStr *This = (DeviceStr *)calloc(1,sizeof(DeviceStr));
 	strcpy(This->id,id);
 	memset(This->value,0,sizeof(This->value));
-	if (outlet16.short_model == 0) {
-		memcpy(&outlet16,&outlet10,sizeof(DeviceTypePara));
-		outlet16.name = "outlet16";
-		outlet16.device_type = DEVICE_TYPE_JLCZ16;
-	}
 	This->type_para = &outlet16;
 	This->addr = addr;
 	This->channel = channel;
